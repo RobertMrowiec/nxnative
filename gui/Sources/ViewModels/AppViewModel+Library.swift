@@ -41,21 +41,6 @@ extension AppViewModel {
             }
         }
     }
-    
-    /// Moves `dragged` to the position of `target` inside the same shelf and persists the new order.
-    public func moveLibraryGame(_ dragged: PortedGame, onto target: PortedGame) {
-        guard dragged.id != target.id, dragged.platform == target.platform,
-              let from = libraryGames.firstIndex(where: { $0.id == dragged.id }),
-              let to = libraryGames.firstIndex(where: { $0.id == target.id }) else { return }
-        let focusedId = libraryGames.indices.contains(focusedGameIndex) ? libraryGames[focusedGameIndex].id : nil
-        var games = libraryGames
-        games.insert(games.remove(at: from), at: to)
-        libraryGames = games
-        if let focusedId, let idx = games.firstIndex(where: { $0.id == focusedId }) {
-            focusedGameIndex = idx
-        }
-        LibraryOrder.save(games)
-    }
 
     public func selectLibraryFolder() {
         let panel = NSOpenPanel()

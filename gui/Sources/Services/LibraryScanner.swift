@@ -246,18 +246,29 @@ public final class LibraryScanner {
     }
     
     public func launchGame(at url: URL, env: [String: String]? = nil, completion: @escaping (Bool, String?) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            self?.syncDmhostBinary(to: url)
+        DispatchQueue.global(qos: .userInitiated).async {
+            // Strip macOS quarantine and provenance attributes to satisfy Gatekeeper
             let cleanProc = Process()
             cleanProc.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
             cleanProc.arguments = ["-cr", url.path]
             try? cleanProc.run()
             cleanProc.waitUntilExit()
-            
+
+            // Re-sign bundle ad-hoc to guarantee AMFI accepts any modified metadata or resources
+            let signProc = Process()
+            signProc.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+            signProc.arguments = ["--force", "--deep", "--sign", "-", url.path]
+            try? signProc.run()
+            signProc.waitUntilExit()
+
             DispatchQueue.main.async {
                 let config = NSWorkspace.OpenConfiguration()
                 config.activates = true
-                if let envDict = env { config.environment = envDict }
+                var envDict = env ?? [:]
+                if envDict["DM_LAUNCHER"] == nil {
+                    envDict["DM_LAUNCHER"] = "0"
+                }
+                config.environment = envDict
                 NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
                     if let err = error { completion(false, err.localizedDescription) }
                     else {
@@ -266,34 +277,6 @@ public final class LibraryScanner {
                     }
                 }
             }
-        }
-    }
-
-    private func syncDmhostBinary(to appURL: URL) {
-        let fm = FileManager.default
-        let targetHost = appURL.appendingPathComponent("Contents/MacOS/dmhost")
-        guard fm.fileExists(atPath: targetHost.path) else { return }
-
-        let candidates = [
-            SystemDetector.shared.resolveRootDirectory().appendingPathComponent("nxnative/dm/host/dmhost"),
-            Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent("dmhost")
-        ]
-
-        for src in candidates {
-            guard fm.fileExists(atPath: src.path),
-                  let srcAttrs = try? fm.attributesOfItem(atPath: src.path),
-                  let srcDate = srcAttrs[.modificationDate] as? Date,
-                  let tgtAttrs = try? fm.attributesOfItem(atPath: targetHost.path),
-                  let tgtDate = tgtAttrs[.modificationDate] as? Date,
-                  srcDate > tgtDate else { continue }
-
-            let tempTarget = targetHost.deletingLastPathComponent().appendingPathComponent("dmhost.tmp")
-            try? fm.removeItem(at: tempTarget)
-            if (try? fm.copyItem(at: src, to: tempTarget)) != nil {
-                _ = try? fm.replaceItemAt(targetHost, withItemAt: tempTarget)
-                try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: targetHost.path)
-            }
-            break
         }
     }
 }

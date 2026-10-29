@@ -16,7 +16,7 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 5 ? NXTheme.secondary : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 6 ? NXTheme.secondary : Color.clear, lineWidth: 2)
                     )
                     
                     Spacer()
@@ -29,7 +29,7 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 6 ? NXTheme.secondary : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 7 ? NXTheme.secondary : Color.clear, lineWidth: 2)
                     )
                     
                     Button(viewModel.tr("common.save")) {
@@ -41,9 +41,9 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 7 ? Color.white : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 8 ? Color.white : Color.clear, lineWidth: 2)
                     )
-                    .shadow(color: viewModel.settingsModalFocusIndex == 7 ? NXTheme.primary.opacity(0.8) : Color.clear, radius: 8)
+                    .shadow(color: viewModel.settingsModalFocusIndex == 8 ? NXTheme.primary.opacity(0.8) : Color.clear, radius: 8)
                 }
             }
             
@@ -128,7 +128,7 @@ extension GameSettingsSheetView {
         iconColor: Color,
         @ViewBuilder content: () -> Content
     ) -> some View {
-        let isFocused = viewModel.settingsModalFocusIndex == rowIndex
+        let isFocused = rowIndex >= 0 && viewModel.settingsModalFocusIndex == rowIndex
         
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -170,7 +170,9 @@ extension GameSettingsSheetView {
         .shadow(color: isFocused ? NXTheme.primary.opacity(0.4) : Color.clear, radius: 8, x: 0, y: 2)
         .animation(.easeInOut(duration: 0.15), value: isFocused)
         .onTapGesture {
-            viewModel.settingsModalFocusIndex = rowIndex
+            if rowIndex >= 0 {
+                viewModel.settingsModalFocusIndex = rowIndex
+            }
         }
     }
     
@@ -179,7 +181,7 @@ extension GameSettingsSheetView {
         let currentCover = GameCoverService.shared.coverImage(for: game) ?? NSWorkspace.shared.icon(forFile: game.url.path)
         
         return settingCard(
-            rowIndex: 5,
+            rowIndex: -1,
             title: viewModel.tr("settings_modal.cover_title"),
             icon: "photo.on.rectangle.angled",
             iconColor: Color(red: 0.95, green: 0.45, blue: 0.75)
@@ -217,7 +219,7 @@ extension GameSettingsSheetView {
                          ? viewModel.tr("settings_modal.cover_custom_desc")
                          : viewModel.tr("settings_modal.cover_auto_desc"))
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(viewModel.settingsModalFocusIndex == 5 ? .white : .white.opacity(0.88))
+                        .foregroundColor(.white.opacity(0.88))
                         .fixedSize(horizontal: false, vertical: true)
                     
                     NXGlassContainer(spacing: 8) {
@@ -252,54 +254,5 @@ extension GameSettingsSheetView {
                 Spacer()
             }
         }
-    }
-    
-    func gameManagementSection() -> some View {
-        GlassCard(padding: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Label(viewModel.tr("settings_modal.management_title"), systemImage: "gearshape.2.fill")
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(NXTheme.textPrimary)
-                    Spacer()
-                }
-                
-                Text(viewModel.tr("settings_modal.management_desc"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.white.opacity(0.88))
-                
-                HStack(spacing: 12) {
-                    Spacer()
-                    
-                    NXGlassContainer(spacing: 12) {
-                        HStack(spacing: 12) {
-                            Button(action: {
-                                dismissSettingsAndShowRemove()
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "eye.slash")
-                                    Text(viewModel.tr("actions.remove_from_library"))
-                                }
-                            }
-                            .buttonStyle(NXSecondaryButtonStyle())
-                            
-                            Button(action: {
-                                dismissSettingsAndShowTrash()
-                            }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "trash.fill")
-                                    Text(viewModel.tr("actions.move_to_trash"))
-                                }
-                                .foregroundColor(Color(red: 0.95, green: 0.35, blue: 0.35))
-                            }
-                            .buttonStyle(NXSecondaryButtonStyle())
-                        }
-                    }
-                }
-                .padding(.top, 2)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .frame(maxWidth: .infinity)
     }
 }

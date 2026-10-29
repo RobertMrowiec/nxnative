@@ -19,7 +19,7 @@
 
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B%20%7C%20iOS%2018%2B-blue.svg)](https://apple.com/macos)
 [![Architecture](https://img.shields.io/badge/Arch-Apple%20Silicon%20(M1--M4%20%26%20A17%2B)-orange.svg)](https://apple.com)
-[![Version](https://img.shields.io/badge/Release-v1.8.2-purple.svg)](https://github.com/rennan101/nxnative_Launcher/releases)
+[![Version](https://img.shields.io/badge/Release-v1.8.3-purple.svg)](https://github.com/rennan101/nxnative_Launcher/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/rennan101/nxnative_Launcher?style=flat&color=ffd700)](https://github.com/rennan101/nxnative_Launcher/stargazers)
 [![Verified Games](https://img.shields.io/badge/Verified%20Games-111%2B%20Titles-success.svg)](SUPPORTED_GAMES.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)

@@ -122,6 +122,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             UserDefaults.standard.set(libraryCardScale, forKey: StorageKeys.savedLibraryCardScale)
         }
     }
+    @Published public var draggedGame: PortedGame? = nil
+    @Published public var isTextInputActive: Bool = false
     @Published public var gameForSettingsSheet: PortedGame? = nil {
         didSet {
             if let game = gameForSettingsSheet {

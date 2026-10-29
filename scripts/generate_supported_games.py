@@ -288,15 +288,15 @@ def generate_markdown(games):
 
     timeline = [
         {
-            "version": "Current Build (v1.8.2 / Latest)",
+            "version": "Current Build (v1.8.3 / Latest)",
             "date": "October 2026",
-            "tagline": "3D Mouse Look Camera Control, Library Drag & Drop, and 14 Locales Expansion",
+            "tagline": "macOS Game Mode, Game Launch Fix, Auto-Signing & Mouse Drag & Drop",
             "features": [
-                "**3D Mouse Look (FPS Mode)**: Smooth first-person and third-person camera control with mouse tracking, horizontal/vertical sensitivity sliders, Y-axis inversion, and custom toggle shortcuts.",
-                "**Interactive Input Capture & Extra Mouse Buttons**: Complete revamp of the key binding engine. Seamlessly captures Mouse 4 (Back) and Mouse 5 (Forward) without conflicting key presses.",
+                "**macOS Game Mode (Modo Jogo)**: Every ported game automatically triggers macOS Game Mode via native fullscreen and game category metadata, maximizing CPU/GPU performance and minimizing Bluetooth latency for controllers and AirPods.",
+                "**Game Launch Fix & Code Signing Pipeline**: Eliminated the infinite launching state by fixing host compilation profiles, passing `DM_LAUNCHER=0`, and adding automatic ad-hoc re-signing (`codesign --force --deep --sign -`) to bypass macOS Gatekeeper seals.",
                 "**Mouse Drag & Drop Library Organization**: Reorder game cards directly on the Switch Dark Mode console carousel with mouse drag & drop, automatically persisted to local storage.",
-                "**14 Locales with Alphabetical Settings**: Added European Portuguese (`Português de Portugal - PT-PT`) alongside PT-BR, EN, JA, ES, FR, DE, IT, KO, PL, RU, SV, ZH-Hans, ZH-Hant, neatly sorted alphabetically in Settings.",
-                "**Frame Pacing & 60 FPS Stability**: Refined Metal frame pacing and frame presentation interval timers across high-refresh ProMotion displays."
+                "**Modal Input Focus Lock**: Automatically disables keyboard/gamepad navigation hotkeys when modals or text inputs are active, preventing accidental triggers.",
+                "**14 Locales with Alphabetical Settings**: Added European Portuguese (`Português de Portugal - PT-PT`) alongside PT-BR, EN, JA, ES, FR, DE, IT, KO, PL, RU, SV, ZH-Hans, ZH-Hant, neatly sorted alphabetically in Settings."
             ]
         },
         {

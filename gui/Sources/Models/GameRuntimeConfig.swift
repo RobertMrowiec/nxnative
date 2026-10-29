@@ -6,19 +6,22 @@ public struct GameRuntimeConfig: Codable, Equatable {
     public var isDockedMode: Bool // true = Docked (1080p), false = Handheld (720p)
     public var renderScale: Double // 0.5 to 1.0
     public var enableMetalFXUpscale: Bool // true = MetalFX, false = off
+    public var enableGameMode: Bool // true = Full Screen (macOS Game Mode ON), false = Windowed
     
     public init(
         enable60FPS: Bool = true,
         enableMetalHUD: Bool = false,
         isDockedMode: Bool = true,
         renderScale: Double = 1.0,
-        enableMetalFXUpscale: Bool = false
+        enableMetalFXUpscale: Bool = false,
+        enableGameMode: Bool = true
     ) {
         self.enable60FPS = enable60FPS
         self.enableMetalHUD = enableMetalHUD
         self.isDockedMode = isDockedMode
         self.renderScale = renderScale
         self.enableMetalFXUpscale = enableMetalFXUpscale
+        self.enableGameMode = enableGameMode
     }
     
     public func toEnvironmentDict(savePath: String? = nil) -> [String: String] {
@@ -28,7 +31,9 @@ public struct GameRuntimeConfig: Codable, Equatable {
             "DM_METAL_HUD": enableMetalHUD ? "1" : "0",
             "DM_OPMODE": isDockedMode ? "1" : "0",
             "DM_RENDER_SCALE": String(format: "%.2f", locale: posixLocale, renderScale),
-            "DM_PRESENT_UPSCALE": enableMetalFXUpscale ? "metalfx" : "off"
+            "DM_PRESENT_UPSCALE": enableMetalFXUpscale ? "metalfx" : "off",
+            "DM_FULLSCREEN": enableGameMode ? "1" : "0",
+            "DM_LAUNCHER": "0"
         ]
         if let sp = savePath, !sp.isEmpty {
             dict["DM_SAVE"] = sp
@@ -45,6 +50,8 @@ public struct GameRuntimeConfig: Codable, Equatable {
         DM_OPMODE=\(isDockedMode ? "1" : "0")
         DM_RENDER_SCALE=\(String(format: "%.2f", locale: posixLocale, renderScale))
         DM_PRESENT_UPSCALE=\(enableMetalFXUpscale ? "metalfx" : "off")
+        DM_FULLSCREEN=\(enableGameMode ? "1" : "0")
+        DM_LAUNCHER=0
         """
     }
     
@@ -117,7 +124,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
     }
 
     private func mergedEnvContent(existing: String?) -> String {
-        let managedKeys = ["DM_FPS_TARGET", "DM_METAL_HUD", "DM_OPMODE", "DM_RENDER_SCALE", "DM_PRESENT_UPSCALE"]
+        let managedKeys = ["DM_FPS_TARGET", "DM_METAL_HUD", "DM_OPMODE", "DM_RENDER_SCALE", "DM_PRESENT_UPSCALE", "DM_FULLSCREEN", "DM_LAUNCHER"]
         var preservedLines: [String] = []
         if let existing = existing {
             for line in existing.components(separatedBy: .newlines) {
@@ -164,6 +171,8 @@ public struct GameRuntimeConfig: Codable, Equatable {
                 }
             case "DM_PRESENT_UPSCALE":
                 config.enableMetalFXUpscale = (val.lowercased() == "metalfx" || val == "1")
+            case "DM_FULLSCREEN":
+                config.enableGameMode = (val != "0")
             default:
                 break
             }

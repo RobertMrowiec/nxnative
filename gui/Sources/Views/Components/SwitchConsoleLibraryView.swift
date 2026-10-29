@@ -6,7 +6,7 @@ public struct SwitchConsoleLibraryView: View {
     public let games: [PortedGame]
     @State private var scrollWheelMonitor: Any? = nil
     @State private var suppressVerticalAutoScroll: Bool = false
-    @State private var draggedGame: PortedGame? = nil
+    @State private var hoveredTargetGamePath: String? = nil
 
     public init(viewModel: AppViewModel, games: [PortedGame]) {
         self.viewModel = viewModel
@@ -41,7 +41,6 @@ public struct SwitchConsoleLibraryView: View {
 
                     // MARK: - 2. Two Categories Shelves (Row 1: Mac, Row 2: iPhone / iPad)
                     VStack(alignment: .leading, spacing: 18) {
-                        // Category 1: Mac (macOS Native)
                         if !macGames.isEmpty {
                             categoryShelf(
                                 title: "Mac (macOS Native)",
@@ -54,7 +53,6 @@ public struct SwitchConsoleLibraryView: View {
                             .id("shelf_mac")
                         }
 
-                        // Category 2: iPhone / iPad (iOS Port)
                         if !iosGames.isEmpty {
                             categoryShelf(
                                 title: "iPhone / iPad (iOS Port)",
@@ -67,7 +65,6 @@ public struct SwitchConsoleLibraryView: View {
                             .id("shelf_ios")
                         }
 
-                        // Fallback if both empty
                         if macGames.isEmpty && iosGames.isEmpty {
                             VStack(spacing: 12) {
                                 Image(systemName: "gamecontroller")
@@ -116,7 +113,6 @@ public struct SwitchConsoleLibraryView: View {
             guard !viewModel.isAnyModalPresented, viewModel.selectedTab == 1 else {
                 return event
             }
-            // Allow Shift + Wheel or horizontal trackpad swipes to scroll the horizontal shelf normally.
             guard !event.modifierFlags.contains(.shift),
                   abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX),
                   abs(event.scrollingDeltaY) > 0.01,
@@ -125,8 +121,6 @@ public struct SwitchConsoleLibraryView: View {
                 return event
             }
 
-            // Walk ancestor chain: if hit inside a horizontal NSScrollView nested inside an outer vertical NSScrollView,
-            // forward the vertical wheel event directly to the outer vertical NSScrollView.
             var scrollViews: [NSScrollView] = []
             var cursor: NSView? = hitView
             while let current = cursor {
@@ -187,14 +181,18 @@ public struct SwitchConsoleLibraryView: View {
             // Horizontal Scroll Carousel of Square 1:1 Nintendo Switch Tiles
             ScrollViewReader { horizontalProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    LazyHStack(alignment: .center, spacing: cardSpacing) {
+                    HStack(alignment: .center, spacing: cardSpacing) {
                         ForEach(items) { game in
-                            let isFocused = focusedGame?.id == game.id
+                            let isFocused = focusedGame?.url.standardized.path == game.url.standardized.path
+                            let isDropTarget = hoveredTargetGamePath == game.url.standardized.path &&
+                                               viewModel.draggedGame != nil &&
+                                               viewModel.draggedGame?.url.standardized.path != game.url.standardized.path
 
                             SquareGameCardView(
                                 game: game,
                                 viewModel: viewModel,
                                 isFocused: isFocused,
+                                isDropTarget: isDropTarget,
                                 baseSize: baseCardSize,
                                 onSelect: {
                                     guard !viewModel.isAnyModalPresented else { return }
@@ -209,22 +207,23 @@ public struct SwitchConsoleLibraryView: View {
                                         SoundEffectService.shared.play(.focus)
                                         suppressVerticalAutoScroll = true
                                         withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                                            if let idx = games.firstIndex(where: { $0.id == game.id }) {
+                                            if let idx = games.firstIndex(where: { $0.url.standardized.path == game.url.standardized.path }) {
                                                 viewModel.focusedGameIndex = idx
                                             }
                                         }
                                     }
                                 }
                             )
-                            .zIndex(isFocused ? 10 : 1)
+                            .zIndex(isFocused ? 10 : (isDropTarget ? 8 : 1))
                             .id("card_\(game.id.uuidString)")
                             .onDrag {
-                                draggedGame = game
-                                return NSItemProvider(object: game.id.uuidString as NSString)
+                                viewModel.draggedGame = game
+                                return NSItemProvider(object: game.url.standardized.path as NSString)
                             }
-                            .onDrop(of: [.text], delegate: GameReorderDropDelegate(
+                            .onDrop(of: [.text, .plainText], delegate: GameReorderDropDelegate(
                                 target: game,
-                                draggedGame: $draggedGame,
+                                viewModel: viewModel,
+                                hoveredTargetGamePath: $hoveredTargetGamePath,
                                 move: { viewModel.moveLibraryGame($0, onto: $1) }
                             ))
                         }
@@ -244,23 +243,42 @@ public struct SwitchConsoleLibraryView: View {
     }
 }
 
-/// Live reordering: the dragged card swaps into the hovered card's slot.
+/// Live reordering: swaps dragged card into hovered card's slot on the same shelf.
 struct GameReorderDropDelegate: DropDelegate {
     let target: PortedGame
-    @Binding var draggedGame: PortedGame?
+    let viewModel: AppViewModel
+    @Binding var hoveredTargetGamePath: String?
     let move: (PortedGame, PortedGame) -> Void
 
     func dropEntered(info: DropInfo) {
-        guard let dragged = draggedGame else { return }
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.8)) {
+        guard let dragged = viewModel.draggedGame,
+              dragged.platform == target.platform,
+              dragged.url.standardized.path != target.url.standardized.path else { return }
+
+        hoveredTargetGamePath = target.url.standardized.path
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
             move(dragged, target)
         }
     }
 
-    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        guard let dragged = viewModel.draggedGame,
+              dragged.platform == target.platform else {
+            return DropProposal(operation: .forbidden)
+        }
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        if hoveredTargetGamePath == target.url.standardized.path {
+            hoveredTargetGamePath = nil
+        }
+    }
 
     func performDrop(info: DropInfo) -> Bool {
-        draggedGame = nil
+        hoveredTargetGamePath = nil
+        viewModel.draggedGame = nil
+        SoundEffectService.shared.play(.click)
         return true
     }
 }

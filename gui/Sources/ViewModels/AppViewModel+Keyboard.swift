@@ -8,19 +8,7 @@ extension AppViewModel {
     public func handleKeyboardKey(_ key: String) {
         // Modal Navigation: traps all keyboard navigation while any modal is opened
         if isAnyModalPresented {
-            if gameForSettingsSheet != nil {
-                switch key {
-                case "up": handleSettingsModalGamepadAction(.navigateUp)
-                case "down": handleSettingsModalGamepadAction(.navigateDown)
-                case "left": handleSettingsModalGamepadAction(.navigateLeft)
-                case "right": handleSettingsModalGamepadAction(.navigateRight)
-                case "return", "space": handleSettingsModalGamepadAction(.confirm)
-                case "escape": handleSettingsModalGamepadAction(.cancel)
-                case "o": handleSettingsModalGamepadAction(.options)
-                case "y": handleSettingsModalGamepadAction(.contextAction)
-                default: break
-                }
-            } else if isGameActionMenuPresented {
+            if isGameActionMenuPresented {
                 switch key {
                 case "up": handleLibraryNavigateUp()
                 case "down": handleLibraryNavigateDown()
@@ -28,15 +16,19 @@ extension AppViewModel {
                 case "escape": handleCancel()
                 default: break
                 }
-            } else if showDeleteConfirm || showRemoveConfirm || showTrashConfirm {
+            } else if showDeleteConfirm || showRemoveConfirm || showTrashConfirm || showUninstallConfirm {
                 if key == "escape" {
                     showDeleteConfirm = false
                     showRemoveConfirm = false
                     showTrashConfirm = false
+                    showUninstallConfirm = false
                 }
             }
             return
         }
+
+        // Navigation hotkeys guard: ensure hotkeys are enabled and no text input is active
+        guard isNavigationHotkeysEnabled else { return }
         
         // Tab switching: Direct number keys 1-7
         if let num = Int(key), (1...7).contains(num) {

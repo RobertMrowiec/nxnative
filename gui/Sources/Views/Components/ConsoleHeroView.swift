@@ -84,6 +84,9 @@ public struct ConsoleHeroView: View {
                         if game.platform == .macApp {
                             statusPill(title: config.enable60FPS ? "60 FPS" : "30 FPS", active: config.enable60FPS)
                             statusPill(title: config.isDockedMode ? "Docked" : "Handheld", active: true)
+                            if config.enableGameMode {
+                                statusPill(title: "Game Mode", active: true)
+                            }
                             if config.enableMetalFXUpscale {
                                 statusPill(title: "MetalFX", active: true)
                             }

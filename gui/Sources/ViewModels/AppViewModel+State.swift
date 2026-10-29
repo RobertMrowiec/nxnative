@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 
 extension AppViewModel {
     public static let availableLanguages: [(code: String, label: String)] = [
@@ -64,7 +65,15 @@ extension AppViewModel {
         showInstallerSheet ||
         showDeleteConfirm ||
         showRemoveConfirm ||
-        showTrashConfirm
+        showTrashConfirm ||
+        showUninstallConfirm ||
+        showCltInstallAlert ||
+        (NSApp.keyWindow?.attachedSheet != nil) ||
+        (NSApp.modalWindow != nil)
+    }
+
+    public var isNavigationHotkeysEnabled: Bool {
+        !isAnyModalPresented && !isTextInputActive
     }
 
     public var hasHiddenGames: Bool {

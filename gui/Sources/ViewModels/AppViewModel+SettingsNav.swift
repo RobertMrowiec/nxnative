@@ -11,13 +11,13 @@ extension AppViewModel {
         case .navigateUp:
             SoundEffectService.shared.play(.focus)
             withAnimation(.easeInOut(duration: 0.15)) {
-                settingsModalFocusIndex = (settingsModalFocusIndex - 1 + 8) % 8
+                settingsModalFocusIndex = (settingsModalFocusIndex - 1 + 9) % 9
             }
             
         case .navigateDown:
             SoundEffectService.shared.play(.focus)
             withAnimation(.easeInOut(duration: 0.15)) {
-                settingsModalFocusIndex = (settingsModalFocusIndex + 1) % 8
+                settingsModalFocusIndex = (settingsModalFocusIndex + 1) % 9
             }
             
         case .navigateLeft:
@@ -26,22 +26,24 @@ extension AppViewModel {
                 switch settingsModalFocusIndex {
                 case 0: // 60 FPS
                     activeSettingsConfig.enable60FPS.toggle()
-                case 1: // Metal HUD
+                case 1: // macOS Game Mode
+                    activeSettingsConfig.enableGameMode.toggle()
+                case 2: // Metal HUD
                     activeSettingsConfig.enableMetalHUD.toggle()
-                case 2: // Console Mode
+                case 3: // Console Mode
                     activeSettingsConfig.isDockedMode = false
-                case 3: // 3D Render Scale (decrement 5%)
+                case 4: // 3D Render Scale (decrement 5%)
                     let current = activeSettingsConfig.renderScale
                     let updated = max(0.50, round((current - 0.05) * 100) / 100)
                     activeSettingsConfig.renderScale = updated
-                case 4: // MetalFX
+                case 5: // MetalFX
                     activeSettingsConfig.enableMetalFXUpscale.toggle()
-                case 5: // Restore Defaults -> Cancel
-                    settingsModalFocusIndex = 7
-                case 6: // Cancel -> Defaults
-                    settingsModalFocusIndex = 5
-                case 7: // Save -> Cancel
+                case 6: // Restore Defaults -> Save
+                    settingsModalFocusIndex = 8
+                case 7: // Cancel -> Defaults
                     settingsModalFocusIndex = 6
+                case 8: // Save -> Cancel
+                    settingsModalFocusIndex = 7
                 default:
                     break
                 }
@@ -53,22 +55,24 @@ extension AppViewModel {
                 switch settingsModalFocusIndex {
                 case 0: // 60 FPS
                     activeSettingsConfig.enable60FPS.toggle()
-                case 1: // Metal HUD
+                case 1: // macOS Game Mode
+                    activeSettingsConfig.enableGameMode.toggle()
+                case 2: // Metal HUD
                     activeSettingsConfig.enableMetalHUD.toggle()
-                case 2: // Console Mode
+                case 3: // Console Mode
                     activeSettingsConfig.isDockedMode = true
-                case 3: // 3D Render Scale (increment 5%)
+                case 4: // 3D Render Scale (increment 5%)
                     let current = activeSettingsConfig.renderScale
                     let updated = min(1.00, round((current + 0.05) * 100) / 100)
                     activeSettingsConfig.renderScale = updated
-                case 4: // MetalFX
+                case 5: // MetalFX
                     activeSettingsConfig.enableMetalFXUpscale.toggle()
-                case 5: // Restore Defaults -> Cancel
-                    settingsModalFocusIndex = 6
-                case 6: // Cancel -> Save
+                case 6: // Restore Defaults -> Cancel
                     settingsModalFocusIndex = 7
-                case 7: // Save -> Restore
-                    settingsModalFocusIndex = 5
+                case 7: // Cancel -> Save
+                    settingsModalFocusIndex = 8
+                case 8: // Save -> Restore
+                    settingsModalFocusIndex = 6
                 default:
                     break
                 }
@@ -81,10 +85,12 @@ extension AppViewModel {
                 case 0:
                     activeSettingsConfig.enable60FPS.toggle()
                 case 1:
-                    activeSettingsConfig.enableMetalHUD.toggle()
+                    activeSettingsConfig.enableGameMode.toggle()
                 case 2:
+                    activeSettingsConfig.enableMetalHUD.toggle()
+                case 3:
                     activeSettingsConfig.isDockedMode.toggle()
-                case 3: // Cycle presets (50% -> 75% -> 100% -> 50%)
+                case 4: // Cycle presets (50% -> 75% -> 100% -> 50%)
                     if activeSettingsConfig.renderScale < 0.70 {
                         activeSettingsConfig.renderScale = 0.75
                     } else if activeSettingsConfig.renderScale < 0.95 {
@@ -92,13 +98,13 @@ extension AppViewModel {
                     } else {
                         activeSettingsConfig.renderScale = 0.50
                     }
-                case 4:
+                case 5:
                     activeSettingsConfig.enableMetalFXUpscale.toggle()
-                case 5: // Restore Defaults
+                case 6: // Restore Defaults
                     activeSettingsConfig = GameRuntimeConfig()
-                case 6: // Cancel
+                case 7: // Cancel
                     gameForSettingsSheet = nil
-                case 7: // Save Settings
+                case 8: // Save Settings
                     saveRuntimeConfig(activeSettingsConfig, for: game)
                     gameForSettingsSheet = nil
                 default:
