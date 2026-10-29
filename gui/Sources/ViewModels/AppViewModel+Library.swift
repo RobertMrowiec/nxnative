@@ -80,9 +80,9 @@ extension AppViewModel {
         config.applyToDisk(for: game)
         InputProfileManager.shared.exportActiveMappingToDisk(libraryFolder: libraryFolder)
         
-        // Ensure iCloud Cross-Save is configured with cover art if iCloud Drive is available
+        // Ensure iCloud Cross-Save is configured with cover art if iCloud Sync is enabled by user
         var savePath: String? = nil
-        if SaveSyncService.shared.isICloudDriveAvailable {
+        if SaveSyncService.shared.isICloudSyncEnabled && SaveSyncService.shared.isICloudDriveAvailable {
             let cover = GameCoverService.shared.coverImage(for: game)
             if case .success(let cloudSaveDir) = SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
                 savePath = cloudSaveDir.path

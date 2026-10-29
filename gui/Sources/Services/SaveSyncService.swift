@@ -13,9 +13,25 @@ public final class SaveSyncService: ObservableObject {
     internal let fileManager = FileManager.default
     private var cloudSyncActiveCache: [String: Bool] = [:]
 
+    private static let iCloudSyncEnabledKey = "nxnative_icloud_sync_enabled"
+
     @Published public private(set) var isICloudDriveAvailable: Bool = false
 
+    /// User setting controlling whether iCloud Sync and Cross-Save is enabled.
+    /// Defaults to false to prevent unprompted consumption of users' iCloud quotas.
+    @Published public var isICloudSyncEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isICloudSyncEnabled, forKey: Self.iCloudSyncEnabledKey)
+            cloudSyncActiveCache.removeAll()
+            if !isICloudSyncEnabled {
+                _ = disableCloudSyncAndRevertLocal()
+            }
+            DispatchQueue.main.async { self.objectWillChange.send() }
+        }
+    }
+
     private init() {
+        self.isICloudSyncEnabled = UserDefaults.standard.object(forKey: Self.iCloudSyncEnabledKey) as? Bool ?? false
         checkICloudAvailability()
     }
 
@@ -36,7 +52,7 @@ public final class SaveSyncService: ObservableObject {
     }
 
     public func ensureRootFolderConfigured() {
-        guard isICloudDriveAvailable else { return }
+        guard isICloudSyncEnabled && isICloudDriveAvailable else { return }
         let root = iCloudRootURL
         if !fileManager.fileExists(atPath: root.path) {
             try? fileManager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -63,6 +79,9 @@ public final class SaveSyncService: ObservableObject {
     }
 
     public func isCloudSyncActive(for game: PortedGame) -> Bool {
+        guard isICloudSyncEnabled && isICloudDriveAvailable else {
+            return false
+        }
         let key = game.uniqueKey
         if let cached = cloudSyncActiveCache[key] {
             return cached
@@ -92,14 +111,15 @@ public final class SaveSyncService: ObservableObject {
     // MARK: - Safe Setup & Migration
     @discardableResult
     public func ensureCloudSaveConfigured(for game: PortedGame, cover: NSImage?) -> Result<URL, Error> {
+        guard isICloudSyncEnabled && isICloudDriveAvailable else {
+            return .failure(NSError(domain: "SaveSyncService", code: 403, userInfo: [NSLocalizedDescriptionKey: "iCloud Sync is disabled"]))
+        }
         ensureRootFolderConfigured()
         let gameFolder = iCloudFolder(for: game)
         let cloudSaveDir = iCloudSaveDirectory(for: game)
-        let cloudBackupsDir = gameFolder.appendingPathComponent("backups", isDirectory: true)
 
         do {
             try fileManager.createDirectory(at: cloudSaveDir, withIntermediateDirectories: true)
-            try fileManager.createDirectory(at: cloudBackupsDir, withIntermediateDirectories: true)
 
             // Apply game's box art cover as custom folder icon in Finder and iCloud Drive
             if let coverImage = cover ?? GameCoverService.shared.coverImage(for: game) {
@@ -224,25 +244,34 @@ public final class SaveSyncService: ObservableObject {
     }
 
     public func revealCloudGameFolder(for game: PortedGame, cover: NSImage?) {
-        _ = ensureCloudSaveConfigured(for: game, cover: cover)
-        let folder = iCloudFolder(for: game)
-        NSWorkspace.shared.activateFileViewerSelecting([folder])
+        if isICloudSyncEnabled && isICloudDriveAvailable {
+            _ = ensureCloudSaveConfigured(for: game, cover: cover)
+            let folder = iCloudFolder(for: game)
+            NSWorkspace.shared.activateFileViewerSelecting([folder])
+        } else if let titleId = game.titleId {
+            let local = macSaveDirectory(for: titleId)
+            try? fileManager.createDirectory(at: local, withIntermediateDirectories: true)
+            NSWorkspace.shared.activateFileViewerSelecting([local])
+        }
     }
 
-    // MARK: - Safety Snapshots
+    // MARK: - Safety Snapshots (Strictly Local Storage)
     @discardableResult
     public func createSafetySnapshot(for game: PortedGame, label: String = "auto") -> URL? {
-        let cloudSave = iCloudSaveDirectory(for: game)
-        guard fileManager.fileExists(atPath: cloudSave.path) else { return nil }
+        guard let titleId = game.titleId, !titleId.isEmpty else { return nil }
+        let srcDir = resolvedSaveDirectory(forTitleId: titleId)
+        guard fileManager.fileExists(atPath: srcDir.path) else { return nil }
 
-        let backupsDir = iCloudFolder(for: game).appendingPathComponent("backups", isDirectory: true)
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let backupsDir = appSupport.appendingPathComponent("nxnative/\(titleId.uppercased())/backups", isDirectory: true)
         try? fileManager.createDirectory(at: backupsDir, withIntermediateDirectories: true)
 
         let timestamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
         let destination = backupsDir.appendingPathComponent("save_snapshot_\(timestamp)_\(label)")
 
         do {
-            try fileManager.copyItem(at: cloudSave, to: destination)
+            try fileManager.copyItem(at: srcDir, to: destination)
+            pruneOldBackups(in: backupsDir, maxKeep: 5)
             return destination
         } catch {
             return nil
@@ -297,7 +326,8 @@ public final class SaveSyncService: ObservableObject {
         let saveDir = resolvedSaveDirectory(forTitleId: titleId)
         guard fileManager.fileExists(atPath: saveDir.path) else { return nil }
 
-        let backupRoot = saveDir.deletingLastPathComponent().appendingPathComponent("backups", isDirectory: true)
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let backupRoot = appSupport.appendingPathComponent("nxnative/\(titleId.uppercased())/backups", isDirectory: true)
         try? fileManager.createDirectory(at: backupRoot, withIntermediateDirectories: true)
 
         let timestamp = ISO8601DateFormatter().string(from: Date()).replacingOccurrences(of: ":", with: "-")
@@ -305,9 +335,99 @@ public final class SaveSyncService: ObservableObject {
 
         do {
             try fileManager.copyItem(at: saveDir, to: destination)
+            pruneOldBackups(in: backupRoot, maxKeep: 5)
             return destination
         } catch {
             return nil
         }
+    }
+
+    // MARK: - Backup Retention & Pruning (Max 5 Snapshots)
+    public func pruneOldBackups(in directory: URL, maxKeep: Int = 5) {
+        guard let entries = try? fileManager.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey, .isDirectoryKey], options: .skipsHiddenFiles) else { return }
+        
+        let sorted = entries.sorted { a, b in
+            let dateA = (try? a.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date.distantPast
+            let dateB = (try? b.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? Date.distantPast
+            return dateA > dateB // newest first
+        }
+        
+        if sorted.count > maxKeep {
+            for stale in sorted.dropFirst(maxKeep) {
+                try? fileManager.removeItem(at: stale)
+            }
+        }
+    }
+
+    // MARK: - Safe iCloud Disabling & Reversion to Local Storage
+    @discardableResult
+    public func disableCloudSyncAndRevertLocal() -> Int {
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let nxRoot = appSupport.appendingPathComponent("nxnative", isDirectory: true)
+        guard let titleDirs = try? fileManager.contentsOfDirectory(atPath: nxRoot.path) else { return 0 }
+        
+        var revertedCount = 0
+        for title in titleDirs {
+            let titleFolder = nxRoot.appendingPathComponent(title, isDirectory: true)
+            let saveFolder = titleFolder.appendingPathComponent("save", isDirectory: true)
+            
+            if let dest = try? fileManager.destinationOfSymbolicLink(atPath: saveFolder.path) {
+                let cloudDestURL = URL(fileURLWithPath: dest)
+                // Remove the symlink safely
+                try? fileManager.removeItem(at: saveFolder)
+                // Re-create genuine local directory
+                try? fileManager.createDirectory(at: saveFolder, withIntermediateDirectories: true)
+                // Copy files back from iCloud if available
+                if fileManager.fileExists(atPath: cloudDestURL.path),
+                   let contents = try? fileManager.contentsOfDirectory(atPath: cloudDestURL.path) {
+                    for file in contents {
+                        let src = cloudDestURL.appendingPathComponent(file)
+                        let dst = saveFolder.appendingPathComponent(file)
+                        try? fileManager.copyItem(at: src, to: dst)
+                    }
+                }
+                revertedCount += 1
+            }
+            
+            // Clean DM_SAVE in env.txt if present
+            let envFile = titleFolder.appendingPathComponent("env.txt")
+            if let existing = try? String(contentsOf: envFile, encoding: .utf8) {
+                let cleaned = existing.components(separatedBy: .newlines)
+                    .filter { !$0.hasPrefix("DM_SAVE=") }
+                    .joined(separator: "\n")
+                try? cleaned.write(to: envFile, atomically: true, encoding: .utf8)
+            }
+        }
+        
+        cloudSyncActiveCache.removeAll()
+        return revertedCount
+    }
+
+    // MARK: - iCloud Storage Measurement & Reclamation
+    public func calculateICloudStorageBytes() -> Int64 {
+        guard isICloudDriveAvailable else { return 0 }
+        let root = iCloudRootURL
+        guard fileManager.fileExists(atPath: root.path) else { return 0 }
+        
+        guard let enumerator = fileManager.enumerator(at: root, includingPropertiesForKeys: [.fileSizeKey], options: []) else { return 0 }
+        var total: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            if let size = (try? fileURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                total += Int64(size)
+            }
+        }
+        return total
+    }
+
+    @discardableResult
+    public func purgeICloudFolder() throws -> Int64 {
+        let bytes = calculateICloudStorageBytes()
+        let root = iCloudRootURL
+        if fileManager.fileExists(atPath: root.path) {
+            try fileManager.removeItem(at: root)
+        }
+        cloudSyncActiveCache.removeAll()
+        DispatchQueue.main.async { self.objectWillChange.send() }
+        return bytes
     }
 }

@@ -509,5 +509,13 @@ extension Translations {
         "menubar.icon_style_symbol": "White Symbol (No Background)",
         "menubar.icon_style_dark": "Dark",
         "menubar.icon_style_light_color": "Light with Color",
+        // iCloud Sync & Storage Management
+        "system.icloud_title": "iCloud Cross-Save & Backups",
+        "system.icloud_active_desc": "Active: Game saves sync automatically to iCloud Drive > nxnative_launcher.",
+        "system.icloud_disabled_desc": "Disabled: Saves and snapshots stay strictly on this Mac in Application Support.",
+        "system.icloud_reclaim_btn": "Reclaim iCloud Space",
+        "system.icloud_reclaimed_success": "Freed ~%@ of iCloud storage!",
+        "settings_modal.icloud_local_only": "Local Storage Only (iCloud Sync Off)",
+        "settings_modal.icloud_local_only_desc": "Saves and snapshots are stored locally in Application Support",
 ]
 }

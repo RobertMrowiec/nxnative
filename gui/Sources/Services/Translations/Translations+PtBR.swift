@@ -509,5 +509,13 @@ extension Translations {
         "menubar.icon_style_symbol": "Símbolo Branco (Sem Fundo)",
         "menubar.icon_style_dark": "Escuro",
         "menubar.icon_style_light_color": "Claro com Cor",
+        // Gerenciamento e Sincronização do iCloud
+        "system.icloud_title": "Cross-Save e Backups no iCloud",
+        "system.icloud_active_desc": "Ativo: Saves sincronizam automaticamente com o iCloud Drive > nxnative_launcher.",
+        "system.icloud_disabled_desc": "Desativado: Saves e snapshots ficam salvos exclusivamente neste Mac em Application Support.",
+        "system.icloud_reclaim_btn": "Liberar Espaço do iCloud",
+        "system.icloud_reclaimed_success": "Liberado ~%@ do armazenamento do iCloud!",
+        "settings_modal.icloud_local_only": "Armazenamento Local (iCloud Desativado)",
+        "settings_modal.icloud_local_only_desc": "Saves e snapshots são mantidos localmente em Application Support",
 ]
 }

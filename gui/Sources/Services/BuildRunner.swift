@@ -56,24 +56,8 @@ public final class BuildRunner {
             self.delegate?.buildRunner(self, didProduceLog: LogEntry(level: isSuccess ? .success : .info, message: message))
         }
         
-        // Determina caminho do python com seleção resiliente
-        let pyCandidates = [
-            "/opt/homebrew/opt/python@3.14/bin/python3",
-            "/opt/homebrew/opt/python@3.13/bin/python3",
-            "/opt/homebrew/opt/python@3.12/bin/python3",
-            "/opt/homebrew/bin/python3",
-            "/usr/local/opt/python@3.14/bin/python3",
-            "/usr/local/opt/python@3.13/bin/python3",
-            "/usr/local/opt/python@3.12/bin/python3",
-            "/usr/local/bin/python3",
-            "/usr/bin/python3"
-        ]
-        let fm = FileManager.default
-        var pythonPath = "/usr/bin/python3"
-        for candidate in pyCandidates where fm.fileExists(atPath: candidate) {
-            pythonPath = candidate
-            break
-        }
+        // Determina caminho do python usando deteccao centralizada e estavel
+        let pythonPath = SystemDetector.findBestPythonPath()
         
         var arguments: [String] = [
             scriptPath,
@@ -140,15 +124,15 @@ public final class BuildRunner {
         proc.arguments = arguments
         proc.currentDirectoryURL = URL(fileURLWithPath: nxnativePath)
         
-        // System PATH to ensure homebrew and local tools are available
+        // Augmented PATH ensuring bundled tools, bundled python, and system tools are available
         var env = ProcessInfo.processInfo.environment
         let brewPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        if let existing = env["PATH"] {
-            env["PATH"] = "\(brewPaths):\(existing)"
-        } else {
-            env["PATH"] = brewPaths
-        }
+        let basePaths = env["PATH"] != nil ? "\(brewPaths):\(env["PATH"]!)" : brewPaths
+        env["PATH"] = BundledTools.augmentedPath(base: basePaths, python: pythonPath)
         env["PYTHONUNBUFFERED"] = "1"
+        for (k, v) in BundledTools.environment(for: pythonPath) {
+            env[k] = v
+        }
         proc.environment = env
         
         let stdout = Pipe()

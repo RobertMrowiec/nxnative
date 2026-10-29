@@ -80,8 +80,8 @@ public struct SystemPrerequisites {
         isAvailable: false,
         details: "Checking...",
         recommendation: nil,
-        installCommand: "brew install python",
-        repairCommand: "brew reinstall python",
+        installCommand: "brew install python@3.13",
+        repairCommand: "brew reinstall python@3.13",
         uninstallCommand: nil,
         isProtected: false
     )
@@ -152,23 +152,28 @@ public struct SystemPrerequisites {
         isAvailable: false,
         details: "Checking...",
         recommendation: nil,
-        installCommand: "PY_BIN=\"\"; for c in /opt/homebrew/opt/python@3.14/bin/python3 /opt/homebrew/opt/python@3.13/bin/python3 /opt/homebrew/opt/python@3.12/bin/python3 /opt/homebrew/bin/python3 /usr/local/opt/python@3.14/bin/python3 /usr/local/opt/python@3.13/bin/python3 /usr/local/opt/python@3.12/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip install --break-system-packages lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --break-system-packages nsz 2>/dev/null || true); else \"$PY_BIN\" -m pip install lz4 capstone fonttools && (\"$PY_BIN\" -m pip install nsz 2>/dev/null || true); fi; fi",
-        repairCommand: "PY_BIN=\"\"; for c in /opt/homebrew/opt/python@3.14/bin/python3 /opt/homebrew/opt/python@3.13/bin/python3 /opt/homebrew/opt/python@3.12/bin/python3 /opt/homebrew/bin/python3 /usr/local/opt/python@3.14/bin/python3 /usr/local/opt/python@3.13/bin/python3 /usr/local/opt/python@3.12/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip install --force-reinstall --break-system-packages lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --force-reinstall --break-system-packages nsz 2>/dev/null || true); else \"$PY_BIN\" -m pip install --force-reinstall lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --force-reinstall nsz 2>/dev/null || true); fi; fi",
-        uninstallCommand: "PY_BIN=\"\"; for c in /opt/homebrew/opt/python@3.14/bin/python3 /opt/homebrew/opt/python@3.13/bin/python3 /opt/homebrew/opt/python@3.12/bin/python3 /opt/homebrew/bin/python3 /usr/local/opt/python@3.14/bin/python3 /usr/local/opt/python@3.13/bin/python3 /usr/local/opt/python@3.12/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip uninstall --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip uninstall -y --break-system-packages lz4 capstone fonttools nsz 2>/dev/null || true; else \"$PY_BIN\" -m pip uninstall -y lz4 capstone fonttools nsz 2>/dev/null || true; fi; fi",
+        installCommand: "PY_BIN=\"\"; for c in /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13 /opt/homebrew/bin/python3.14 /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip install --break-system-packages lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --break-system-packages nsz 2>/dev/null || true); else \"$PY_BIN\" -m pip install lz4 capstone fonttools && (\"$PY_BIN\" -m pip install nsz 2>/dev/null || true); fi; fi",
+        repairCommand: "PY_BIN=\"\"; for c in /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13 /opt/homebrew/bin/python3.14 /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip install --force-reinstall --break-system-packages lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --force-reinstall --break-system-packages nsz 2>/dev/null || true); else \"$PY_BIN\" -m pip install --force-reinstall lz4 capstone fonttools && (\"$PY_BIN\" -m pip install --force-reinstall nsz 2>/dev/null || true); fi; fi",
+        uninstallCommand: "PY_BIN=\"\"; for c in /opt/homebrew/bin/python3.13 /usr/local/bin/python3.13 /opt/homebrew/bin/python3.14 /opt/homebrew/bin/python3.12 /opt/homebrew/bin/python3 /usr/local/bin/python3 $(which python3); do if [ -x \"$c\" ]; then PY_BIN=\"$c\"; break; fi; done; if [ -n \"$PY_BIN\" ]; then if \"$PY_BIN\" -m pip uninstall --help 2>&1 | grep -q -- '--break-system-packages'; then \"$PY_BIN\" -m pip uninstall -y --break-system-packages lz4 capstone fonttools nsz 2>/dev/null || true; else \"$PY_BIN\" -m pip uninstall -y lz4 capstone fonttools nsz 2>/dev/null || true; fi; fi",
         isProtected: false
     )
     
     public var allSatisfied: Bool {
-        xcode.isAvailable &&
-        homebrew.isAvailable &&
-        git.isAvailable &&
-        python.isAvailable &&
-        dotnet.isAvailable &&
-        xcodegen.isAvailable &&
-        zstd.isAvailable &&
-        spirvCross.isAvailable &&
-        glslang.isAvailable &&
-        pythonPackages.isAvailable
+        let coreReady = xcode.isAvailable &&
+            git.isAvailable &&
+            python.isAvailable &&
+            dotnet.isAvailable &&
+            xcodegen.isAvailable &&
+            zstd.isAvailable &&
+            spirvCross.isAvailable &&
+            glslang.isAvailable &&
+            pythonPackages.isAvailable
+        
+        // If standalone tools and Python are bundled, Homebrew is optional
+        if BundledTools.isBundledPythonAvailable {
+            return coreReady
+        }
+        return coreReady && homebrew.isAvailable
     }
     
     public var missingList: [DependencyStatus] {

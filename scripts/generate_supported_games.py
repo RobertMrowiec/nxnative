@@ -300,6 +300,17 @@ def generate_markdown(games):
             ]
         },
         {
+            "version": "v1.8.2",
+            "date": "October 2026",
+            "tagline": "Embedded Standalone Runtime, Python 3.15 Fix & iCloud Sync Toggle",
+            "features": [
+                "**Isolated Standalone Runtime**: Bundles relocatable Python 3.13 and pre-compiled native binaries (zstd, spirv-cross, glslangValidator, xcodegen). Zero Homebrew or terminal setup required for end-users.",
+                "**Python 3.15 Incompatibility Resolution**: Fixed clang build failure (`lz4` C-extension) by resolving deterministic Python 3.13 runtimes and pre-bundling universal binary wheels.",
+                "**iCloud Sync Toggle & Space Reclaim**: Complete user control over iCloud Drive synchronization. Backups are strictly kept on local storage with automated 5-snapshot pruning, plus a one-click button to reclaim iCloud cloud storage.",
+                "**iOS Signing Identity & Profile Reset**: Added quick-clear actions for custom certificates (.p12) and provisioning profiles (.mobileprovision), alongside an explicit Unsigned / Sideloading mode."
+            ]
+        },
+        {
             "version": "v1.8.1",
             "date": "October 2026",
             "tagline": "Official Joy-Con Taskbar Icon, Menu Bar Customization & iOS Sideloading Fixes",

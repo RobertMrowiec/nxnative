@@ -2,11 +2,15 @@ import SwiftUI
 
 public struct SystemStorageAndDiagnosticsCard: View {
     @ObservedObject public var viewModel: AppViewModel
+    @ObservedObject private var saveService = SaveSyncService.shared
     @State private var copiedReport: Bool = false
     @State private var freedSpaceMessage: String? = nil
     @State private var imageCacheBytes: Int64 = 0
     @State private var coverFreedMessage: String? = nil
     @State private var isClearingCovers: Bool = false
+    @State private var iCloudBytes: Int64 = 0
+    @State private var iCloudFreedMessage: String? = nil
+    @State private var isPurgingICloud: Bool = false
 
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -137,10 +141,85 @@ public struct SystemStorageAndDiagnosticsCard: View {
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
                 }
+
+                Divider().opacity(0.2)
+
+                // Row 4: iCloud Sync & Cloud Storage Reclamation
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "icloud.fill")
+                                .foregroundColor(saveService.isICloudSyncEnabled ? Color.blue : Color.gray)
+                                .font(.system(size: 13))
+
+                            Text(L10n.t("system.icloud_title"))
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundColor(NXTheme.textPrimary)
+
+                            Toggle("", isOn: $saveService.isICloudSyncEnabled)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
+                                .controlSize(.mini)
+
+                            if iCloudBytes > 0 {
+                                Text(ByteCountFormatter.string(fromByteCount: iCloudBytes, countStyle: .file))
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.orange.opacity(0.25))
+                                    .foregroundColor(Color.orange)
+                                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                            }
+                        }
+
+                        Text(iCloudFreedMessage ?? (saveService.isICloudSyncEnabled 
+                            ? L10n.t("system.icloud_active_desc")
+                            : L10n.t("system.icloud_disabled_desc")))
+                            .font(.system(size: 11))
+                            .foregroundColor(iCloudFreedMessage != nil ? Color(red: 0.13, green: 0.77, blue: 0.37) : NXTheme.textSecondary)
+                    }
+
+                    Spacer()
+
+                    if iCloudBytes > 0 {
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            isPurgingICloud = true
+                            DispatchQueue.global(qos: .userInitiated).async {
+                                do {
+                                    let freed = try saveService.purgeICloudFolder()
+                                    let freedStr = ByteCountFormatter.string(fromByteCount: freed, countStyle: .file)
+                                    DispatchQueue.main.async {
+                                        self.iCloudFreedMessage = L10n.t("system.icloud_reclaimed_success", freedStr)
+                                        self.iCloudBytes = saveService.calculateICloudStorageBytes()
+                                        self.isPurgingICloud = false
+                                    }
+                                } catch {
+                                    DispatchQueue.main.async {
+                                        self.iCloudFreedMessage = "Failed to purge iCloud: \(error.localizedDescription)"
+                                        self.isPurgingICloud = false
+                                    }
+                                }
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "trash.circle.fill")
+                                    .foregroundColor(Color.orange)
+                                Text(L10n.t("system.icloud_reclaim_btn"))
+                            }
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        .disabled(isPurgingICloud)
+                    }
+                }
             }
         }
         .onAppear {
             refreshImageCacheSize()
+            refreshICloudSize()
+        }
+        .onChange(of: saveService.isICloudSyncEnabled) { _ in
+            refreshICloudSize()
         }
     }
 
@@ -149,6 +228,15 @@ public struct SystemStorageAndDiagnosticsCard: View {
             let bytes = BuildCleanupService.shared.calculateImageCacheBytes()
             DispatchQueue.main.async {
                 self.imageCacheBytes = bytes
+            }
+        }
+    }
+
+    private func refreshICloudSize() {
+        DispatchQueue.global(qos: .utility).async {
+            let bytes = saveService.calculateICloudStorageBytes()
+            DispatchQueue.main.async {
+                self.iCloudBytes = bytes
             }
         }
     }

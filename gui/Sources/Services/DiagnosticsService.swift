@@ -9,7 +9,7 @@ public final class DiagnosticsService {
     public func generateAndCopyReport(lastLogLines: [String] = []) -> String {
         var sections: [String] = []
 
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.8.1"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.8.2"
         sections.append("### NxNative Launcher Diagnostic Report")
         sections.append("- **App Version:** \(version) (Native Apple Silicon)")
         sections.append("- **macOS Version:** \(ProcessInfo.processInfo.operatingSystemVersionString)")
@@ -77,12 +77,10 @@ public final class DiagnosticsService {
     }
 
     private func getPythonEnvironment() -> String {
-        let candidates = ["/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"]
-        for p in candidates where FileManager.default.fileExists(atPath: p) {
-            let out = runProcess(executable: p, args: ["--version"]).trimmingCharacters(in: .whitespacesAndNewlines)
-            if !out.isEmpty {
-                return "\(out) (\(p))"
-            }
+        let pyInfo = SystemDetector.findBestPython()
+        if let path = pyInfo.path {
+            let note = pyInfo.isBundled ? " [Bundled]" : (pyInfo.isExperimental ? " [Incompatible Experimental]" : "")
+            return "\(pyInfo.version) (\(path))\(note)"
         }
         return "Not detected"
     }

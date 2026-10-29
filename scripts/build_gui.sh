@@ -6,6 +6,11 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GUI_DIR="$REPO_ROOT/gui"
 WORKSPACE_DIR="$(cd "$REPO_ROOT/.." && pwd)"
 
+if [ ! -d "$GUI_DIR/Resources/python" ] || [ ! -d "$GUI_DIR/Resources/tools" ]; then
+    echo "==> Recursos standalone de Python e ferramentas ausentes. Executando bundle_tools.sh..."
+    "$SCRIPT_DIR/bundle_tools.sh" "$GUI_DIR/Resources"
+fi
+
 echo "==> Compilando NXNative GUI em modo release..."
 cd "$GUI_DIR"
 swift build -c release
@@ -39,6 +44,14 @@ build_app_bundle() {
         if [ -d "$GUI_DIR/Resources/patches" ]; then
             mkdir -p "$APP_BUNDLE/Contents/Resources/patches"
             cp -R "$GUI_DIR/Resources/patches/" "$APP_BUNDLE/Contents/Resources/patches/"
+        fi
+        if [ -d "$GUI_DIR/Resources/python" ]; then
+            echo "==> Copiando runtime Python standalone embutido..."
+            cp -R "$GUI_DIR/Resources/python" "$APP_BUNDLE/Contents/Resources/"
+        fi
+        if [ -d "$GUI_DIR/Resources/tools" ]; then
+            echo "==> Copiando ferramentas standalone embutidas..."
+            cp -R "$GUI_DIR/Resources/tools" "$APP_BUNDLE/Contents/Resources/"
         fi
     fi
     
@@ -83,9 +96,9 @@ build_app_bundle() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.8.1</string>
+    <string>1.8.2</string>
     <key>CFBundleVersion</key>
-    <string>16</string>
+    <string>17</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>

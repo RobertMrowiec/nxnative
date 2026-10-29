@@ -162,6 +162,14 @@ A complete, deduplicated chronology of every milestone and capability introduced
 - **14 Locales with Alphabetical Settings**: Added European Portuguese (`Português de Portugal - PT-PT`) alongside PT-BR, EN, JA, ES, FR, DE, IT, KO, PL, RU, SV, ZH-Hans, ZH-Hant, neatly sorted alphabetically in Settings.
 - **Frame Pacing & 60 FPS Stability**: Refined Metal frame pacing and frame presentation interval timers across high-refresh ProMotion displays.
 
+### 🌟 v1.8.2 — *October 2026*
+> **Embedded Standalone Runtime, Python 3.15 Fix & iCloud Sync Toggle**
+
+- **Isolated Standalone Runtime**: Bundles relocatable Python 3.13 and pre-compiled native binaries (zstd, spirv-cross, glslangValidator, xcodegen). Zero Homebrew or terminal setup required for end-users.
+- **Python 3.15 Incompatibility Resolution**: Fixed clang build failure (`lz4` C-extension) by resolving deterministic Python 3.13 runtimes and pre-bundling universal binary wheels.
+- **iCloud Sync Toggle & Space Reclaim**: Complete user control over iCloud Drive synchronization. Backups are strictly kept on local storage with automated 5-snapshot pruning, plus a one-click button to reclaim iCloud cloud storage.
+- **iOS Signing Identity & Profile Reset**: Added quick-clear actions for custom certificates (.p12) and provisioning profiles (.mobileprovision), alongside an explicit Unsigned / Sideloading mode.
+
 ### 🌟 v1.8.1 — *October 2026*
 > **Official Joy-Con Taskbar Icon, Menu Bar Customization & iOS Sideloading Fixes**
 
