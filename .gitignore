@@ -9,3 +9,5 @@ dm/games/*/c1_full.tsv
 dm/games/*/cb_extent.tsv
 NxNative_Launcher.app/
 *.dmg
+gui/Resources/python/
+gui/Resources/tools/

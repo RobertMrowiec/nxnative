@@ -46,6 +46,9 @@ public struct GameSettingsIosDeploymentView: View {
             if deviceService.connectedDevices.isEmpty || deviceService.signingTeams.isEmpty {
                 deviceService.refreshDevicesAndTeams()
             }
+            if mobileprovisionPath.isEmpty, let saved = UserDefaults.standard.string(forKey: "NXNative_SavedCustomProvisioningProfilePath") {
+                mobileprovisionPath = saved
+            }
         }
     }
 
@@ -163,6 +166,7 @@ public struct GameSettingsIosDeploymentView: View {
                         .foregroundColor(NXTheme.textSecondary)
                 } else {
                     Picker("", selection: $deviceService.selectedSigningTeam) {
+                        Text("None (Unsigned / Sideloading)").tag(Optional<DeveloperSigningTeam>.none)
                         ForEach(deviceService.signingTeams) { team in
                             Text(team.displayName)
                                 .tag(Optional(team))
@@ -195,10 +199,24 @@ public struct GameSettingsIosDeploymentView: View {
                         .controlSize(.mini)
                         
                         if !p12Path.isEmpty {
-                            Text(URL(fileURLWithPath: p12Path).lastPathComponent)
-                                .font(.system(size: 10.5, design: .monospaced))
-                                .foregroundColor(NXTheme.textPrimary)
-                                .lineLimit(1)
+                            HStack(spacing: 4) {
+                                Text(URL(fileURLWithPath: p12Path).lastPathComponent)
+                                    .font(.system(size: 10.5, design: .monospaced))
+                                    .foregroundColor(NXTheme.textPrimary)
+                                    .lineLimit(1)
+                                
+                                Button(action: {
+                                    p12Path = ""
+                                    p12Password = ""
+                                    importMessage = nil
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(NXTheme.textSecondary)
+                                        .font(.system(size: 11))
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .help("Clear selected certificate file")
+                            }
                         }
                     }
                     
@@ -238,10 +256,23 @@ public struct GameSettingsIosDeploymentView: View {
                         .controlSize(.mini)
                         
                         if !mobileprovisionPath.isEmpty {
-                            Text(URL(fileURLWithPath: mobileprovisionPath).lastPathComponent)
-                                .font(.system(size: 10.5, design: .monospaced))
-                                .foregroundColor(NXTheme.textPrimary)
-                                .lineLimit(1)
+                            HStack(spacing: 4) {
+                                Text(URL(fileURLWithPath: mobileprovisionPath).lastPathComponent)
+                                    .font(.system(size: 10.5, design: .monospaced))
+                                    .foregroundColor(NXTheme.textPrimary)
+                                    .lineLimit(1)
+                                
+                                Button(action: {
+                                    mobileprovisionPath = ""
+                                    UserDefaults.standard.removeObject(forKey: "NXNative_SavedCustomProvisioningProfilePath")
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundColor(NXTheme.textSecondary)
+                                        .font(.system(size: 11))
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .help("Clear custom provisioning profile")
+                            }
                         }
                     }
                     

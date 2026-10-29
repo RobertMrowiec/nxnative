@@ -38,11 +38,17 @@ public struct GameSettingsSavesSectionView: View {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "icloud.fill")
-                        .foregroundColor(Color.blue)
+                        .foregroundColor(saveService.isICloudSyncEnabled ? Color.blue : Color.gray)
                         .font(.system(size: 15))
                     Text(L10n.t("settings_modal.icloud_sync"))
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(NXTheme.textPrimary)
+                    
+                    Toggle("", isOn: $saveService.isICloudSyncEnabled)
+                        .labelsHidden()
+                        .toggleStyle(.switch)
+                        .controlSize(.mini)
+                        .help(saveService.isICloudSyncEnabled ? "Turn off iCloud Sync to keep saves only on local Mac storage" : "Turn on iCloud Sync to share saves via iCloud Drive")
                 }
 
                 Spacer()
@@ -50,7 +56,7 @@ public struct GameSettingsSavesSectionView: View {
                 Button(L10n.t("settings_modal.local_backup")) {
                     SoundEffectService.shared.play(.click)
                     if let backup = saveService.backupMacSave(titleId: titleId) {
-                        backupStatusText = "Saved to: \(backup.lastPathComponent)"
+                        backupStatusText = "Saved locally: \(backup.lastPathComponent)"
                     } else {
                         backupStatusText = "No save data found to backup"
                     }
@@ -61,18 +67,34 @@ public struct GameSettingsSavesSectionView: View {
 
             // Status Banner
             HStack(spacing: 8) {
-                Circle()
-                    .fill(saveService.isICloudDriveAvailable ? Color.green : Color.orange)
-                    .frame(width: 7, height: 7)
+                if !saveService.isICloudSyncEnabled {
+                    Circle()
+                        .fill(Color.blue)
+                        .frame(width: 7, height: 7)
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(saveService.isICloudDriveAvailable ? "iCloud Drive Sync Active" : "iCloud Drive Disabled on macOS")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(NXTheme.textPrimary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.t("settings_modal.icloud_local_only"))
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(NXTheme.textPrimary)
 
-                    Text(L10n.t("settings_modal.saves_centralized"))
-                        .font(.system(size: 10))
-                        .foregroundColor(NXTheme.textSecondary)
+                        Text(L10n.t("settings_modal.icloud_local_only_desc"))
+                            .font(.system(size: 10))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                } else {
+                    Circle()
+                        .fill(saveService.isICloudDriveAvailable ? Color.green : Color.orange)
+                        .frame(width: 7, height: 7)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(saveService.isICloudDriveAvailable ? "iCloud Drive Sync Active" : "iCloud Drive Disabled on macOS")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(NXTheme.textPrimary)
+
+                        Text(L10n.t("settings_modal.saves_centralized"))
+                            .font(.system(size: 10))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
                 }
 
                 Spacer()
@@ -89,7 +111,7 @@ public struct GameSettingsSavesSectionView: View {
                 }
                 .buttonStyle(NXSecondaryButtonStyle())
                 .controlSize(.mini)
-                .help(L10n.t("settings_modal.icloud_folder_help"))
+                .help(saveService.isICloudSyncEnabled ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
             }
             .padding(10)
             .nxGlassCard(cornerRadius: 10, isNested: true)
