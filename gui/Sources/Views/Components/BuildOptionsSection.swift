@@ -227,6 +227,16 @@ public struct BuildOptionsSection: View {
                         
                         Toggle(viewModel.tr("build.opt_survey_only"), isOn: $viewModel.surveyOnly)
                         
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle(viewModel.tr("build.opt_allow_other_metal"), isOn: $viewModel.allowOtherMetal)
+                            
+                            Text(viewModel.tr("build.opt_allow_other_metal_help"))
+                                .font(.system(size: 10))
+                                .foregroundColor(NXTheme.textSecondary.opacity(0.85))
+                                .padding(.leading, 20)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        
                         if viewModel.platform == .ios {
                             Divider().opacity(0.2)
                             VStack(alignment: .leading, spacing: 6) {

@@ -29,6 +29,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         public static let savedCustomCertPassword = "NXNative_SavedCustomCertPassword"
         public static let savedCustomProvisioningProfilePath = "NXNative_SavedCustomProvisioningProfilePath"
         public static let savedMenuBarIconStyle = "NXNative_SavedMenuBarIconStyle"
+        public static let savedAllowOtherMetal = "NXNative_SavedAllowOtherMetal"
     }
     
     // MARK: - Workspace & Paths
@@ -209,6 +210,11 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
     }
     @Published public var surveyOnly: Bool = false
+    @Published public var allowOtherMetal: Bool = true {
+        didSet {
+            UserDefaults.standard.set(allowOtherMetal, forKey: StorageKeys.savedAllowOtherMetal)
+        }
+    }
     @Published public var userDidManuallyOverrideRomfsSeparate: Bool = false
     @Published public var romfsSeparate: Bool = false {
         didSet {
@@ -429,6 +435,9 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
         if let savedRomfs = UserDefaults.standard.object(forKey: StorageKeys.savedRomfsSeparate) as? Bool {
             self.romfsSeparate = savedRomfs
+        }
+        if let savedAllowMetal = UserDefaults.standard.object(forKey: StorageKeys.savedAllowOtherMetal) as? Bool {
+            self.allowOtherMetal = savedAllowMetal
         }
         if let savedSplitLimit = UserDefaults.standard.object(forKey: StorageKeys.savedAutoRomfsSplitLimitGB) as? Double {
             self.autoRomfsSplitLimitGB = savedSplitLimit

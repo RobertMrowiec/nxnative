@@ -111,8 +111,26 @@ extension AppViewModel {
             showFps: showFps,
             keepExtracted: keepExtracted,
             surveyOnly: surveyOnly,
-            romfsSeparate: effectiveRomfsSeparate
+            romfsSeparate: effectiveRomfsSeparate,
+            allowOtherMetal: allowOtherMetal
         )
+    }
+    
+    public var isMetalCompilerMismatchError: Bool {
+        if let err = buildError,
+           (err.contains("allow-other-metal") || err.contains("ALLOW_OTHER_METAL") || err.contains("Metal compiler is not the one")) {
+            return true
+        }
+        return logs.suffix(25).contains { entry in
+            entry.message.contains("allow-other-metal") ||
+            entry.message.contains("ALLOW_OTHER_METAL") ||
+            entry.message.contains("Metal compiler is not the one")
+        }
+    }
+    
+    public func enableAllowOtherMetalAndRetry() {
+        allowOtherMetal = true
+        startBuild()
     }
     
     public func cancelBuild() {

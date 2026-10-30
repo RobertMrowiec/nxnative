@@ -226,8 +226,51 @@ public struct BuildExecutionSection: View {
                     Text(errorMessage)
                         .font(.system(size: 12))
                         .foregroundColor(NXTheme.textSecondary)
-                        .lineLimit(3)
+                        .lineLimit(4)
                 }
+            }
+            
+            if viewModel.isMetalCompilerMismatchError && !viewModel.allowOtherMetal {
+                HStack(spacing: 12) {
+                    Image(systemName: "hammer.fill")
+                        .foregroundColor(NXTheme.primary)
+                        .font(.system(size: 18))
+                    
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(viewModel.tr("build.metal_mismatch_title"))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(NXTheme.textPrimary)
+                        Text(viewModel.tr("build.metal_mismatch_desc"))
+                            .font(.system(size: 11))
+                            .foregroundColor(NXTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    
+                    Spacer(minLength: 8)
+                    
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            viewModel.enableAllowOtherMetalAndRetry()
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "bolt.fill")
+                            Text(viewModel.tr("build.metal_mismatch_retry"))
+                        }
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                    }
+                    .buttonStyle(NXPrimaryButtonStyle())
+                }
+                .padding(12)
+                .background(NXTheme.primary.opacity(0.12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(NXTheme.primary.opacity(0.35), lineWidth: 1)
+                )
+                .cornerRadius(10)
             }
             
             Divider().opacity(0.2)
