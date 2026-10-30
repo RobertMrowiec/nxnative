@@ -4,6 +4,7 @@ import AppKit
 public final class UpdateCheckerService {
     public static let shared = UpdateCheckerService()
     public static let launcherRepoURL = "https://github.com/rennan101/nxnative_Launcher.git"
+    public static let upstreamRepoURL = "https://github.com/seedds/nxnative.git"
     
     public weak var delegate: UpdateCheckerDelegate?
     private var isChecking = false
@@ -48,13 +49,12 @@ public final class UpdateCheckerService {
                 return
             }
             
-            // Determine remote to check (prefer origin pointing to rennan101/nxnative_Launcher)
-            let remoteURL = self.runGit(["remote", "get-url", "origin"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
+            // Automatically migrate origin from seedds/nxnative to rennan101/nxnative_Launcher if needed
+            let remoteURL = self.ensureOfficialRemote(in: nxnativePath)
             
             // 1. git fetch origin main
             let fetchRes = self.runGitWithStatus(["fetch", "origin", "main", "--quiet"], in: nxnativePath)
             if fetchRes.exitCode != 0 {
-                // If fetch fails (no network, etc.), do not report spurious updates
                 self.isChecking = false
                 DispatchQueue.main.async { completion(nil) }
                 return
@@ -72,7 +72,6 @@ public final class UpdateCheckerService {
             let logOutput = self.runGit(["log", "HEAD..origin/main", "--oneline"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
             let commits = logOutput.isEmpty ? [] : logOutput.components(separatedBy: .newlines).filter { !$0.isEmpty }
             
-            // Only consider it an update if origin/main actually has commits ahead
             let hasUpdate = aheadCount > 0 && !commits.isEmpty && localHead != remoteHead
             let info = UpdateInfo(
                 hasUpdate: hasUpdate,
@@ -130,20 +129,12 @@ public final class UpdateCheckerService {
             }
             
             reportProgress("==> Preparing repository for update...")
-            // Abort any previously stalled rebase or merge
             _ = self.runGitWithStatus(["rebase", "--abort"], in: nxnativePath)
             _ = self.runGitWithStatus(["merge", "--abort"], in: nxnativePath)
+            _ = self.ensureOfficialRemote(in: nxnativePath, reportProgress: reportProgress)
             
-            // Check for uncommitted changes
-            let statusRes = self.runGitWithStatus(["status", "--porcelain"], in: nxnativePath)
-            let hasUncommitted = !statusRes.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            
-            var didStash = false
-            if hasUncommitted {
-                reportProgress("==> Stashing local modifications temporarily...")
-                let stashRes = self.runGitWithStatus(["stash", "push", "-u", "-m", "nxnative_update_auto_stash"], in: nxnativePath)
-                didStash = (stashRes.exitCode == 0)
-            }
+            // Discard auto-patched tracked modifications so git pull/merge never conflicts with PatchService edits
+            _ = self.runGitWithStatus(["checkout", "--", "."], in: nxnativePath)
             
             reportProgress("==> Downloading latest version from GitHub (rennan101/nxnative_Launcher)...")
             let fetchRes = self.runGitWithStatus(["fetch", "origin", "main"], in: nxnativePath)
@@ -157,20 +148,17 @@ public final class UpdateCheckerService {
                 reportProgress(mergeRes.output.trimmingCharacters(in: .whitespacesAndNewlines))
             }
             
-            let isMergeSuccess = (mergeRes.exitCode == 0) &&
+            var isMergeSuccess = (mergeRes.exitCode == 0) &&
                 !mergeRes.output.localizedCaseInsensitiveContains("fatal:") &&
                 !mergeRes.output.localizedCaseInsensitiveContains("Automatic merge failed")
             
             if !isMergeSuccess {
                 _ = self.runGitWithStatus(["merge", "--abort"], in: nxnativePath)
+                reportProgress("==> Fast-forwarding local repository to origin/main...")
+                let resetRes = self.runGitWithStatus(["reset", "--hard", "origin/main"], in: nxnativePath)
+                isMergeSuccess = (resetRes.exitCode == 0)
             }
             
-            if didStash {
-                reportProgress("==> Restoring local workspace modifications...")
-                _ = self.runGitWithStatus(["stash", "pop"], in: nxnativePath)
-            }
-            
-            // Update submodules if any
             _ = self.runGitWithStatus(["submodule", "update", "--init", "--recursive"], in: nxnativePath)
             
             guard isMergeSuccess else {
@@ -202,7 +190,6 @@ public final class UpdateCheckerService {
                         return
                     }
                     
-                    // If running from a custom location (e.g. /Applications/NxNative_Launcher.app), sync binary there too
                     self.syncUpdatedBundleToRunningAppIfNeeded(nxnativePath: nxnativePath, reportProgress: reportProgress)
                 }
             }
@@ -244,85 +231,5 @@ public final class UpdateCheckerService {
         DispatchQueue.main.async {
             NSApplication.shared.terminate(nil)
         }
-    }
-    
-    private func syncUpdatedBundleToRunningAppIfNeeded(nxnativePath: String, reportProgress: (String) -> Void) {
-        let fm = FileManager.default
-        let currentBundleURL = Bundle.main.bundleURL.standardizedFileURL
-        guard currentBundleURL.pathExtension == "app" else { return }
-        
-        let workspaceRoot = URL(fileURLWithPath: nxnativePath).deletingLastPathComponent().standardizedFileURL
-        let workspaceApp = workspaceRoot.appendingPathComponent("NxNative_Launcher.app").standardizedFileURL
-        let repoApp = URL(fileURLWithPath: nxnativePath).appendingPathComponent("NxNative_Launcher.app").standardizedFileURL
-        
-        if currentBundleURL.path != workspaceApp.path && currentBundleURL.path != repoApp.path {
-            let sourceApp = fm.fileExists(atPath: workspaceApp.path) ? workspaceApp : repoApp
-            guard fm.fileExists(atPath: sourceApp.path) else { return }
-            reportProgress("==> Updating running bundle at \(currentBundleURL.path)...")
-            let cpProc = Process()
-            cpProc.executableURL = URL(fileURLWithPath: "/bin/cp")
-            cpProc.arguments = ["-Rf", "\(sourceApp.path)/Contents", "\(currentBundleURL.path)/"]
-            try? cpProc.run()
-            cpProc.waitUntilExit()
-        }
-    }
-    
-    private func runShellScript(_ scriptPath: String, workingDir: String, onLine: @escaping (String) -> Void) -> Int32 {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath]
-        process.currentDirectoryURL = URL(fileURLWithPath: workingDir)
-        process.environment = ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"]
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        let handle = pipe.fileHandleForReading
-        handle.readabilityHandler = { fileHandle in
-            let data = fileHandle.availableData
-            guard !data.isEmpty, let chunk = String(data: data, encoding: .utf8) else { return }
-            chunk.components(separatedBy: .newlines)
-                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-                .forEach { onLine($0) }
-        }
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            handle.readabilityHandler = nil
-            return process.terminationStatus
-        } catch {
-            handle.readabilityHandler = nil
-            onLine("Error running build script: \(error.localizedDescription)")
-            return -1
-        }
-    }
-    
-    @discardableResult
-    private func runGitWithStatus(_ args: [String], in dir: String) -> (exitCode: Int32, output: String) {
-        let fm = FileManager.default
-        let gitPath = ["/opt/homebrew/bin/git", "/usr/local/bin/git", "/usr/bin/git"].first(where: { fm.fileExists(atPath: $0) }) ?? "/usr/bin/git"
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: gitPath)
-        process.arguments = args
-        process.currentDirectoryURL = URL(fileURLWithPath: dir)
-        process.environment = ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return (process.terminationStatus, String(data: data, encoding: .utf8) ?? "")
-        } catch {
-            return (-1, error.localizedDescription)
-        }
-    }
-    
-    private func runGit(_ args: [String], in dir: String) -> String {
-        runGitWithStatus(args, in: dir).output
     }
 }

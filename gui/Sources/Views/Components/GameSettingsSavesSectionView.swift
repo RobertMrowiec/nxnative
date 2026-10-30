@@ -53,7 +53,7 @@ public struct GameSettingsSavesSectionView: View {
 
     private var iCloudCrossSaveCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
+            HStack(alignment: .center, spacing: 12) {
                 HStack(spacing: 8) {
                     Image(systemName: "icloud.fill")
                         .foregroundColor(saveService.isICloudSyncEnabled(for: game) ? Color.blue : Color.gray)
@@ -61,26 +61,14 @@ public struct GameSettingsSavesSectionView: View {
                     Text(L10n.t("settings_modal.icloud_sync"))
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(NXTheme.textPrimary)
-                    
-                    Toggle("", isOn: isGameICloudEnabledBinding)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
-                        .controlSize(.mini)
-                        .help(saveService.isICloudSyncEnabled(for: game) ? "Turn off iCloud Sync for this game to keep saves only on local Mac storage" : "Turn on iCloud Sync to share this game's saves via iCloud Drive")
                 }
 
-                Spacer()
+                Spacer(minLength: 12)
 
-                Button(L10n.t("settings_modal.local_backup")) {
-                    SoundEffectService.shared.play(.click)
-                    if let backup = saveService.backupMacSave(titleId: titleId) {
-                        backupStatusText = "Saved locally: \(backup.lastPathComponent)"
-                    } else {
-                        backupStatusText = "No save data found to backup"
-                    }
-                }
-                .buttonStyle(NXSecondaryButtonStyle())
-                .controlSize(.mini)
+                Toggle("", isOn: isGameICloudEnabledBinding)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .help(saveService.isICloudSyncEnabled(for: game) ? "Turn off iCloud Sync for this game to keep saves only on local Mac storage" : "Turn on iCloud Sync to share this game's saves via iCloud Drive")
             }
 
             // Status Banner
@@ -117,19 +105,32 @@ public struct GameSettingsSavesSectionView: View {
 
                 Spacer()
 
-                Button(action: {
-                    SoundEffectService.shared.play(.click)
-                    let cover = GameCoverService.shared.coverImage(for: game)
-                    saveService.revealCloudGameFolder(for: game, cover: cover)
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder.fill")
-                        Text(L10n.t("common.reveal_finder"))
+                HStack(spacing: 6) {
+                    Button(L10n.t("settings_modal.local_backup")) {
+                        SoundEffectService.shared.play(.click)
+                        if let backup = saveService.backupMacSave(titleId: titleId) {
+                            backupStatusText = "Saved locally: \(backup.lastPathComponent)"
+                        } else {
+                            backupStatusText = "No save data found to backup"
+                        }
                     }
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.mini)
+
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        let cover = GameCoverService.shared.coverImage(for: game)
+                        saveService.revealCloudGameFolder(for: game, cover: cover)
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder.fill")
+                            Text(L10n.t("common.reveal_finder"))
+                        }
+                    }
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.mini)
+                    .help(saveService.isICloudSyncEnabled(for: game) ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
                 }
-                .buttonStyle(NXSecondaryButtonStyle())
-                .controlSize(.mini)
-                .help(saveService.isICloudSyncEnabled(for: game) ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
             }
             .padding(10)
             .nxGlassCard(cornerRadius: 10, isNested: true)

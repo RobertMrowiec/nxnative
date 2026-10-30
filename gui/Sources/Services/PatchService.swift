@@ -49,6 +49,17 @@ public final class PatchService {
             
             // If already contains token, it's either merged upstream or previously applied
             if content.contains(def.checkToken) {
+                // Self-heal: if global_60fps_speed_sync was previously applied without the weak declaration of dm_fps_has_engine_lock, inject it now
+                if def.id == "global_60fps_speed_sync" && !content.contains("int dm_fps_has_engine_lock(void)") {
+                    let weakDecl = "__attribute__((weak)) int dm_fps_has_engine_lock(void) { return 0; }\n\nstatic int speed_sync_on(void)"
+                    if content.contains("static int speed_sync_on(void)") {
+                        let healed = content.replacingOccurrences(of: "static int speed_sync_on(void)", with: weakDecl)
+                        try? healed.write(to: fileURL, atomically: true, encoding: .utf8)
+                        appliedCount += 1
+                        logger?("[Patch] Repaired missing weak declaration in \(def.relativePath)", true)
+                        continue
+                    }
+                }
                 skippedCount += 1
                 logger?("[Patch] \(def.name): Already applied or upstream merged.", false)
                 continue

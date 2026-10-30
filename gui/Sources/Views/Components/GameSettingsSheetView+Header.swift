@@ -91,6 +91,86 @@ extension GameSettingsSheetView {
         }
     }
     
+    func coverArtworkSection() -> some View {
+        let isCustom = GameCoverService.shared.hasCustomCover(for: game)
+        let currentCover = GameCoverService.shared.coverImage(for: game) ?? NSWorkspace.shared.icon(forFile: game.url.path)
+        
+        return settingCard(
+            rowIndex: -1,
+            title: viewModel.tr("settings_modal.cover_title"),
+            icon: "photo.on.rectangle.angled",
+            iconColor: Color(red: 0.95, green: 0.45, blue: 0.75)
+        ) {
+            HStack(spacing: 16) {
+                Image(nsImage: currentCover)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 55, height: 78)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(NXTheme.specularRim, lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.4), radius: 6, x: 0, y: 2)
+                
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Text(isCustom ? viewModel.tr("settings_modal.cover_custom_active") : viewModel.tr("settings_modal.cover_auto_active"))
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(isCustom ? NXTheme.secondary : NXTheme.textPrimary)
+                        
+                        if isCustom {
+                            Text(viewModel.tr("settings_modal.cover_custom_badge"))
+                                .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 1)
+                                .background(NXTheme.secondary.opacity(0.25))
+                                .foregroundColor(NXTheme.secondary)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    
+                    Text(isCustom
+                         ? viewModel.tr("settings_modal.cover_custom_desc")
+                         : viewModel.tr("settings_modal.cover_auto_desc"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.88))
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    NXGlassContainer(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Button(viewModel.tr("settings_modal.cover_choose_btn")) {
+                                let panel = NSOpenPanel()
+                                panel.title = viewModel.tr("settings_modal.cover_panel_title")
+                                panel.allowedContentTypes = [.jpeg, .png, .webP, .image]
+                                panel.allowsMultipleSelection = false
+                                panel.canChooseDirectories = false
+                                if panel.runModal() == .OK, let url = panel.url {
+                                    SoundEffectService.shared.play(.click)
+                                    _ = GameCoverService.shared.setCustomCover(imageURL: url, for: game)
+                                }
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                            .controlSize(.small)
+                            
+                            if isCustom {
+                                Button(viewModel.tr("settings_modal.cover_reset_btn")) {
+                                    SoundEffectService.shared.play(.click)
+                                    GameCoverService.shared.resetCustomCover(for: game)
+                                }
+                                .buttonStyle(NXSecondaryButtonStyle())
+                                .controlSize(.small)
+                                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
+                            }
+                        }
+                    }
+                    .padding(.top, 2)
+                }
+                Spacer()
+            }
+        }
+    }
+
     func gameManagementSection() -> some View {
         GlassCard(padding: 14) {
             VStack(alignment: .leading, spacing: 10) {

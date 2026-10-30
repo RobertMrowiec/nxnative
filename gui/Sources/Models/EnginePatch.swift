@@ -202,6 +202,8 @@ if mac_pack:
             applyTransform: { content in
                 let target = "static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? (k && fstep_on() ? k : 60 / c) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }"
                 let repl = """
+__attribute__((weak)) int dm_fps_has_engine_lock(void) { return 0; }
+
 static int speed_sync_on(void) {
     static int s = -1;
     if (s < 0) {
