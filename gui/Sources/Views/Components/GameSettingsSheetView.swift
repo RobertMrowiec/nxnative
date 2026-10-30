@@ -4,6 +4,7 @@ import AppKit
 public struct GameSettingsSheetView: View {
     @ObservedObject public var viewModel: AppViewModel
     @ObservedObject var controllerService = GameControllerService.shared
+    @ObservedObject var profileManager = InputProfileManager.shared
     public let game: PortedGame
     
     @Environment(\.dismiss) internal var dismiss
@@ -31,7 +32,7 @@ public struct GameSettingsSheetView: View {
                         iconColor: Color(red: 0.13, green: 0.77, blue: 0.37)
                     ) {
                         let isRowFocused = viewModel.settingsModalFocusIndex == 0
-                        Toggle(isOn: $viewModel.activeSettingsConfig.enable60FPS) {
+                        HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(viewModel.activeSettingsConfig.enable60FPS ? viewModel.tr("settings_modal.fps_60") : viewModel.tr("settings_modal.fps_30"))
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -40,8 +41,11 @@ public struct GameSettingsSheetView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
                             }
+                            Spacer(minLength: 12)
+                            Toggle("", isOn: $viewModel.activeSettingsConfig.enable60FPS)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
                         }
-                        .toggleStyle(.switch)
                     }
                     
                     // Section 1: macOS Game Mode (Modo Jogo & Fullscreen)
@@ -52,7 +56,7 @@ public struct GameSettingsSheetView: View {
                         iconColor: Color(red: 0.25, green: 0.55, blue: 1.0)
                     ) {
                         let isRowFocused = viewModel.settingsModalFocusIndex == 1
-                        Toggle(isOn: $viewModel.activeSettingsConfig.enableGameMode) {
+                        HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(viewModel.activeSettingsConfig.enableGameMode ? viewModel.tr("settings_modal.game_mode_enabled") : viewModel.tr("settings_modal.game_mode_disabled"))
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -61,8 +65,11 @@ public struct GameSettingsSheetView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
                             }
+                            Spacer(minLength: 12)
+                            Toggle("", isOn: $viewModel.activeSettingsConfig.enableGameMode)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
                         }
-                        .toggleStyle(.switch)
                     }
                     
                     // Section 2: Metal HUD
@@ -73,7 +80,7 @@ public struct GameSettingsSheetView: View {
                         iconColor: NXTheme.secondary
                     ) {
                         let isRowFocused = viewModel.settingsModalFocusIndex == 2
-                        Toggle(isOn: $viewModel.activeSettingsConfig.enableMetalHUD) {
+                        HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(viewModel.activeSettingsConfig.enableMetalHUD ? viewModel.tr("settings_modal.metal_hud_enabled") : viewModel.tr("settings_modal.metal_hud_disabled"))
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -82,8 +89,11 @@ public struct GameSettingsSheetView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
                             }
+                            Spacer(minLength: 12)
+                            Toggle("", isOn: $viewModel.activeSettingsConfig.enableMetalHUD)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
                         }
-                        .toggleStyle(.switch)
                     }
                     
                     // Section 3: Console Mode (Sliding Liquid Glass Segmented Picker)
@@ -169,7 +179,7 @@ public struct GameSettingsSheetView: View {
                         iconColor: NXTheme.secondary
                     ) {
                         let isRowFocused = viewModel.settingsModalFocusIndex == 5
-                        Toggle(isOn: $viewModel.activeSettingsConfig.enableMetalFXUpscale) {
+                        HStack(alignment: .center, spacing: 12) {
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(viewModel.activeSettingsConfig.enableMetalFXUpscale ? viewModel.tr("settings_modal.metalfx_enabled") : viewModel.tr("settings_modal.metalfx_disabled"))
                                     .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -178,14 +188,20 @@ public struct GameSettingsSheetView: View {
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
                             }
+                            Spacer(minLength: 12)
+                            Toggle("", isOn: $viewModel.activeSettingsConfig.enableMetalFXUpscale)
+                                .labelsHidden()
+                                .toggleStyle(.switch)
                         }
-                        .toggleStyle(.switch)
                     }
                     
-                    // Section 6: Cover Artwork Customization
+                    // Section 6: Controller Profile Override (Liquid Glass Dropdown)
+                    controllerProfileSection(rowIndex: 6)
+                    
+                    // Section 7: Cover Artwork Customization
                     coverArtworkSection()
                     
-                    // Section 7: Mods Management & Save Sync
+                    // Section 8: Mods Management & Save Sync
                     GameSettingsModsAndSavesView(game: game)
                 } else {
                     // iOS Port: Installation, AirDrop, Sideload & Saves

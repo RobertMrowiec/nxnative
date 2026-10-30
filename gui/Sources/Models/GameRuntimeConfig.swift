@@ -7,6 +7,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
     public var renderScale: Double // 0.5 to 1.0
     public var enableMetalFXUpscale: Bool // true = MetalFX, false = off
     public var enableGameMode: Bool // true = Full Screen (macOS Game Mode ON), false = Windowed
+    public var controllerProfileId: String? // nil = Global Active Profile; UUID string = Pinned Profile
     
     public init(
         enable60FPS: Bool = true,
@@ -14,7 +15,8 @@ public struct GameRuntimeConfig: Codable, Equatable {
         isDockedMode: Bool = true,
         renderScale: Double = 1.0,
         enableMetalFXUpscale: Bool = false,
-        enableGameMode: Bool = true
+        enableGameMode: Bool = true,
+        controllerProfileId: String? = nil
     ) {
         self.enable60FPS = enable60FPS
         self.enableMetalHUD = enableMetalHUD
@@ -22,6 +24,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
         self.renderScale = renderScale
         self.enableMetalFXUpscale = enableMetalFXUpscale
         self.enableGameMode = enableGameMode
+        self.controllerProfileId = controllerProfileId
     }
     
     public func toEnvironmentDict(savePath: String? = nil) -> [String: String] {
@@ -43,7 +46,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
     
     public func envFileContent() -> String {
         let posixLocale = Locale(identifier: "en_US_POSIX")
-        return """
+        var text = """
         # nxnative runtime configuration
         DM_FPS_TARGET=\(enable60FPS ? "60" : "30")
         DM_METAL_HUD=\(enableMetalHUD ? "1" : "0")
@@ -53,6 +56,10 @@ public struct GameRuntimeConfig: Codable, Equatable {
         DM_FULLSCREEN=\(enableGameMode ? "1" : "0")
         DM_LAUNCHER=0
         """
+        if let pid = controllerProfileId, !pid.isEmpty {
+            text += "\nDM_CONTROLLER_PROFILE_ID=\(pid)"
+        }
+        return text
     }
     
     public static func storageKey(for game: PortedGame) -> String {
@@ -121,10 +128,13 @@ public struct GameRuntimeConfig: Codable, Equatable {
             let content = mergedEnvContent(existing: existing)
             try? content.write(to: bundleEnv, atomically: true, encoding: .utf8)
         }
+        
+        // 3. Export resolved controller/keyboard mapping to the game bundle
+        InputProfileManager.shared.exportMapping(for: game, config: self)
     }
 
     private func mergedEnvContent(existing: String?) -> String {
-        let managedKeys = ["DM_FPS_TARGET", "DM_METAL_HUD", "DM_OPMODE", "DM_RENDER_SCALE", "DM_PRESENT_UPSCALE", "DM_FULLSCREEN", "DM_LAUNCHER"]
+        let managedKeys = ["DM_FPS_TARGET", "DM_METAL_HUD", "DM_OPMODE", "DM_RENDER_SCALE", "DM_PRESENT_UPSCALE", "DM_FULLSCREEN", "DM_LAUNCHER", "DM_CONTROLLER_PROFILE_ID"]
         var preservedLines: [String] = []
         if let existing = existing {
             for line in existing.components(separatedBy: .newlines) {
@@ -173,6 +183,8 @@ public struct GameRuntimeConfig: Codable, Equatable {
                 config.enableMetalFXUpscale = (val.lowercased() == "metalfx" || val == "1")
             case "DM_FULLSCREEN":
                 config.enableGameMode = (val != "0")
+            case "DM_CONTROLLER_PROFILE_ID":
+                config.controllerProfileId = val.isEmpty ? nil : val
             default:
                 break
             }

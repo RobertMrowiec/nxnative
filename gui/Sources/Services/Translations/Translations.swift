@@ -7,11 +7,11 @@ public enum Translations {
             let resolved = AppLanguage.resolve()
             return dictionary(for: resolved)
         case .en:
-            return english
+            return english.merging(controllerProfileEn) { _, new in new }
         case .ptBR:
-            return portuguese
+            return portuguese.merging(controllerProfilePtBR) { _, new in new }
         case .ptPT:
-            return portuguesePortugal
+            return portuguesePortugal.merging(controllerProfilePtPT) { _, new in new }
         case .es:
             return spanish
         case .ja:
@@ -36,4 +36,22 @@ public enum Translations {
             return swedish
         }
     }
+
+    private static let controllerProfileEn: [String: String] = [
+        "settings_modal.controller_profile_title": "Controller Profile",
+        "settings_modal.controller_profile_desc": "Choose a specific controller profile to always use for this game, or follow the global active profile.",
+        "settings_modal.controller_profile_global": "Global Default (%@)"
+    ]
+
+    private static let controllerProfilePtBR: [String: String] = [
+        "settings_modal.controller_profile_title": "Perfil de Controle",
+        "settings_modal.controller_profile_desc": "Escolha qual perfil de controle criado utilizar sempre neste jogo em específico, ou siga o perfil global ativo.",
+        "settings_modal.controller_profile_global": "Padrão Global (%@)"
+    ]
+
+    private static let controllerProfilePtPT: [String: String] = [
+        "settings_modal.controller_profile_title": "Perfil de Comando",
+        "settings_modal.controller_profile_desc": "Escolhe qual perfil de comando criado utilizar sempre neste jogo em específico, ou segue o perfil global ativo.",
+        "settings_modal.controller_profile_global": "Padrão Global (%@)"
+    ]
 }

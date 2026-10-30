@@ -77,7 +77,7 @@ extension AppViewModel {
         
         let config = GameRuntimeConfig.load(for: game)
         config.applyToDisk(for: game)
-        InputProfileManager.shared.exportActiveMappingToDisk(libraryFolder: libraryFolder)
+        InputProfileManager.shared.exportMapping(for: game, config: config)
         
         // Ensure iCloud Cross-Save is configured with cover art if iCloud Sync is enabled by user
         var savePath: String? = nil
@@ -102,7 +102,11 @@ extension AppViewModel {
             if let csp = cloudSyncPath {
                 env["DM_SAVE_SYNC"] = csp
             }
-            let prof = InputProfileManager.shared.activeProfile
+            let prof = InputProfileManager.shared.resolveProfile(for: game, config: config)
+            let bundleMapping = game.url.appendingPathComponent("Contents/Resources/dm/input_mapping.json")
+            if FileManager.default.fileExists(atPath: bundleMapping.path) {
+                env["DM_INPUT_MAPPING"] = bundleMapping.path
+            }
             env["DM_MOUSE_RIGHT_STICK"] = prof.mouseAsRightStick ? "1" : "0"
             env["DM_MOUSE_SENSITIVITY"] = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), prof.mouseSensitivity)
             env["DM_MOUSE_INVERT_X"] = prof.mouseInvertX ? "1" : "0"
@@ -278,56 +282,5 @@ extension AppViewModel {
                 }
             }
         )
-    }
-
-    // MARK: - Library Directional Navigation (Two-Row Shelves)
-    public func handleLibraryNavigateLeft() {
-        guard !isGameActionMenuPresented && focusedGameIndex > 0 else { return }
-        focusedGameIndex -= 1
-        SoundEffectService.shared.play(.focus)
-    }
-
-    public func handleLibraryNavigateRight() {
-        guard !isGameActionMenuPresented && focusedGameIndex < libraryGames.count - 1 else { return }
-        focusedGameIndex += 1
-        SoundEffectService.shared.play(.focus)
-    }
-
-    public func handleLibraryNavigateUp() {
-        if isGameActionMenuPresented {
-            if gameActionFocusedIndex > 0 {
-                gameActionFocusedIndex -= 1
-                SoundEffectService.shared.play(.focus)
-            }
-            return
-        }
-        let macs = macLibraryGames
-        let ioses = iosLibraryGames
-        if let cur = currentFocusedGame, let iosIdx = ioses.firstIndex(where: { $0.id == cur.id }), !macs.isEmpty {
-            let targetMacIdx = min(iosIdx, macs.count - 1)
-            if let newGameIdx = libraryGames.firstIndex(where: { $0.id == macs[targetMacIdx].id }) {
-                focusedGameIndex = newGameIdx
-                SoundEffectService.shared.play(.focus)
-            }
-        }
-    }
-
-    public func handleLibraryNavigateDown() {
-        if isGameActionMenuPresented {
-            if gameActionFocusedIndex < 6 {
-                gameActionFocusedIndex += 1
-                SoundEffectService.shared.play(.focus)
-            }
-            return
-        }
-        let macs = macLibraryGames
-        let ioses = iosLibraryGames
-        if let cur = currentFocusedGame, let macIdx = macs.firstIndex(where: { $0.id == cur.id }), !ioses.isEmpty {
-            let targetIosIdx = min(macIdx, ioses.count - 1)
-            if let newGameIdx = libraryGames.firstIndex(where: { $0.id == ioses[targetIosIdx].id }) {
-                focusedGameIndex = newGameIdx
-                SoundEffectService.shared.play(.focus)
-            }
-        }
     }
 }

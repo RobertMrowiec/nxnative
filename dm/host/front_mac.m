@@ -245,12 +245,18 @@ static void load_custom_input_mapping(void) {
 
     NSString *bundlePath = [[NSBundle mainBundle] pathForResource:@"input_mapping" ofType:@"json" inDirectory:@"dm"];
     NSString *appSupPath = [@"~/Library/Application Support/nxnative/input_mapping.json" stringByExpandingTildeInPath];
-    // User preferences in Application Support take precedence over bundled default
-    NSString *targetPath = appSupPath;
-    if (!targetPath || ![[NSFileManager defaultManager] fileExistsAtPath:targetPath]) {
+    const char *env_map = getenv("DM_INPUT_MAPPING");
+    NSString *envPath = env_map ? [NSString stringWithUTF8String:env_map] : nil;
+    // Precedence: explicit per-launch DM_INPUT_MAPPING -> bundle input_mapping.json (per-game override) -> global Application Support
+    NSString *targetPath = nil;
+    if (envPath && [[NSFileManager defaultManager] fileExistsAtPath:envPath]) {
+        targetPath = envPath;
+    } else if (bundlePath && [[NSFileManager defaultManager] fileExistsAtPath:bundlePath]) {
         targetPath = bundlePath;
+    } else if (appSupPath && [[NSFileManager defaultManager] fileExistsAtPath:appSupPath]) {
+        targetPath = appSupPath;
     }
-    if (!targetPath || ![[NSFileManager defaultManager] fileExistsAtPath:targetPath]) return;
+    if (!targetPath) return;
 
     NSData *data = [NSData dataWithContentsOfFile:targetPath];
     if (!data) return;
@@ -563,7 +569,8 @@ static void pads_start(void) {
         set_cursor_locked(1);
     }
     on_mouse_button(1001, 1);
-    if (!g_cursor_locked) {
+    // Avoid sending simultaneous touchscreen input when Mouse 1 (1001) is bound to a controller button
+    if (!g_cursor_locked && key_bit(1001) < 0) {
         [self mouseDragged:e];
     }
 }
@@ -574,6 +581,7 @@ static void pads_start(void) {
         [self handleMouseMotion:e];
         return;
     }
+    if (key_bit(1001) >= 0) return;
     NSPoint p = [self convertPoint:e.locationInWindow fromView:nil]; NSSize b = self.bounds.size;
     double w = b.width, h = b.height;
     if (w <= 0 || h <= 0) return;

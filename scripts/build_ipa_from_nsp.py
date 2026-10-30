@@ -339,11 +339,14 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=()):
     cmd = [str(c) for c in cmd]
     log.parent.mkdir(parents=True, exist_ok=True)
     tail = collections.deque(maxlen=40)
+    err_lines = collections.deque(maxlen=20)
     p = subprocess.Popen(cmd, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace', bufsize=1)
     try:
         with open(log, 'w') as f:
             for line in p.stdout:
                 f.write(line); tail.append(line)
+                if ': error:' in line or 'fatal error:' in line or 'undefined symbol' in line.lower():
+                    err_lines.append(line)
                 if on_line:
                     try: on_line(line.rstrip('\n'))
                     except Exception: pass   # progress never stops the build
@@ -354,6 +357,8 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=()):
         p.stdout.close()
     if p.returncode and p.returncode not in ok:
         PROG.end(ok=False)
+        if err_lines:
+            PROG.say(f'---- compiler/linker errors in {log} ----\n' + ''.join(err_lines).rstrip('\n'))
         PROG.say(f'---- last lines of {log} ----\n' + ''.join(tail).rstrip('\n'))
         tool = Path(cmd[1] if cmd[0] in (sys.executable, 'bash') else cmd[0]).name
         raise BuildError(f'{tool} exit code {p.returncode} (full output: {log})')

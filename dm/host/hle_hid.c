@@ -280,10 +280,11 @@ static uint32_t style_of(uint32_t id) { return style_for_player(id, player_of(id
 static int32_t ax(uint64_t v, int i) { return (int16_t)(v >> (16 * i)); }
 static int32_t pick(int32_t a, int32_t b) { return (a < 0 ? -a : a) >= (b < 0 ? -b : b) ? a : b; }   // whichever of two sources is deflected more
 
-// Style update events bound per npad (BindNpadStyleSetUpdateEvent, No1..No8 by id): signalled when a player's controller comes or goes, as the hid
+// Style update events bound per npad (BindNpadStyleSetUpdateEvent, No1..No8 by id and Handheld at index DM_PLAYERS): signalled when a player's controller comes or goes, as the hid
 // service does. The front end reports from its own thread, where an event cannot be bound, so only a bound one is signalled (one the game destroyed is not bound any more)
-static void *_Atomic g_style_ev[DM_PLAYERS];
-static void style_changed(uint32_t id) { void *ev = id < DM_PLAYERS ? atomic_load(&g_style_ev[id]) : NULL; if (ev) hle_signal_bound_system_event(ev); }
+static void *_Atomic g_style_ev[DM_PLAYERS + 1];
+static int style_ev_slot(uint32_t id) { return id < DM_PLAYERS ? (int)id : id == NPAD_HANDHELD ? DM_PLAYERS : -1; }
+static void style_changed(uint32_t id) { int s = style_ev_slot(id); void *ev = s >= 0 ? atomic_load(&g_style_ev[s]) : NULL; if (ev) hle_signal_bound_system_event(ev); }
 static void note_merged(void) {   // logs the players whose npad the game does not support, when that changes
     static _Atomic uint32_t last; uint32_t m = unsupported_players(), one = (uint32_t)one_player();
     if (atomic_exchange(&last, m | one << 31) == (m | one << 31)) return;
@@ -473,12 +474,30 @@ HLE_FORCE("_ZN2nn3hid13GetNpadStatesEPNS0_17NpadHandheldStateEiRKj", "handheld c
 HLE_FORCE("_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyDualStateEiRKj", "dual Joy-Con states (not connected on the host)", int, h_hid_StatesJoyDual, NpadState *s, int n, const uint32_t *id) { return states(s, n, *id, STYLE_JOYDUAL); }
 HLE_FORCE("_ZN2nn3hid13GetNpadStatesEPNS0_16NpadJoyLeftStateEiRKj", "left Joy-Con states (not connected on the host)", int, h_hid_StatesJoyLeft, NpadState *s, int n, const uint32_t *id) { return states(s, n, *id, STYLE_JOYLEFT); }
 HLE_FORCE("_ZN2nn3hid13GetNpadStatesEPNS0_17NpadJoyRightStateEiRKj", "right Joy-Con states (not connected on the host)", int, h_hid_StatesJoyRight, NpadState *s, int n, const uint32_t *id) { return states(s, n, *id, STYLE_JOYRIGHT); }
-HLE_FORCE("_ZN2nn3hid14DisconnectNpadERKj", "disconnect a controller; ignored by the host", void, h_hid_Disconnect, const uint32_t *id) { (void)id; }
+HLE_FORCE("_ZN2nn3hid14DisconnectNpadERKj", "disconnect a controller: clears support bit for No2..No8 so 1-player games merge remaining controllers into player 1", void, h_hid_Disconnect, const uint32_t *id) {
+    if (!id || *id < 1 || *id >= DM_PLAYERS) return;
+    uint32_t bit = id_bit(*id);
+    uint32_t old = atomic_fetch_and(&g_ids_supported, ~bit);
+    if (old & bit) {
+        dm_haptics_clear((int)*id);
+        style_changed(*id);
+        note_merged();
+    }
+}
 static uint32_t g_hold_type;
 HLE_FORCE("_ZN2nn3hid18SetNpadJoyHoldTypeENS0_15NpadJoyHoldTypeE", "Joy-Con hold orientation; the host only records it", void, h_hid_HoldType, int t) { g_hold_type = (uint32_t)t; }
 HLE_FORCE("_ZN2nn3hid20GetNpadJoyAssignmentERKj", "Joy-Con assignment: dual", int, h_hid_GetJoyAssign, const uint32_t *id) { (void)id; return 0; }
 HLE_FORCE("_ZN2nn3hid30SetNpadJoyAssignmentModeSingleERKj", "Joy-Con single assignment; ignored by the host", void, h_hid_JoySingle, const uint32_t *id) { (void)id; }
-HLE_FORCE("_ZN2nn3hid18SwapNpadAssignmentERKjS2_", "swap controller ids; ignored by the host", void, h_hid_Swap, const uint32_t *a, const uint32_t *b) { (void)a; (void)b; }
+HLE_FORCE("_ZN2nn3hid18SwapNpadAssignmentERKjS2_", "swap controller ids", void, h_hid_Swap, const uint32_t *a, const uint32_t *b) {
+    if (!a || !b || *a == *b || *a >= DM_PLAYERS || *b >= DM_PLAYERS) return;
+    uint64_t ba = atomic_load(&g_pad_btn[*a]), bb = atomic_load(&g_pad_btn[*b]);
+    uint64_t la = atomic_load(&g_pad_latch[*a]), lb = atomic_load(&g_pad_latch[*b]);
+    uint64_t xa = atomic_load(&g_pad_axes[*a]), xb = atomic_load(&g_pad_axes[*b]);
+    atomic_store(&g_pad_btn[*a], bb); atomic_store(&g_pad_btn[*b], ba);
+    atomic_store(&g_pad_latch[*a], lb); atomic_store(&g_pad_latch[*b], la);
+    atomic_store(&g_pad_axes[*a], xb); atomic_store(&g_pad_axes[*b], xa);
+    style_changed(*a); style_changed(*b);
+}
 HLE_FORCE("_ZN2nn3hid21StartLrAssignmentModeEv", "L/R assignment mode; ignored by the host", void, h_hid_LrStart, void) {}
 HLE_FORCE("_ZN2nn3hid20StopLrAssignmentModeEv", "L/R assignment mode; ignored by the host", void, h_hid_LrStop, void) {}
 // Controller applet (system UI): report the connected players right away, with player 1's controller selected. ControllerSupportResultInfo = { int playerCount; uint32_t selectedId; };
@@ -488,6 +507,13 @@ HLE_FORCE("_ZN2nn3hid20StopLrAssignmentModeEv", "L/R assignment mode; ignored by
 // fewer players is an answer a Switch never gives: Mario Kart 8 Deluxe asks for two in 2P and opened the applet again every few frames on it (GitHub issue #550)
 #define RES_CTRL_CANCELED (202u | 3101u << 9)
 static Result ctrl_support(int32_t *info, const int8_t *arg) {
+    if (arg && arg[1] == 1) {
+        uint32_t old = atomic_fetch_and(&g_ids_supported, ~((1u << DM_PLAYERS) - 2));
+        if (old & ((1u << DM_PLAYERS) - 2)) {
+            for (int p = 1; p < DM_PLAYERS; p++) if (old & id_bit((uint32_t)p)) style_changed((uint32_t)p);
+            note_merged();
+        }
+    }
     int count = 0; for (int p = 0; p < DM_PLAYERS; p++) count += reported(p);
     int canceled = arg && arg[0] > count;
     if (arg) LOG("hid controller applet: %d to %d players wanted, %d connected%s", arg[0], arg[1], count, canceled ? ": too few, closed as the player would (canceled)" : "");
@@ -732,7 +758,8 @@ HLE_FORCE("_ZN2nn3hid23MergeSingleJoyAsDualJoyERKjS2_", "merge single Joy-Cons; 
 HLE_FORCE("_ZN2nn3hid27BindNpadStyleSetUpdateEventERKjPNS_2os15SystemEventTypeENS3_14EventClearModeE", "controller style update event: bound, signaled once for a connected controller and on connect / disconnect", void, h_hid_BindStyleEv,
           const uint32_t *id, void *ev, int clear) {
     hle_bind_system_event(ev, clear);
-    if (*id < DM_PLAYERS) atomic_store(&g_style_ev[*id], ev);
+    int slot = style_ev_slot(*id);
+    if (slot >= 0) atomic_store(&g_style_ev[slot], ev);
     if (style_of(*id)) hle_signal_system_event(ev);
 }
 // The Switch's player LEDs by npad (No1 1, No2 1-2, No3 1-3, No4 1-4, No5 1+4, No6 1+3, No7 1+3+4, No8 2+3; bit 0 = LED 1); Handheld and Other light LED 1 as before

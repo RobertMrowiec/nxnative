@@ -5,6 +5,87 @@ import UniformTypeIdentifiers
 // MARK: - Subviews and Card Helpers for GameSettingsSheetView
 extension GameSettingsSheetView {
     
+    func controllerProfileSection(rowIndex: Int) -> some View {
+        let isRowFocused = viewModel.settingsModalFocusIndex == rowIndex
+        let selectedId = viewModel.activeSettingsConfig.controllerProfileId
+        let selectedProfile = selectedId.flatMap { idStr in
+            UUID(uuidString: idStr).flatMap { uuid in
+                profileManager.profiles.first(where: { $0.id == uuid })
+            }
+        }
+        let globalLabel = String(format: viewModel.tr("settings_modal.controller_profile_global"), profileManager.activeProfile.name)
+        let currentLabel = selectedProfile?.name ?? globalLabel
+
+        return settingCard(
+            rowIndex: rowIndex,
+            title: viewModel.tr("settings_modal.controller_profile_title"),
+            icon: "gamecontroller.fill",
+            iconColor: Color(red: 0.58, green: 0.42, blue: 1.0)
+        ) {
+            HStack(alignment: .center, spacing: 12) {
+                Text(viewModel.tr("settings_modal.controller_profile_desc"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
+                    .fixedSize(horizontal: false, vertical: true)
+                
+                Spacer(minLength: 12)
+                
+                Menu {
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        viewModel.activeSettingsConfig.controllerProfileId = nil
+                    }) {
+                        if selectedProfile == nil {
+                            Label(globalLabel, systemImage: "checkmark")
+                        } else {
+                            Text(globalLabel)
+                        }
+                    }
+                    Divider()
+                    ForEach(profileManager.profiles) { prof in
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            viewModel.activeSettingsConfig.controllerProfileId = prof.id.uuidString
+                        }) {
+                            if selectedProfile?.id == prof.id {
+                                Label(prof.name, systemImage: "checkmark")
+                            } else {
+                                Text(prof.name)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "gamecontroller.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(.white)
+
+                        Text(currentLabel)
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .contentShape(Capsule())
+                    .nxGlassInteractive(
+                        in: Capsule(),
+                        fallbackFill: NXTheme.glassSurfaceElevated
+                    )
+                }
+                .menuStyle(.button)
+                .buttonStyle(NXPressableButtonStyle())
+                .menuIndicator(.hidden)
+                .fixedSize()
+                .nxNoFocusRing()
+            }
+        }
+    }
+    
     func footerBar(onDismiss: @escaping () -> Void) -> some View {
         let footerContent = VStack(spacing: 10) {
             NXGlassContainer(spacing: 10) {
@@ -16,7 +97,7 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 6 ? NXTheme.secondary : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 7 ? NXTheme.secondary : Color.clear, lineWidth: 2)
                     )
                     
                     Spacer()
@@ -29,7 +110,7 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 7 ? NXTheme.secondary : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 8 ? NXTheme.secondary : Color.clear, lineWidth: 2)
                     )
                     
                     Button(viewModel.tr("common.save")) {
@@ -41,9 +122,9 @@ extension GameSettingsSheetView {
                     .controlSize(.regular)
                     .overlay(
                         Capsule()
-                            .stroke(viewModel.settingsModalFocusIndex == 8 ? Color.white : Color.clear, lineWidth: 2)
+                            .stroke(viewModel.settingsModalFocusIndex == 9 ? Color.white : Color.clear, lineWidth: 2)
                     )
-                    .shadow(color: viewModel.settingsModalFocusIndex == 8 ? NXTheme.primary.opacity(0.8) : Color.clear, radius: 8)
+                    .shadow(color: viewModel.settingsModalFocusIndex == 9 ? NXTheme.primary.opacity(0.8) : Color.clear, radius: 8)
                 }
             }
             
@@ -172,86 +253,6 @@ extension GameSettingsSheetView {
         .onTapGesture {
             if rowIndex >= 0 {
                 viewModel.settingsModalFocusIndex = rowIndex
-            }
-        }
-    }
-    
-    func coverArtworkSection() -> some View {
-        let isCustom = GameCoverService.shared.hasCustomCover(for: game)
-        let currentCover = GameCoverService.shared.coverImage(for: game) ?? NSWorkspace.shared.icon(forFile: game.url.path)
-        
-        return settingCard(
-            rowIndex: -1,
-            title: viewModel.tr("settings_modal.cover_title"),
-            icon: "photo.on.rectangle.angled",
-            iconColor: Color(red: 0.95, green: 0.45, blue: 0.75)
-        ) {
-            HStack(spacing: 16) {
-                Image(nsImage: currentCover)
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 55, height: 78)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(NXTheme.specularRim, lineWidth: 1)
-                    )
-                    .shadow(color: Color.black.opacity(0.4), radius: 6, x: 0, y: 2)
-                
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Text(isCustom ? viewModel.tr("settings_modal.cover_custom_active") : viewModel.tr("settings_modal.cover_auto_active"))
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(isCustom ? NXTheme.secondary : NXTheme.textPrimary)
-                        
-                        if isCustom {
-                            Text(viewModel.tr("settings_modal.cover_custom_badge"))
-                                .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(NXTheme.secondary.opacity(0.25))
-                                .foregroundColor(NXTheme.secondary)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    
-                    Text(isCustom
-                         ? viewModel.tr("settings_modal.cover_custom_desc")
-                         : viewModel.tr("settings_modal.cover_auto_desc"))
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.88))
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    NXGlassContainer(spacing: 8) {
-                        HStack(spacing: 8) {
-                            Button(viewModel.tr("settings_modal.cover_choose_btn")) {
-                                let panel = NSOpenPanel()
-                                panel.title = viewModel.tr("settings_modal.cover_panel_title")
-                                panel.allowedContentTypes = [.jpeg, .png, .webP, .image]
-                                panel.allowsMultipleSelection = false
-                                panel.canChooseDirectories = false
-                                if panel.runModal() == .OK, let url = panel.url {
-                                    SoundEffectService.shared.play(.click)
-                                    _ = GameCoverService.shared.setCustomCover(imageURL: url, for: game)
-                                }
-                            }
-                            .buttonStyle(NXSecondaryButtonStyle())
-                            .controlSize(.small)
-                            
-                            if isCustom {
-                                Button(viewModel.tr("settings_modal.cover_reset_btn")) {
-                                    SoundEffectService.shared.play(.click)
-                                    GameCoverService.shared.resetCustomCover(for: game)
-                                }
-                                .buttonStyle(NXSecondaryButtonStyle())
-                                .controlSize(.small)
-                                .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4))
-                            }
-                        }
-                    }
-                    .padding(.top, 2)
-                }
-                Spacer()
             }
         }
     }

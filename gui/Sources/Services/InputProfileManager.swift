@@ -57,9 +57,9 @@ public final class InputProfileManager: ObservableObject {
         listeningTarget = target
     }
 
-    private let fileManager = FileManager.default
+    internal let fileManager = FileManager.default
 
-    private var profilesDirectory: URL {
+    internal var profilesDirectory: URL {
         let appSup = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = appSup.appendingPathComponent("nxnative/controller_profiles", isDirectory: true)
         if !fileManager.fileExists(atPath: dir.path) {
@@ -136,7 +136,6 @@ public final class InputProfileManager: ObservableObject {
             }
         }
 
-        // If a profile was decoded with the legacy default 1.0, update to 5.0
         for i in 0..<loaded.count {
             if loaded[i].mouseSensitivity == 1.0 {
                 loaded[i].mouseSensitivity = 5.0
@@ -154,14 +153,34 @@ public final class InputProfileManager: ObservableObject {
             self.activeProfileId = loaded.first?.id ?? UUID()
         }
 
-        exportActiveMappingToDisk()
+        // Unify custom keyboard/mouse bindings across all profiles so Shift, Space, and Mouse 1 work everywhere by default
+        let defaultKB = ControllerProfile.nintendoDefault.keyboardBindings
+        if let customizedSource = profiles.first(where: { $0.id == activeProfileId && $0.keyboardBindings != defaultKB })
+            ?? profiles.first(where: { $0.keyboardBindings != defaultKB }) {
+            syncKeyboardSettingsAcrossAllProfiles(from: customizedSource)
+        } else {
+            exportActiveMappingToDisk()
+        }
     }
 
     public func updateProfile(_ profile: ControllerProfile) {
         if let idx = profiles.firstIndex(where: { $0.id == profile.id }) {
+            let old = profiles[idx]
+            let keyboardOrMouseChanged =
+                old.keyboardBindings != profile.keyboardBindings ||
+                old.keyboardMovement != profile.keyboardMovement ||
+                old.mouseAsRightStick != profile.mouseAsRightStick ||
+                old.mouseSensitivity != profile.mouseSensitivity ||
+                old.mouseInvertX != profile.mouseInvertX ||
+                old.mouseInvertY != profile.mouseInvertY ||
+                old.mouseRightStickMode != profile.mouseRightStickMode
+
             profiles[idx] = profile
             saveProfileToDisk(profile)
-            if activeProfileId == profile.id {
+
+            if keyboardOrMouseChanged {
+                syncKeyboardSettingsAcrossAllProfiles(from: profile)
+            } else {
                 exportActiveMappingToDisk()
             }
         }
@@ -250,50 +269,5 @@ public final class InputProfileManager: ObservableObject {
             try? data.write(to: file, options: [.atomic])
         }
         UserDefaults.standard.synchronize()
-    }
-
-    public func exportActiveMappingToDisk(libraryFolder: URL? = nil) {
-        let dict = activeProfile.exportDictionary()
-        guard let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted]) else { return }
-
-        // 1. Global mapping in Application Support
-        try? data.write(to: globalMappingFile, options: [.atomic])
-
-        // 2. Also write to active game bundles in all potential library paths
-        var candidateDirs: [URL] = []
-        if let lib = libraryFolder {
-            candidateDirs.append(lib)
-        }
-        if let savedLib = UserDefaults.standard.string(forKey: "NXNative_SavedLibraryFolder"),
-           let savedURL = URL(string: savedLib) ?? URL(fileURLWithPath: savedLib) as URL? {
-            candidateDirs.append(savedURL)
-        }
-        let nxPortsDir = fileManager.homeDirectoryForCurrentUser.appendingPathComponent("Applications/NxPorts")
-        candidateDirs.append(nxPortsDir)
-        let rootGames = SystemDetector.shared.resolveRootDirectory().appendingPathComponent("Games")
-        candidateDirs.append(rootGames)
-        let defaultExternal = URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/Nx Ports")
-        if fileManager.fileExists(atPath: defaultExternal.path) {
-            candidateDirs.append(defaultExternal)
-        }
-
-        var visitedGames = Set<String>()
-        for dir in candidateDirs {
-            guard fileManager.fileExists(atPath: dir.path),
-                  let items = try? fileManager.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil) else {
-                continue
-            }
-            for item in items where item.pathExtension == "app" {
-                let canonicalPath = item.standardized.path
-                guard !visitedGames.contains(canonicalPath) else { continue }
-                visitedGames.insert(canonicalPath)
-
-                let dmDir = item.appendingPathComponent("Contents/Resources/dm")
-                if fileManager.fileExists(atPath: dmDir.path) {
-                    let target = dmDir.appendingPathComponent("input_mapping.json")
-                    try? data.write(to: target, options: [.atomic])
-                }
-            }
-        }
     }
 }
