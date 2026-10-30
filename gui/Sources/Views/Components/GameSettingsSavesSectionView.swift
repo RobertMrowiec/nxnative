@@ -193,7 +193,7 @@ public struct GameSettingsSavesSectionView: View {
                         syncStatusText = L10n.t("settings_modal.syncing_save")
                         saveService.autoSyncSave(
                             titleId: titleId,
-                            bundleId: game.bundleId ?? "com.nxnative.\(titleId)",
+                            bundleId: "org.nxnative.\(titleId.lowercased())",
                             device: dev,
                             game: game
                         ) { _, msg in

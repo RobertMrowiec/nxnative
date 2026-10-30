@@ -20,7 +20,6 @@ extension SaveSyncService {
         completion: @escaping (AutoSyncStatus, String) -> Void
     ) {
         let saveDir = resolvedSaveDirectory(forTitleId: titleId)
-        let realBundleId = DeviceDeploymentService.shared.findBundleId(for: titleId, on: device) ?? bundleId
 
         // 1. Safety snapshot of local / iCloud save before any sync action
         if let g = game {
@@ -30,7 +29,23 @@ extension SaveSyncService {
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+            guard let self = self else {
+                DispatchQueue.main.async { completion(.failed("Sync service unavailable"), "Sync service unavailable") }
+                return
+            }
+
+            // The Mac app's own bundle ID is not the iPhone app's: asking devicectl for it gives
+            // ContainerLookupError. The iPhone app is found by title ID among the apps installed on the device.
+            guard let realBundleId = DeviceDeploymentService.shared.findBundleId(for: titleId, on: device) else {
+                let msg = "O app iOS deste jogo não está instalado em \(device.name). Instale o IPA no iPhone primeiro. Com o iCloud ativo, o save já está em iCloud Drive/nxnative_launcher/\(titleId.uppercased()) e entra no app iOS ao abrir o jogo lá."
+                DispatchQueue.main.async { completion(.failed(msg), msg) }
+                return
+            }
+
+            // iPhone reads <iCloud>/nxnative_launcher/<TITLE_ID>/save.dmsync; refresh it before comparing.
+            if let g = game, self.isICloudSyncEnabled(for: g) {
+                _ = self.writeDMSync(for: g)
+            }
 
             let tempDir = self.fileManager.temporaryDirectory.appendingPathComponent("nxnative_sync_\(UUID().uuidString)", isDirectory: true)
             defer {

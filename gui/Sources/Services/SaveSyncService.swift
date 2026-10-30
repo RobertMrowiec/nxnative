@@ -194,14 +194,12 @@ public final class SaveSyncService: ObservableObject {
 
             let upperTitle = titleId.uppercased()
 
-            // Setup cross-platform Title ID aliases so iPhone app can locate <TITLE_ID>/save.dmsync
-            let rootAlias = iCloudRootURL.appendingPathComponent(upperTitle)
-            if !fileManager.fileExists(atPath: rootAlias.path) {
-                try? fileManager.createSymbolicLink(at: rootAlias, withDestinationURL: gameFolder)
-            }
-            let gameFolderAlias = gameFolder.appendingPathComponent(upperTitle)
-            if !fileManager.fileExists(atPath: gameFolderAlias.path) {
-                try? fileManager.createSymbolicLink(at: gameFolderAlias, withDestinationURL: gameFolder)
+            // v1.8.5 created symlink aliases here; iCloud Drive does not sync symlinks, so the iPhone never saw them.
+            // The iPhone reads <root>/<TITLE_ID>/save.dmsync as a real folder (writeDMSync).
+            for alias in [iCloudRootURL.appendingPathComponent(upperTitle), gameFolder.appendingPathComponent(upperTitle)] {
+                if (try? fileManager.destinationOfSymbolicLink(atPath: alias.path)) != nil {
+                    try? fileManager.removeItem(at: alias)
+                }
             }
 
             let localSave = macSaveDirectory(for: titleId)
@@ -230,7 +228,12 @@ public final class SaveSyncService: ObservableObject {
             }
 
             // Write DM_SAVE and DM_SAVE_SYNC into env.txt
-            updateEnvFileWithCloudSave(titleId: titleId, cloudSavePath: cloudSaveDir.path, cloudSyncPath: gameFolder.path)
+            updateEnvFileWithCloudSave(titleId: titleId, cloudSavePath: cloudSaveDir.path, cloudSyncPath: iCloudRootURL.path)
+
+            // Make the save readable by the iPhone app right away, without waiting for the Mac game to run and exit.
+            if case .failure(let err) = writeDMSync(for: game) {
+                NSLog("[iCloud] save.dmsync not written: %@", err.localizedDescription)
+            }
 
             cloudSyncActiveCache[game.uniqueKey] = true
             DispatchQueue.main.async { self.objectWillChange.send() }

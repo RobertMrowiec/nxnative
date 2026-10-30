@@ -87,7 +87,7 @@ extension AppViewModel {
             switch SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
             case .success(let cloudSaveDir):
                 savePath = cloudSaveDir.path
-                cloudSyncPath = SaveSyncService.shared.iCloudFolder(for: game).path
+                cloudSyncPath = SaveSyncService.shared.iCloudRootURL.path
             case .failure(let error):
                 logs.append(LogEntry(level: .warning, message: "[iCloud] \(error.localizedDescription)"))
             }
