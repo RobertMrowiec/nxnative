@@ -3,11 +3,11 @@ import AppKit
 
 // MARK: - Device and Code Signing Discovery
 extension DeviceDeploymentService {
-    public func findBundleId(for titleId: String, on device: ConnectedAppleDevice) -> String? {
+    public func findBundleId(for titleId: String, gameName: String? = nil, on device: ConnectedAppleDevice) -> String? {
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
-        process.arguments = ["devicectl", "device", "info", "apps", "--device", device.id]
+        process.arguments = ["devicectl", "device", "info", "apps", "--device", device.id, "--json-output", "-"]
         process.standardOutput = pipe
         process.standardError = Pipe()
         guard (try? process.run()) != nil else { return nil }
@@ -16,17 +16,53 @@ extension DeviceDeploymentService {
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let out = String(decoding: data, as: UTF8.self)
         let tidLower = titleId.lowercased()
+        let normTitle = Self.normalizeAppName(titleId)
+        let normGame = gameName.map(Self.normalizeAppName) ?? ""
 
+        if let jsonStart = out.firstIndex(of: "{"),
+           let jsonData = String(out[jsonStart...]).data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+           let res = json["result"] as? [String: Any],
+           let apps = res["apps"] as? [[String: Any]] {
+            // 1. Match by Title ID in bundleIdentifier
+            if !tidLower.isEmpty {
+                for app in apps {
+                    if let bid = app["bundleIdentifier"] as? String, bid.lowercased().contains(tidLower) {
+                        return bid
+                    }
+                }
+            }
+            // 2. Match by normalized app display name (handles free Apple ID profile reuse where bundleIdentifier carries another game's Title ID)
+            for app in apps {
+                guard let name = app["name"] as? String,
+                      let bid = app["bundleIdentifier"] as? String else { continue }
+                let normApp = Self.normalizeAppName(name)
+                if !normApp.isEmpty && (normApp == normGame || normApp == normTitle || (!normGame.isEmpty && (normApp.contains(normGame) || normGame.contains(normApp)))) {
+                    return bid
+                }
+            }
+        }
+
+        // Fallback table parser: extract the bundle identifier token (contains "." and letters)
         for line in out.components(separatedBy: .newlines) {
-            let lower = line.lowercased()
-            if lower.contains(tidLower) {
-                let tokens = line.split(whereSeparator: { $0.isWhitespace })
-                if tokens.count >= 2 {
-                    return String(tokens[1])
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasPrefix("Apps") || trimmed.hasPrefix("Name") || trimmed.hasPrefix("---") || trimmed.hasPrefix("{") { continue }
+            let lower = trimmed.lowercased()
+            let normLine = Self.normalizeAppName(trimmed)
+            let matchesTitle = !tidLower.isEmpty && lower.contains(tidLower)
+            let matchesName = !normGame.isEmpty && normLine.hasPrefix(normGame)
+            if matchesTitle || matchesName {
+                let tokens = trimmed.split(whereSeparator: { $0.isWhitespace })
+                if let bundleToken = tokens.first(where: { $0.contains(".") && $0.contains(where: { $0.isLetter }) }) {
+                    return String(bundleToken)
                 }
             }
         }
         return nil
+    }
+
+    private static func normalizeAppName(_ s: String) -> String {
+        String(s.lowercased().unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) })
     }
 
     public func revealInFinder(fileURL: URL) {

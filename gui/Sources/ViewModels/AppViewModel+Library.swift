@@ -119,7 +119,7 @@ extension AppViewModel {
                         self?.logs.append(LogEntry(level: .success, message: "Launched game: \(game.name)"))
                         MemoryOptimizer.shared.optimizeForBackground(viewModel: self)
                         
-                        // Observe game termination to clear runningGameTitle
+                        // Observe game termination to clear runningGameTitle and pack save.dmsync for iOS iCloud sync
                         if let runningApp = GameControllerService.shared.activeRunningGameApp {
                             NotificationCenter.default.addObserver(
                                 forName: NSWorkspace.didTerminateApplicationNotification,
@@ -129,6 +129,11 @@ extension AppViewModel {
                                 if let termApp = notif.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                                    termApp.processIdentifier == runningApp.processIdentifier {
                                     self?.runningGameTitle = nil
+                                    if SaveSyncService.shared.isICloudSyncEnabled(for: game) {
+                                        DispatchQueue.global(qos: .utility).async {
+                                            _ = SaveSyncService.shared.writeDMSync(for: game)
+                                        }
+                                    }
                                 }
                             }
                         }
