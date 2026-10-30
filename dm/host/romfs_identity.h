@@ -102,5 +102,5 @@ __attribute__((unused)) static void romfs_id_message(int rc, const romfs_id *wan
     int n = snprintf(buf, cap, "%s Expected: %s.", what, w);
     if (rc == ROMFS_ID_DIFFERENT && n > 0 && (size_t)n < cap) n += snprintf(buf + n, cap - (size_t)n, " Found: %" PRIu64 " bytes, index %016" PRIx64 ".", got->size, got->index);
     if (rc != ROMFS_ID_BAD && n > 0 && (size_t)n < cap)
-        snprintf(buf + n, cap - (size_t)n, " On the Mac run: scripts/push_romfs.sh <device UDID> %s <RomFS.img> (build_ipa_from_nsp.py prints the whole command).", bundle_id);
+        snprintf(buf + n, cap - (size_t)n, " On the Mac run: scripts/push_romfs.sh <device UDID> %s <RomFS.img> (build_ipa_from_nsp.py prints the whole command). Or copy RomFS.img into this app's folder in the iOS Files app or Mac Finder.", bundle_id);
 }

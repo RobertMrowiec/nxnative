@@ -40,15 +40,24 @@ static int romfs_identity_accepts(NSString *img) {
     if (rc != ROMFS_ID_OK && rc != ROMFS_ID_NONE) fprintf(stderr, "[RED] boot: Documents/%s is not the image this build needs (verdict %d); not used\n", img.lastPathComponent.UTF8String, rc);
     return rc == ROMFS_ID_OK || rc == ROMFS_ID_NONE;
 }
-// The images in Documents: romfs.img in any letter case, romfs.img itself first. The NSP script writes the image as RomFS.img (extract/<version>/RomFS.img) and the Mac's
-// file system ignores letter case, but iOS's does not: a copy made through Finder or the Files app keeps the source's name, which an exact lookup of romfs.img never finds
+// The images in Documents: romfs.img in any letter case, <title_id>.romfs.img, or any *.romfs.img / *.img.
+// Sort images so that an image matching this game's expected identity comes first, followed by romfs.img.
 static NSArray<NSString *> *romfs_document_images(NSString *doc) {
     NSMutableArray<NSString *> *imgs = [NSMutableArray array];
-    for (NSString *n in [NSFileManager.defaultManager contentsOfDirectoryAtPath:doc error:nil])
-        if ([n caseInsensitiveCompare:@"romfs.img"] == NSOrderedSame) [imgs addObject:[doc stringByAppendingPathComponent:n]];
+    for (NSString *n in [NSFileManager.defaultManager contentsOfDirectoryAtPath:doc error:nil]) {
+        NSString *lower = n.lowercaseString;
+        if ([lower isEqualToString:@"romfs.img"] || [lower hasSuffix:@".romfs.img"] || [lower hasSuffix:@".img"]) {
+            [imgs addObject:[doc stringByAppendingPathComponent:n]];
+        }
+    }
     [imgs sortUsingComparator:^NSComparisonResult(NSString *a, NSString *b) {
-        BOOL ea = [a.lastPathComponent isEqualToString:@"romfs.img"], eb = [b.lastPathComponent isEqualToString:@"romfs.img"];
-        return ea != eb ? (ea ? NSOrderedAscending : NSOrderedDescending) : [a compare:b];
+        BOOL okA = romfs_identity_accepts(a);
+        BOOL okB = romfs_identity_accepts(b);
+        if (okA != okB) return okA ? NSOrderedAscending : NSOrderedDescending;
+        BOOL ea = [a.lastPathComponent.lowercaseString isEqualToString:@"romfs.img"];
+        BOOL eb = [b.lastPathComponent.lowercaseString isEqualToString:@"romfs.img"];
+        if (ea != eb) return ea ? NSOrderedAscending : NSOrderedDescending;
+        return [a compare:b];
     }];
     return imgs;
 }

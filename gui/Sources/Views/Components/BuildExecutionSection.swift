@@ -129,6 +129,10 @@ public struct BuildExecutionSection: View {
                         }
                         .buttonStyle(NXPrimaryButtonStyle())
                     } else if outputPath.hasSuffix(".ipa") {
+                        let romfsURL = URL(fileURLWithPath: outputPath).deletingLastPathComponent().appendingPathComponent("romfs.img")
+                        let namedRomfsURL = URL(fileURLWithPath: outputPath).deletingPathExtension().appendingPathExtension("romfs.img")
+                        let separateRomfsURL = FileManager.default.fileExists(atPath: romfsURL.path) ? romfsURL : (FileManager.default.fileExists(atPath: namedRomfsURL.path) ? namedRomfsURL : nil)
+
                         Button(action: {
                             let ipaURL = URL(fileURLWithPath: outputPath)
                             DeviceDeploymentService.shared.shareViaAirDrop(fileURL: ipaURL)
@@ -140,6 +144,19 @@ public struct BuildExecutionSection: View {
                             .font(.system(size: 13, weight: .bold))
                         }
                         .buttonStyle(NXPrimaryButtonStyle())
+
+                        if let rfsURL = separateRomfsURL {
+                            Button(action: {
+                                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: rfsURL)
+                            }) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("AirDrop RomFS.img")
+                                }
+                                .font(.system(size: 13, weight: .semibold))
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                        }
                     }
                     
                     Button(action: {
@@ -167,6 +184,29 @@ public struct BuildExecutionSection: View {
                         .font(.system(size: 13, weight: .semibold))
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
+                }
+
+                if outputPath.hasSuffix(".ipa") {
+                    let romfsURL = URL(fileURLWithPath: outputPath).deletingLastPathComponent().appendingPathComponent("romfs.img")
+                    let namedRomfsURL = URL(fileURLWithPath: outputPath).deletingPathExtension().appendingPathExtension("romfs.img")
+                    let separateRomfsURL = FileManager.default.fileExists(atPath: romfsURL.path) ? romfsURL : (FileManager.default.fileExists(atPath: namedRomfsURL.path) ? namedRomfsURL : nil)
+                    if let rfsURL = separateRomfsURL {
+                        VStack(alignment: .leading, spacing: 6) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundColor(.cyan)
+                                Text("RomFS Separado (Arquivos do Jogo)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.cyan)
+                            }
+                            Text("O IPA foi gerado em modo leve (<100MB). Para abrir o jogo no iPhone, instale o IPA e transfira o arquivo 'romfs.img' (\(DeviceDeploymentService.shared.formatByteSize(DeviceDeploymentService.shared.fileSize(of: rfsURL)))) para a pasta do jogo no aplicativo Arquivos (No Meu iPhone) ou via Finder do Mac.")
+                                .font(.system(size: 11))
+                                .foregroundColor(NXTheme.textSecondary)
+                        }
+                        .padding(10)
+                        .background(Color.cyan.opacity(0.12))
+                        .cornerRadius(8)
+                    }
                 }
             }
         }

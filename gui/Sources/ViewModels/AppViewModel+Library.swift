@@ -57,9 +57,23 @@ extension AppViewModel {
     }
     
     public func launchGame(_ game: PortedGame) {
+        guard game.isPlayableLocally else {
+            logs.append(LogEntry(level: .warning, message: "Cannot launch iOS IPA locally on Mac. Please deploy to an iPhone or iPad."))
+            return
+        }
         guard launchingGameId == nil else { return }
         launchingGameId = game.id
         SoundEffectService.shared.play(.launch)
+        
+        let targetGameId = game.id
+        // Fail-safe Watchdog: guarantees launchingGameId is reset if launch stalls
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { [weak self] in
+            if self?.launchingGameId == targetGameId {
+                self?.launchingGameId = nil
+                SoundEffectService.shared.play(.error)
+                self?.logs.append(LogEntry(level: .warning, message: "Launch watchdog cleared stuck launching state for \(game.name)."))
+            }
+        }
         
         let config = GameRuntimeConfig.load(for: game)
         config.applyToDisk(for: game)
@@ -90,10 +104,12 @@ extension AppViewModel {
             env["DM_MOUSE_INVERT_Y"] = prof.mouseInvertY ? "1" : "0"
             LibraryScanner.shared.launchGame(at: game.url, env: env) { [weak self] success, error in
                 DispatchQueue.main.async {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                        self?.launchingGameId = nil
-                    }
                     if success {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            if self?.launchingGameId == targetGameId {
+                                self?.launchingGameId = nil
+                            }
+                        }
                         self?.runningGameTitle = game.name
                         self?.logs.append(LogEntry(level: .success, message: "Launched game: \(game.name)"))
                         MemoryOptimizer.shared.optimizeForBackground(viewModel: self)
@@ -111,10 +127,15 @@ extension AppViewModel {
                                 }
                             }
                         }
-                    } else if let err = error {
+                    } else {
+                        // Immediately clear launching state on error so user is never locked out
+                        if self?.launchingGameId == targetGameId {
+                            self?.launchingGameId = nil
+                        }
                         self?.runningGameTitle = nil
                         SoundEffectService.shared.play(.error)
-                        self?.logs.append(LogEntry(level: .error, message: "Failed to launch game: \(err)"))
+                        let errMsg = error ?? "Unknown error"
+                        self?.logs.append(LogEntry(level: .error, message: "Failed to launch game: \(errMsg)"))
                     }
                 }
             }

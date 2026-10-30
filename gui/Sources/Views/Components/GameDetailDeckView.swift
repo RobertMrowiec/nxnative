@@ -88,6 +88,23 @@ public struct GameDetailDeckView: View {
                             .buttonStyle(NXPrimaryButtonStyle())
                             .disabled(isLaunching || viewModel.launchingGameId != nil)
                             .shadow(color: isDeckFocused ? NXTheme.primary.opacity(0.6) : Color.clear, radius: 8)
+                        } else {
+                            Button(action: {
+                                SoundEffectService.shared.play(.click)
+                                viewModel.gameForSettingsSheet = game
+                            }) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "arrow.up.forward.app")
+                                        .font(.system(size: 13))
+                                    Text(viewModel.tr("console.send_ios"))
+                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                }
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                            }
+                            .buttonStyle(NXPrimaryButtonStyle())
+                            .shadow(color: isDeckFocused ? NXTheme.secondary.opacity(0.6) : Color.clear, radius: 8)
                         }
                         
                         HStack(spacing: 10) {

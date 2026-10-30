@@ -2481,7 +2481,24 @@ def main(args=None):
     if not keep:
         say(f'deleting the extracted game files: {ex}'); rmtree(ex)
     say(f'done: {out_ipa} ({out_ipa.stat().st_size / 2**30:.1f} GB)')
-    if separate: say_push_romfs(rfs.source(game), bundle_id)
+    if separate:
+        src_img = Path(rfs.source(game))
+        if src_img.is_file():
+            dst_imgs = [
+                out_ipa.parent / 'romfs.img',
+                out_ipa.parent / f'{out_ipa.stem}.romfs.img'
+            ]
+            for target in dst_imgs:
+                try:
+                    if target.resolve() != src_img.resolve():
+                        # Use APFS clone via 'cp -c' for instant 0-byte duplicate on macOS
+                        res = subprocess.run(['cp', '-c', str(src_img), str(target)], capture_output=True)
+                        if res.returncode != 0:
+                            shutil.copyfile(src_img, target)
+                        say(f'RomFS image for device: {target} ({target.stat().st_size / 2**30:.1f} GB)')
+                except Exception as ex_copy:
+                    say(f'[YELLOW] Note: could not clone RomFS to {target}: {ex_copy}')
+        say_push_romfs(rfs.source(game), bundle_id)
     report_profile_status(g, reg, pkg_ver, derived, provisional, patched=patched)
 
 
