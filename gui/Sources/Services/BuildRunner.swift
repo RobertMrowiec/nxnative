@@ -15,6 +15,7 @@ public final class BuildRunner {
     private var stdoutPipe: Pipe?
     private var stderrPipe: Pipe?
     private var isCancelled = false
+    private var lastReportedError: String? = nil
     
     public weak var delegate: BuildRunnerDelegate?
     
@@ -36,10 +37,12 @@ public final class BuildRunner {
         showFps: Bool,
         keepExtracted: Bool,
         surveyOnly: Bool,
-        romfsSeparate: Bool = false
+        romfsSeparate: Bool = false,
+        allowOtherMetal: Bool = true
     ) {
         guard !isRunning else { return }
         isCancelled = false
+        lastReportedError = nil
         
         let scriptPath = URL(fileURLWithPath: nxnativePath)
             .appendingPathComponent("scripts/build_ipa_from_nsp.py")
@@ -127,6 +130,11 @@ public final class BuildRunner {
             arguments.append("--survey-only")
         }
         
+        if allowOtherMetal {
+            arguments.append("--allow-other-metal")
+            delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: "[Config] Allowing current Xcode Metal compiler version (--allow-other-metal)."))
+        }
+        
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: pythonPath)
         proc.arguments = arguments
@@ -183,7 +191,11 @@ public final class BuildRunner {
                     let outPath = self.resolveFinalOutputPath(gameDir: gameDirectory, customOut: customOutputFolder, platform: platform, appName: appName)
                     self.delegate?.buildRunner(self, didFinishSuccess: outPath)
                 } else {
-                    self.delegate?.buildRunner(self, didFinishWithError: "Process exited with error (code: \(p.terminationStatus)). Check logs for details.")
+                    if let specificError = self.lastReportedError, !specificError.isEmpty {
+                        self.delegate?.buildRunner(self, didFinishWithError: specificError)
+                    } else {
+                        self.delegate?.buildRunner(self, didFinishWithError: "Process exited with error (code: \(p.terminationStatus)). Check logs for details.")
+                    }
                 }
             }
         }
@@ -270,7 +282,14 @@ public final class BuildRunner {
                 
             case "say":
                 if let msg = event.msg {
-                    delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: msg))
+                    let isRed = msg.hasPrefix("[RED]")
+                    if isRed {
+                        let cleanMsg = String(msg.dropFirst(5)).trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !cleanMsg.isEmpty {
+                            self.lastReportedError = cleanMsg
+                        }
+                    }
+                    delegate?.buildRunner(self, didProduceLog: LogEntry(level: isRed ? .error : .info, message: msg))
                 }
                 
             default:
