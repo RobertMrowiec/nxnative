@@ -52,7 +52,7 @@ public final class SaveSyncService: ObservableObject {
     }
 
     public func ensureRootFolderConfigured() {
-        guard isICloudSyncEnabled && isICloudDriveAvailable else { return }
+        guard isICloudDriveAvailable else { return }
         let root = iCloudRootURL
         if !fileManager.fileExists(atPath: root.path) {
             try? fileManager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -78,8 +78,54 @@ public final class SaveSyncService: ObservableObject {
         iCloudFolder(for: game).appendingPathComponent("save", isDirectory: true)
     }
 
+    // MARK: - Per-Game iCloud Sync Configuration
+    public func isICloudSyncEnabled(for game: PortedGame) -> Bool {
+        guard isICloudDriveAvailable else { return false }
+        let key = "nxnative_icloud_game_\(game.uniqueKey)"
+        if let val = UserDefaults.standard.object(forKey: key) as? Bool {
+            return val
+        }
+        if let titleId = game.titleId, !titleId.isEmpty {
+            let titleKey = "nxnative_icloud_title_\(titleId.uppercased())"
+            if let val = UserDefaults.standard.object(forKey: titleKey) as? Bool {
+                return val
+            }
+            // Check if local save is already an active symlink into iCloud
+            let localDir = macSaveDirectory(for: titleId)
+            if let dest = try? fileManager.destinationOfSymbolicLink(atPath: localDir.path) {
+                if dest.contains("nxnative_launcher") || dest.contains("CloudDocs") {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    public func setICloudSyncEnabled(_ enabled: Bool, for game: PortedGame, cover: NSImage? = nil) {
+        let key = "nxnative_icloud_game_\(game.uniqueKey)"
+        UserDefaults.standard.set(enabled, forKey: key)
+        if let titleId = game.titleId, !titleId.isEmpty {
+            UserDefaults.standard.set(enabled, forKey: "nxnative_icloud_title_\(titleId.uppercased())")
+        }
+        cloudSyncActiveCache.removeValue(forKey: game.uniqueKey)
+
+        if enabled {
+            if !isICloudSyncEnabled {
+                self.isICloudSyncEnabled = true
+            }
+            _ = ensureCloudSaveConfigured(for: game, cover: cover)
+        } else {
+            if let titleId = game.titleId {
+                revertToLocalSave(for: titleId)
+            }
+        }
+        DispatchQueue.main.async {
+            self.objectWillChange.send()
+        }
+    }
+
     public func isCloudSyncActive(for game: PortedGame) -> Bool {
-        guard isICloudSyncEnabled && isICloudDriveAvailable else {
+        guard isICloudDriveAvailable && isICloudSyncEnabled(for: game) else {
             return false
         }
         let key = game.uniqueKey
@@ -111,8 +157,8 @@ public final class SaveSyncService: ObservableObject {
     // MARK: - Safe Setup & Migration
     @discardableResult
     public func ensureCloudSaveConfigured(for game: PortedGame, cover: NSImage?) -> Result<URL, Error> {
-        guard isICloudSyncEnabled && isICloudDriveAvailable else {
-            return .failure(NSError(domain: "SaveSyncService", code: 403, userInfo: [NSLocalizedDescriptionKey: "iCloud Sync is disabled"]))
+        guard isICloudDriveAvailable else {
+            return .failure(NSError(domain: "SaveSyncService", code: 403, userInfo: [NSLocalizedDescriptionKey: "iCloud Drive is not available on this Mac"]))
         }
         ensureRootFolderConfigured()
         let gameFolder = iCloudFolder(for: game)
@@ -146,23 +192,34 @@ public final class SaveSyncService: ObservableObject {
                 return .success(cloudSaveDir)
             }
 
+            let upperTitle = titleId.uppercased()
+
+            // Setup cross-platform Title ID aliases so iPhone app can locate <TITLE_ID>/save.dmsync
+            let rootAlias = iCloudRootURL.appendingPathComponent(upperTitle)
+            if !fileManager.fileExists(atPath: rootAlias.path) {
+                try? fileManager.createSymbolicLink(at: rootAlias, withDestinationURL: gameFolder)
+            }
+            let gameFolderAlias = gameFolder.appendingPathComponent(upperTitle)
+            if !fileManager.fileExists(atPath: gameFolderAlias.path) {
+                try? fileManager.createSymbolicLink(at: gameFolderAlias, withDestinationURL: gameFolder)
+            }
+
             let localSave = macSaveDirectory(for: titleId)
             let isSymlink: Bool = (try? fileManager.destinationOfSymbolicLink(atPath: localSave.path)) != nil
 
             // If local directory exists and is NOT already a symlink, migrate existing saves
             if fileManager.fileExists(atPath: localSave.path) && !isSymlink {
                 _ = backupMacSave(titleId: titleId)
-                if let contents = try? fileManager.contentsOfDirectory(atPath: localSave.path) {
-                    for item in contents {
-                        let src = localSave.appendingPathComponent(item)
-                        let dst = cloudSaveDir.appendingPathComponent(item)
-                        if !fileManager.fileExists(atPath: dst.path) {
-                            try? fileManager.copyItem(at: src, to: dst)
-                        }
-                    }
-                }
+                try copyDirectoryContents(from: localSave, to: cloudSaveDir)
                 // Safely remove local folder to replace with symlink
                 try? fileManager.removeItem(at: localSave)
+            } else if !fileManager.fileExists(atPath: localSave.path) {
+                // Also check save.work in case it has uncommitted saves
+                let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                let workDir = appSupport.appendingPathComponent("nxnative/\(upperTitle)/save.work", isDirectory: true)
+                if fileManager.fileExists(atPath: workDir.path) {
+                    try? copyDirectoryContents(from: workDir, to: cloudSaveDir)
+                }
             }
 
             // Create transparent POSIX symlink pointing local AppSupport to iCloud Drive
@@ -172,8 +229,8 @@ public final class SaveSyncService: ObservableObject {
                 try? fileManager.createSymbolicLink(at: localSave, withDestinationURL: cloudSaveDir)
             }
 
-            // Write DM_SAVE into env.txt
-            updateEnvFileWithCloudSave(titleId: titleId, cloudSavePath: cloudSaveDir.path)
+            // Write DM_SAVE and DM_SAVE_SYNC into env.txt
+            updateEnvFileWithCloudSave(titleId: titleId, cloudSavePath: cloudSaveDir.path, cloudSyncPath: gameFolder.path)
 
             cloudSyncActiveCache[game.uniqueKey] = true
             DispatchQueue.main.async { self.objectWillChange.send() }
@@ -186,23 +243,38 @@ public final class SaveSyncService: ObservableObject {
         }
     }
 
+    public func copyDirectoryContents(from srcDir: URL, to dstDir: URL) throws {
+        try fileManager.createDirectory(at: dstDir, withIntermediateDirectories: true)
+        let entries = (try? fileManager.contentsOfDirectory(at: srcDir, includingPropertiesForKeys: nil, options: [])) ?? []
+        for entry in entries {
+            let destEntry = dstDir.appendingPathComponent(entry.lastPathComponent)
+            var isDir: ObjCBool = false
+            if fileManager.fileExists(atPath: entry.path, isDirectory: &isDir) {
+                if isDir.boolValue {
+                    try copyDirectoryContents(from: entry, to: destEntry)
+                } else {
+                    if fileManager.fileExists(atPath: destEntry.path) {
+                        try? fileManager.removeItem(at: destEntry)
+                    }
+                    try fileManager.copyItem(at: entry, to: destEntry)
+                }
+            }
+        }
+    }
+
     /// Reverts an individual game from an iCloud symlink back to a genuine local directory in Application Support.
     public func revertToLocalSave(for titleId: String) {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        let titleFolder = appSupport.appendingPathComponent("nxnative/\(titleId.uppercased())", isDirectory: true)
+        let upperTitle = titleId.uppercased()
+        let titleFolder = appSupport.appendingPathComponent("nxnative/\(upperTitle)", isDirectory: true)
         let saveFolder = titleFolder.appendingPathComponent("save", isDirectory: true)
         
         if let dest = try? fileManager.destinationOfSymbolicLink(atPath: saveFolder.path) {
             let cloudDestURL = URL(fileURLWithPath: dest)
             try? fileManager.removeItem(at: saveFolder)
             try? fileManager.createDirectory(at: saveFolder, withIntermediateDirectories: true)
-            if fileManager.fileExists(atPath: cloudDestURL.path),
-               let contents = try? fileManager.contentsOfDirectory(atPath: cloudDestURL.path) {
-                for file in contents {
-                    let src = cloudDestURL.appendingPathComponent(file)
-                    let dst = saveFolder.appendingPathComponent(file)
-                    try? fileManager.copyItem(at: src, to: dst)
-                }
+            if fileManager.fileExists(atPath: cloudDestURL.path) {
+                try? copyDirectoryContents(from: cloudDestURL, to: saveFolder)
             }
         } else if !fileManager.fileExists(atPath: saveFolder.path) {
             try? fileManager.createDirectory(at: saveFolder, withIntermediateDirectories: true)
@@ -211,20 +283,25 @@ public final class SaveSyncService: ObservableObject {
         let envFile = titleFolder.appendingPathComponent("env.txt")
         if let existing = try? String(contentsOf: envFile, encoding: .utf8) {
             let cleaned = existing.components(separatedBy: .newlines)
-                .filter { !$0.hasPrefix("DM_SAVE=") }
+                .filter { !$0.hasPrefix("DM_SAVE=") && !$0.hasPrefix("DM_SAVE_SYNC=") }
                 .joined(separator: "\n")
             try? cleaned.write(to: envFile, atomically: true, encoding: .utf8)
         }
     }
 
-    private func updateEnvFileWithCloudSave(titleId: String, cloudSavePath: String) {
+    private func updateEnvFileWithCloudSave(titleId: String, cloudSavePath: String, cloudSyncPath: String? = nil) {
         let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let envFile = appSupport.appendingPathComponent("nxnative/\(titleId.uppercased())/env.txt")
         var lines: [String] = []
         if let existing = try? String(contentsOf: envFile, encoding: .utf8) {
-            lines = existing.components(separatedBy: .newlines).filter { !$0.hasPrefix("DM_SAVE=") }
+            lines = existing.components(separatedBy: .newlines).filter { 
+                !$0.hasPrefix("DM_SAVE=") && !$0.hasPrefix("DM_SAVE_SYNC=") 
+            }
         }
         lines.append("DM_SAVE=\(cloudSavePath)")
+        if let syncPath = cloudSyncPath, !syncPath.isEmpty {
+            lines.append("DM_SAVE_SYNC=\(syncPath)")
+        }
         try? lines.joined(separator: "\n").write(to: envFile, atomically: true, encoding: .utf8)
     }
 
@@ -294,7 +371,7 @@ public final class SaveSyncService: ObservableObject {
     }
 
     public func revealCloudGameFolder(for game: PortedGame, cover: NSImage?) {
-        if isICloudSyncEnabled && isICloudDriveAvailable {
+        if isICloudSyncEnabled(for: game) && isICloudDriveAvailable {
             _ = ensureCloudSaveConfigured(for: game, cover: cover)
             let folder = iCloudFolder(for: game)
             NSWorkspace.shared.activateFileViewerSelecting([folder])
