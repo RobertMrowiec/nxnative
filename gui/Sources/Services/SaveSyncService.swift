@@ -121,6 +121,22 @@ public final class SaveSyncService: ObservableObject {
         do {
             try fileManager.createDirectory(at: cloudSaveDir, withIntermediateDirectories: true)
 
+            // Pre-flight writability check verifying macOS TCC permits write access to this iCloud path
+            let probeFile = cloudSaveDir.appendingPathComponent(".probe_\(UUID().uuidString)")
+            do {
+                try "probe".write(to: probeFile, atomically: true, encoding: .utf8)
+                try fileManager.removeItem(at: probeFile)
+            } catch {
+                if let titleId = game.titleId {
+                    revertToLocalSave(for: titleId)
+                }
+                return .failure(NSError(
+                    domain: "SaveSyncService",
+                    code: Int(EPERM),
+                    userInfo: [NSLocalizedDescriptionKey: "iCloud Drive write permission denied or inaccessible (errno=1 EPERM). Safely reverting to local save storage."]
+                ))
+            }
+
             // Apply game's box art cover as custom folder icon in Finder and iCloud Drive
             if let coverImage = cover ?? GameCoverService.shared.coverImage(for: game) {
                 applyFolderIcon(image: coverImage, folderURL: gameFolder)
@@ -163,7 +179,41 @@ public final class SaveSyncService: ObservableObject {
             DispatchQueue.main.async { self.objectWillChange.send() }
             return .success(cloudSaveDir)
         } catch {
+            if let titleId = game.titleId {
+                revertToLocalSave(for: titleId)
+            }
             return .failure(error)
+        }
+    }
+
+    /// Reverts an individual game from an iCloud symlink back to a genuine local directory in Application Support.
+    public func revertToLocalSave(for titleId: String) {
+        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let titleFolder = appSupport.appendingPathComponent("nxnative/\(titleId.uppercased())", isDirectory: true)
+        let saveFolder = titleFolder.appendingPathComponent("save", isDirectory: true)
+        
+        if let dest = try? fileManager.destinationOfSymbolicLink(atPath: saveFolder.path) {
+            let cloudDestURL = URL(fileURLWithPath: dest)
+            try? fileManager.removeItem(at: saveFolder)
+            try? fileManager.createDirectory(at: saveFolder, withIntermediateDirectories: true)
+            if fileManager.fileExists(atPath: cloudDestURL.path),
+               let contents = try? fileManager.contentsOfDirectory(atPath: cloudDestURL.path) {
+                for file in contents {
+                    let src = cloudDestURL.appendingPathComponent(file)
+                    let dst = saveFolder.appendingPathComponent(file)
+                    try? fileManager.copyItem(at: src, to: dst)
+                }
+            }
+        } else if !fileManager.fileExists(atPath: saveFolder.path) {
+            try? fileManager.createDirectory(at: saveFolder, withIntermediateDirectories: true)
+        }
+        
+        let envFile = titleFolder.appendingPathComponent("env.txt")
+        if let existing = try? String(contentsOf: envFile, encoding: .utf8) {
+            let cleaned = existing.components(separatedBy: .newlines)
+                .filter { !$0.hasPrefix("DM_SAVE=") }
+                .joined(separator: "\n")
+            try? cleaned.write(to: envFile, atomically: true, encoding: .utf8)
         }
     }
 

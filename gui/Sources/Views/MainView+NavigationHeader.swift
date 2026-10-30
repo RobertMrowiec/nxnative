@@ -56,13 +56,24 @@ extension MainView {
                 
                 if let update = viewModel.updateInfo, update.hasUpdate {
                     Button(action: {
+                        if viewModel.isBuilding {
+                            SoundEffectService.shared.play(.error)
+                            viewModel.logs.append(LogEntry(level: .warning, message: viewModel.tr("build.update_locked_during_build")))
+                            return
+                        }
                         SoundEffectService.shared.play(.click)
                         viewModel.openUpdateCheckerAndAutoInstall()
                     }) {
                         HStack(spacing: 4) {
-                            Circle()
-                                .fill(NXTheme.secondary)
-                                .frame(width: 5, height: 5)
+                            if viewModel.isBuilding {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 7))
+                                    .foregroundColor(.white.opacity(0.85))
+                            } else {
+                                Circle()
+                                    .fill(NXTheme.secondary)
+                                    .frame(width: 5, height: 5)
+                            }
                             Text(viewModel.tr("nav.update"))
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundColor(.white)
@@ -79,7 +90,7 @@ extension MainView {
                         .nxGlassTransition(.materialize)
                     }
                     .buttonStyle(NXPressableButtonStyle())
-                    .help(viewModel.tr("nav.update_tooltip"))
+                    .help(viewModel.isBuilding ? viewModel.tr("build.update_locked_during_build") : viewModel.tr("nav.update_tooltip"))
                 }
             }
         }

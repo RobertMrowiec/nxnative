@@ -71,6 +71,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         didSet {
             if let game = selectedGame {
                 self.appName = game.name
+                self.userDidManuallyOverrideRomfsSeparate = false
+                self.evaluateAutoRomfsSplit()
             }
         }
     }
@@ -84,6 +86,10 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var platform: TargetPlatform = .macApp {
         didSet {
             UserDefaults.standard.set(platform.rawValue, forKey: StorageKeys.savedPlatform)
+            evaluateAutoRomfsSplit()
+            if isKeepExtractedLocked {
+                keepExtracted = true
+            }
         }
     }
     @Published public var useCustomOutputFolder: Bool = false {
@@ -203,6 +209,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
     }
     @Published public var surveyOnly: Bool = false
+    @Published public var userDidManuallyOverrideRomfsSeparate: Bool = false
     @Published public var romfsSeparate: Bool = false {
         didSet {
             UserDefaults.standard.set(romfsSeparate, forKey: StorageKeys.savedRomfsSeparate)
@@ -214,6 +221,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var autoRomfsSplitLimitGB: Double = 8.0 {
         didSet {
             UserDefaults.standard.set(autoRomfsSplitLimitGB, forKey: StorageKeys.savedAutoRomfsSplitLimitGB)
+            evaluateAutoRomfsSplit()
         }
     }
     @Published public var customCertP12Path: String = "" {
@@ -237,6 +245,42 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         let totalBytes = selectedGame?.totalSizeBytes ?? detectedFiles.reduce(0) { $0 + $1.sizeBytes }
         let limitBytes = Int64(autoRomfsSplitLimitGB * 1_073_741_824)
         return totalBytes >= limitBytes
+    }
+    
+    public func evaluateAutoRomfsSplit() {
+        guard platform == .ios else { return }
+        if shouldSuggestRomfsSplit {
+            if !userDidManuallyOverrideRomfsSeparate {
+                romfsSeparate = true
+            }
+        } else {
+            if !userDidManuallyOverrideRomfsSeparate {
+                romfsSeparate = false
+            }
+        }
+        if isKeepExtractedLocked {
+            keepExtracted = true
+        }
+    }
+    
+    public var isRomfsSeparateAutoActive: Bool {
+        platform == .ios && romfsSeparate && shouldSuggestRomfsSplit && !userDidManuallyOverrideRomfsSeparate
+    }
+    
+    public var isKeepExtractedLocked: Bool {
+        if platform == .macApp { return true }
+        if platform == .ios && romfsSeparate { return true }
+        return false
+    }
+    
+    public var keepExtractedLockReason: String? {
+        if platform == .macApp {
+            return tr("build.opt_keep_extracted_locked_mac")
+        }
+        if platform == .ios && romfsSeparate {
+            return tr("build.opt_keep_extracted_locked_romfs")
+        }
+        return nil
     }
     
     public var selectedGameSizeString: String {

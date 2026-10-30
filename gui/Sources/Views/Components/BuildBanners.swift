@@ -113,6 +113,19 @@ public struct BuildBanners: View {
             
             if viewModel.isApplyingUpdate {
                 ProgressView().controlSize(.small)
+            } else if viewModel.isBuilding {
+                HStack(spacing: 6) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 10))
+                    Text(viewModel.tr("build.update_locked_badge"))
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                .foregroundColor(NXTheme.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(8)
+                .help(viewModel.tr("build.update_locked_during_build"))
             } else {
                 Button(viewModel.tr("build.update_now")) {
                     viewModel.applyUpdate()

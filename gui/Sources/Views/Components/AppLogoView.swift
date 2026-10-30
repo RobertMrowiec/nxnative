@@ -67,11 +67,14 @@ public struct AppLogoView: View {
             }
             
             Button(action: {
-                SoundEffectService.shared.play(.click)
-                viewModel.openUpdateCheckerAndAutoInstall()
+                if !viewModel.isBuilding {
+                    SoundEffectService.shared.play(.click)
+                    viewModel.openUpdateCheckerAndAutoInstall()
+                }
             }) {
                 Label(viewModel.tr("system.check_updates"), systemImage: "arrow.triangle.2.circlepath")
             }
+            .disabled(viewModel.isBuilding)
             
             Divider()
             

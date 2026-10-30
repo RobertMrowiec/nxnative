@@ -210,8 +210,31 @@ static Result mount_ex(const char *name, const char *dir, int ro, int txn) {
         if (!access(work, F_OK) && rm_tree(work)) why = "cannot clear the work directory left over from last time";
         else if (!access(neu, F_OK) && rm_tree(neu)) why = "cannot clear the .new left over from last time";
         else if (dm_fs_test_fail("mountclone") || clonefile(dir, work, 0)) why = "cloning the work directory failed";
-        if (why) { txn_err = errno ? errno : EIO; g_mnt[g_nmnt].ro = 1; strlcpy(g_mnt[g_nmnt].dir, dir, sizeof g_mnt[0].dir);
-            LOG("[RED] save transaction: %s (%s, errno=%d) -- mounting the committed directory %s read-only instead: saves cannot be written this session, the committed version is unchanged", why, work, txn_err, dir); }
+        if (why) {
+            txn_err = errno ? errno : EIO;
+            const char *fb = (txn_err == EPERM || txn_err == EACCES) ? getenv("DM_SAVE_FALLBACK") : NULL;
+            if (fb && strcmp(fb, dir)) {
+                char fb_work[1100], fb_neu[1100];
+                snprintf(fb_work, sizeof fb_work, "%s.work", fb); snprintf(fb_neu, sizeof fb_neu, "%s.new", fb);
+                mkdir(fb, 0755);
+                if (!access(fb_work, F_OK)) rm_tree(fb_work);
+                if (!access(fb_neu, F_OK)) rm_tree(fb_neu);
+                if (!clonefile(fb, fb_work, 0)) {
+                    LOG("[YELLOW] save transaction: primary save directory %s is inaccessible (errno=%d); safely fell back to local save %s", dir, txn_err, fb);
+                    why = NULL;
+                    txn_err = 0;
+                    strlcpy(g_mnt[g_nmnt].commit, fb, sizeof g_mnt[0].commit);
+                    g_mnt[g_nmnt].txn_root = g_nmnt;
+                    atomic_store(&g_mnt[g_nmnt].poison, 0);
+                    atomic_store(&g_mnt[g_nmnt].first_write_ns, 0);
+                    strlcpy(g_mnt[g_nmnt].dir, fb_work, sizeof g_mnt[0].dir);
+                }
+            }
+            if (why) {
+                g_mnt[g_nmnt].ro = 1; strlcpy(g_mnt[g_nmnt].dir, dir, sizeof g_mnt[0].dir);
+                LOG("[RED] save transaction: %s (%s, errno=%d) -- mounting the committed directory %s read-only instead: saves cannot be written this session, the committed version is unchanged", why, work, txn_err, dir);
+            }
+        }
         else {
             strlcpy(g_mnt[g_nmnt].commit, dir, sizeof g_mnt[0].commit);
             g_mnt[g_nmnt].txn_root = g_nmnt;

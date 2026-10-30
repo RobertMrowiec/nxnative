@@ -10,7 +10,7 @@ public struct AboutLauncherView: View {
     }
     
     private var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.8.3"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.8.4"
     }
     
     private var currentCommit: String {

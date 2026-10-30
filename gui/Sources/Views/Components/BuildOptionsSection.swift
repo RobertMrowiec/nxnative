@@ -59,9 +59,31 @@ public struct BuildOptionsSection: View {
                         Divider().opacity(0.2)
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Toggle(viewModel.tr("build.opt_romfs_separate"), isOn: $viewModel.romfsSeparate)
+                            HStack(alignment: .center, spacing: 8) {
+                                Toggle(viewModel.tr("build.opt_romfs_separate"), isOn: Binding(
+                                    get: { viewModel.romfsSeparate },
+                                    set: { val in
+                                        viewModel.userDidManuallyOverrideRomfsSeparate = true
+                                        viewModel.romfsSeparate = val
+                                    }
+                                ))
                                 .font(.system(size: 12, weight: .semibold))
                                 .foregroundColor(NXTheme.textPrimary)
+                                
+                                if viewModel.isRomfsSeparateAutoActive {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "bolt.fill")
+                                            .font(.system(size: 9))
+                                        Text(String(format: viewModel.tr("build.romfs_auto_split_active"), viewModel.selectedGameSizeString, "\(Int(viewModel.autoRomfsSplitLimitGB)) GB"))
+                                            .font(.system(size: 10, weight: .bold))
+                                    }
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(NXTheme.primary.opacity(0.18))
+                                    .foregroundColor(NXTheme.primary)
+                                    .cornerRadius(6)
+                                }
+                            }
                             
                             Text(viewModel.tr("build.opt_romfs_separate_help"))
                                 .font(.system(size: 11))
@@ -83,6 +105,7 @@ public struct BuildOptionsSection: View {
                                     
                                     Button("Separate RomFS") {
                                         SoundEffectService.shared.play(.click)
+                                        viewModel.userDidManuallyOverrideRomfsSeparate = true
                                         viewModel.romfsSeparate = true
                                         viewModel.keepExtracted = true
                                     }
@@ -185,7 +208,23 @@ public struct BuildOptionsSection: View {
                     
                     VStack(alignment: .leading, spacing: 8) {
                         Toggle(viewModel.tr("build.opt_fps"), isOn: $viewModel.showFps)
-                        Toggle(viewModel.tr("build.opt_keep_extracted"), isOn: $viewModel.keepExtracted)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle(viewModel.tr("build.opt_keep_extracted"), isOn: $viewModel.keepExtracted)
+                                .disabled(viewModel.isKeepExtractedLocked)
+                            
+                            if let reason = viewModel.keepExtractedLockReason {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 9))
+                                    Text(reason)
+                                        .font(.system(size: 10))
+                                }
+                                .foregroundColor(NXTheme.textSecondary.opacity(0.85))
+                                .padding(.leading, 20)
+                            }
+                        }
+                        
                         Toggle(viewModel.tr("build.opt_survey_only"), isOn: $viewModel.surveyOnly)
                         
                         if viewModel.platform == .ios {
@@ -197,8 +236,19 @@ public struct BuildOptionsSection: View {
                                         .foregroundColor(NXTheme.textSecondary)
                                     Spacer()
                                 }
-                                Slider(value: $viewModel.autoRomfsSplitLimitGB, in: 2.0...16.0, step: 1.0)
-                                    .accentColor(NXTheme.primary)
+                                Slider(
+                                    value: Binding(
+                                        get: { viewModel.autoRomfsSplitLimitGB },
+                                        set: { val in
+                                            viewModel.autoRomfsSplitLimitGB = val
+                                            viewModel.userDidManuallyOverrideRomfsSeparate = false
+                                            viewModel.evaluateAutoRomfsSplit()
+                                        }
+                                    ),
+                                    in: 2.0...16.0,
+                                    step: 1.0
+                                )
+                                .accentColor(NXTheme.primary)
                             }
                         }
                     }

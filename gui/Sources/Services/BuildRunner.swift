@@ -105,13 +105,21 @@ public final class BuildRunner {
         let shouldSeparateRomfs = (platform == .ios && romfsSeparate)
         if shouldSeparateRomfs {
             arguments.append(contentsOf: ["--romfs", "separate"])
-            // --romfs separate requires --keep-extracted
+            // --romfs separate strictly requires --keep-extracted (build_ipa_from_nsp.py:2222)
             arguments.append("--keep-extracted")
+            delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: "[Config] RomFS separate mode enabled: preserving extracted image for device transfer (--keep-extracted enforced)."))
+        } else if platform == .macApp {
+            // Mac App runs natively from extracted engine files (build_ipa_from_nsp.py:2216)
+            arguments.append("--keep-extracted")
+            if !keepExtracted {
+                delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: "[Config] Mac App runs directly from extracted game assets: enforcing --keep-extracted."))
+            }
         } else {
             if keepExtracted {
                 arguments.append("--keep-extracted")
             } else {
                 arguments.append("--no-keep-extracted")
+                delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: "[Config] Intermediate extracted files will be cleaned up upon completion (--no-keep-extracted)."))
             }
         }
         
@@ -166,6 +174,7 @@ public final class BuildRunner {
             guard let self = self else { return }
             stdoutHandle.readabilityHandler = nil
             stderrHandle.readabilityHandler = nil
+            UpdateCheckerService.shared.isBuildActive = false
             
             DispatchQueue.main.async {
                 if self.isCancelled {
@@ -180,8 +189,10 @@ public final class BuildRunner {
         }
         
         do {
+            UpdateCheckerService.shared.isBuildActive = true
             try proc.run()
         } catch {
+            UpdateCheckerService.shared.isBuildActive = false
             delegate?.buildRunner(self, didFinishWithError: "Failed to start build process: \(error.localizedDescription)")
         }
     }
@@ -189,6 +200,7 @@ public final class BuildRunner {
     public func cancel() {
         guard isRunning else { return }
         isCancelled = true
+        UpdateCheckerService.shared.isBuildActive = false
         delegate?.buildRunner(self, didProduceLog: LogEntry(level: .warning, message: "Cancelling build process..."))
         process?.terminate()
     }
