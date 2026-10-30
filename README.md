@@ -10,20 +10,20 @@
 <br>
 
 <a href="https://github.com/rennan101/nxnative_Launcher">
-  <img src="docs/images/banner.png" width="100%" alt="NxNative Launcher Banner">
+  <img src="gui/Resources/AppIcon.png" width="160" alt="NxNative Launcher Logo">
 </a>
 
 # NxNative Launcher
 
 ### The Definitive Native Game Porting & Playback Suite for Apple Silicon
 
+[![GitHub Stars](https://img.shields.io/github/stars/rennan101/nxnative_Launcher?style=flat&color=white)](https://github.com/rennan101/nxnative_Launcher/stargazers)
+[![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B%20%7C%20iOS%2018%2B-blue.svg)](https://apple.com/macos)
 [![Architecture](https://img.shields.io/badge/Arch-Apple%20Silicon%20(M1--M4%20%26%20A17%2B)-orange.svg)](https://apple.com)
 [![Version](https://img.shields.io/badge/Release-v1.8.4-purple.svg)](https://github.com/rennan101/nxnative_Launcher/releases)
-[![GitHub Stars](https://img.shields.io/github/stars/rennan101/nxnative_Launcher?style=flat&color=ffd700)](https://github.com/rennan101/nxnative_Launcher/stargazers)
 [![Verified Games](https://img.shields.io/badge/Verified%20Games-114%2B%20Titles-success.svg)](SUPPORTED_GAMES.md)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-informational.svg)](https://github.com/seedds/nxnative)
 [![Sync Upstream](https://github.com/rennan101/nxnative_Launcher/actions/workflows/sync-upstream.yml/badge.svg)](https://github.com/rennan101/nxnative_Launcher/actions/workflows/sync-upstream.yml)
 
 <p align="center">
