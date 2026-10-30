@@ -21,6 +21,13 @@ extension AppViewModel {
         updateSuccessBanner = nil
         updateCompletedReadyToRelaunch = false
         
+        guard !isBuilding else {
+            let msg = tr("build.update_locked_during_build")
+            updateErrorBanner = msg
+            logs.append(LogEntry(level: .warning, message: "[Update] \(msg)"))
+            return
+        }
+        
         guard isNxnativeValid, !nxnativePath.isEmpty else {
             updateErrorBanner = "Local repository path not configured."
             return
@@ -33,12 +40,22 @@ extension AppViewModel {
             self.updateInfo = info
             
             if let info = info, info.hasUpdate {
-                self.applyUpdate(autoRelaunch: true)
+                if !self.isBuilding {
+                    self.applyUpdate(autoRelaunch: true)
+                } else {
+                    self.updateErrorBanner = self.tr("build.update_locked_during_build")
+                }
             }
         }
     }
     
     public func applyUpdate(autoRelaunch: Bool = false) {
+        guard !isBuilding else {
+            let msg = tr("build.update_locked_during_build")
+            self.updateErrorBanner = msg
+            self.logs.append(LogEntry(level: .warning, message: "[Update] \(msg)"))
+            return
+        }
         guard isNxnativeValid, !nxnativePath.isEmpty else { return }
         isApplyingUpdate = true
         updateErrorBanner = nil
@@ -98,7 +115,11 @@ extension AppViewModel {
     }
     
     public func updateCheckerDidFindUpdate(_ info: UpdateInfo) {
-        self.logs.append(LogEntry(level: .info, message: "nxnative update available: \(info.commitMessages.count) new commits."))
+        if isBuilding {
+            self.logs.append(LogEntry(level: .info, message: "nxnative update available: \(info.commitMessages.count) new commits (update deferred until current build finishes)."))
+        } else {
+            self.logs.append(LogEntry(level: .info, message: "nxnative update available: \(info.commitMessages.count) new commits."))
+        }
     }
     
     public func updateCheckerDidProduceLog(_ message: String) {

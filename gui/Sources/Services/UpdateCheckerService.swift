@@ -9,6 +9,22 @@ public final class UpdateCheckerService {
     private var isChecking = false
     private var isUpdating = false
     
+    // Concurrency lock preventing Git mutations during an active build
+    private let buildLock = NSLock()
+    private var _isBuildActive = false
+    public var isBuildActive: Bool {
+        get {
+            buildLock.lock()
+            defer { buildLock.unlock() }
+            return _isBuildActive
+        }
+        set {
+            buildLock.lock()
+            _isBuildActive = newValue
+            buildLock.unlock()
+        }
+    }
+    
     private init() {}
     
     public func getLocalCommit(nxnativePath: String) -> String {
@@ -84,6 +100,12 @@ public final class UpdateCheckerService {
         progressHandler: ((String) -> Void)? = nil,
         completion: @escaping (Bool, String) -> Void
     ) {
+        guard !isBuildActive else {
+            let msg = "Update blocked: A compilation process is currently active. Repository updates are paused during build to prevent toolchain and shader hash mismatch."
+            delegate?.updateCheckerDidProduceLog(msg)
+            completion(false, msg)
+            return
+        }
         guard !isUpdating else {
             completion(false, "Update already in progress")
             return
@@ -99,6 +121,13 @@ public final class UpdateCheckerService {
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
+            
+            if self.isBuildActive {
+                self.isUpdating = false
+                reportProgress("==> Update aborted: A build process has started.")
+                DispatchQueue.main.async { completion(false, "Update cancelled: Build in progress.") }
+                return
+            }
             
             reportProgress("==> Preparing repository for update...")
             // Abort any previously stalled rebase or merge

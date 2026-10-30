@@ -798,3 +798,45 @@ int front_text_input(const char *title, const char *sub, const char *guide, cons
     snprintf(out, out_cap, "%s", text.UTF8String);
     return 1;
 }
+
+// Save write failed (e.g. storage full or iCloud Drive permission denied by macOS TCC): show an NSAlert on the main thread without blocking the game thread.
+static int g_save_failed_alert_shown = 0;
+void front_save_failed(int err) {
+    LOG("front end: save data write failed errno=%d, alerting player", err);
+    dispatch_async(dispatch_get_main_queue(), ^{
+        if (g_save_failed_alert_shown) return;
+        g_save_failed_alert_shown = 1;
+
+        NSAlert *alert = [NSAlert new];
+        alert.alertStyle = NSAlertStyleCritical;
+        NSString *bundleId = [[NSBundle mainBundle] bundleIdentifier] ?: @"org.nxnative.game";
+
+        if (err == EPERM || err == EACCES) {
+            alert.messageText = @"Save Permission Denied (iCloud Drive)";
+            alert.informativeText = [NSString stringWithFormat:
+                @"macOS prevented saving because access to the iCloud Drive folder was denied (errno %d).\n\n"
+                @"Your progress will NOT be saved this session.\n\n"
+                @"To grant permission and restore saves, run this in Terminal:\n"
+                @"tccutil reset All %@\n\n"
+                @"Then restart the game and click 'Allow' on the permission prompt.",
+                err, bundleId];
+        } else if (err == ENOSPC) {
+            alert.messageText = @"Storage Space Full";
+            alert.informativeText = @"Storage is full, so progress could not be saved. Free up disk space and save again.";
+        } else {
+            alert.messageText = @"Save Data Write Failed";
+            alert.informativeText = [NSString stringWithFormat:
+                @"Saving failed (error %d). The save storage was mounted read-only; progress cannot be saved this session.",
+                err];
+        }
+        [alert addButtonWithTitle:@"OK"];
+
+        NSWindow *win = [NSApp keyWindow] ?: [NSApp mainWindow];
+        if (win) {
+            [alert beginSheetModalForWindow:win completionHandler:nil];
+        } else {
+            [alert runModal];
+        }
+    });
+}
+

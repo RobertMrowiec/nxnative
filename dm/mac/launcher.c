@@ -177,7 +177,18 @@ int main(int argc, char **argv) {
     int shown = window ? dm_mac_launcher() : 2;
     if (!shown) return 0;   // Quit: no game
     if (shown == 2) saved_choices();
-    setenv("DM_ROOT", sup, 0); setenv("DM_ROMFS", romfs, 0); setenv("DM_SAVE", save, 0); setenv("DM_TEMP", temp, 0);
+    setenv("DM_ROOT", sup, 0); setenv("DM_ROMFS", romfs, 0);
+    const char *env_save = getenv("DM_SAVE");
+    if (env_save && *env_save) {
+        if (access(env_save, R_OK | W_OK) != 0 && (errno == EPERM || errno == EACCES)) {
+            fprintf(stderr, "launcher: DM_SAVE=%s is inaccessible (errno=%d), falling back to local %s\n", env_save, errno, save);
+            setenv("DM_SAVE", save, 1);
+        }
+    } else {
+        setenv("DM_SAVE", save, 0);
+    }
+    setenv("DM_SAVE_FALLBACK", save, 0);
+    setenv("DM_TEMP", temp, 0);
     snprintf(p, sizeof p, "%s/msl", res); setenv("DM_MSL_DIR", p, 0);
     snprintf(p, sizeof p, "%s/font", dm); setenv("DM_FONT_DIR", p, 0);
     snprintf(p, sizeof p, "%s/shader_map.tsv", dm); if (!stat(p, &st)) setenv("DM_NVN_SHMAP", p, 0);

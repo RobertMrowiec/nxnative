@@ -130,6 +130,18 @@ Traditional Nintendo Switch emulators (such as Yuzu or Ryujinx) rely on **Just-I
 ### 4. Smart iCloud Cross-Save & Single-Button Device Sync
 - **Automatic Save Resolution**: Automatically indexes `~/Library/Application Support/nxnative/<TID>/save` with a one-click **"Saves"** button to reveal files in Finder.
 - **Bidirectional Device Sync**: Instantly transfer save files and Atmosphere mods between your Mac and paired iPhones or iPads.
+- **Automatic Local Fallback**: If iCloud permissions are revoked or denied, the launcher and game host automatically fall back to local Application Support storage to prevent progress loss.
+
+> [!TIP]
+> **iCloud Drive Permissions & Troubleshooting**
+> If you clicked *"Don't Allow"* when macOS prompted for iCloud Drive permissions on first launch, or if logs report `save transaction: cloning the work directory failed (..., errno=1)`:
+> 1. Reset the permission decision in macOS Terminal:
+>    ```bash
+>    tccutil reset All org.nxnative.<TitleID_lowercase>
+>    tccutil reset All org.nxnative.launcher
+>    ```
+> 2. Relaunch the game and click **Allow** when prompted.
+> 3. Alternatively, disabling **iCloud Sync** in Launcher Settings safely reverts your saves to local storage at `~/Library/Application Support/nxnative/<TID>/save` with automatic backup restoration.
 
 <p align="center">
   <img src="docs/images/screenshots/library_game_details.png" width="95%" alt="Game Performance Options & Save Sync">

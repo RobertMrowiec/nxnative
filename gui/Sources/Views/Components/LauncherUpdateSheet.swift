@@ -172,6 +172,21 @@ public struct LauncherUpdateSheet: View {
                 .nxGlassCard(cornerRadius: 12, tint: Color.orange.opacity(0.24))
             }
             
+            if viewModel.isBuilding {
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(.yellow)
+                    Text(viewModel.tr("build.update_locked_during_build"))
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.yellow.opacity(0.12))
+                .cornerRadius(8)
+            }
+            
             Divider().opacity(0.2)
             
             // MARK: - Footer Buttons
@@ -198,6 +213,7 @@ public struct LauncherUpdateSheet: View {
                                 }
                             }
                             .buttonStyle(NXSecondaryButtonStyle())
+                            .disabled(viewModel.isBuilding)
                         }
                     }
                     
@@ -218,11 +234,12 @@ public struct LauncherUpdateSheet: View {
                             viewModel.applyUpdate(autoRelaunch: true)
                         }) {
                             HStack(spacing: 6) {
-                                Image(systemName: "arrow.down.circle.fill")
-                                Text(viewModel.tr("update_modal.install_relaunch"))
+                                Image(systemName: viewModel.isBuilding ? "lock.fill" : "arrow.down.circle.fill")
+                                Text(viewModel.isBuilding ? viewModel.tr("build.update_locked_badge") : viewModel.tr("update_modal.install_relaunch"))
                             }
                         }
                         .buttonStyle(NXPrimaryButtonStyle())
+                        .disabled(viewModel.isBuilding)
                     }
                     
                     if !viewModel.isApplyingUpdate {

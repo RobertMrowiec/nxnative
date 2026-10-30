@@ -164,25 +164,56 @@ extension DeviceDeploymentService {
             }
         }
 
-        // 2. Also incorporate any Keychain signing identities that weren't captured by Xcode team IDs
+        // 2. Parse all valid Keychain signing identities
+        var validCertNames: [String] = []
         for line in keychainOutput.components(separatedBy: .newlines) {
             if line.contains("Apple Development:") || line.contains("iPhone Developer:") || line.contains("Apple Distribution:") || line.contains("iPhone Distribution:") || line.contains("iOS Development:") {
                 let parts = line.components(separatedBy: "\"")
                 if parts.count >= 2 {
-                    let certName = parts[1]
-                    let isAlreadyIncluded = teams.contains { t in
-                        certName.contains(t.id) || certName.contains(t.name)
-                    }
-                    if !isAlreadyIncluded {
-                        teams.append(DeveloperSigningTeam(
-                            id: certName,
-                            name: certName,
-                            teamType: "Keychain",
-                            isFreeProvisioningTeam: false,
-                            hasCertificateInKeychain: true
-                        ))
-                    }
+                    validCertNames.append(parts[1])
                 }
+            }
+        }
+
+        // Link valid certificates to Xcode teams if applicable
+        for i in 0..<teams.count {
+            let tid = teams[i].id
+            let tname = teams[i].name
+            if let matchingCert = validCertNames.first(where: { $0.contains(tid) || $0.contains(tname) }) {
+                teams[i] = DeveloperSigningTeam(
+                    id: teams[i].id,
+                    name: teams[i].name,
+                    teamType: teams[i].teamType,
+                    isFreeProvisioningTeam: teams[i].isFreeProvisioningTeam,
+                    hasCertificateInKeychain: true,
+                    signingIdentity: matchingCert
+                )
+            } else if let firstDev = validCertNames.first(where: { $0.contains("Development") || $0.contains("Developer") }) {
+                teams[i] = DeveloperSigningTeam(
+                    id: teams[i].id,
+                    name: teams[i].name,
+                    teamType: teams[i].teamType,
+                    isFreeProvisioningTeam: teams[i].isFreeProvisioningTeam,
+                    hasCertificateInKeychain: true,
+                    signingIdentity: firstDev
+                )
+            }
+        }
+
+        // 3. Also incorporate any Keychain signing identities that weren't captured by Xcode team IDs
+        for certName in validCertNames {
+            let isAlreadyIncluded = teams.contains { t in
+                t.signingIdentity == certName || certName.contains(t.id) || certName.contains(t.name)
+            }
+            if !isAlreadyIncluded {
+                teams.append(DeveloperSigningTeam(
+                    id: certName,
+                    name: certName,
+                    teamType: "Keychain",
+                    isFreeProvisioningTeam: false,
+                    hasCertificateInKeychain: true,
+                    signingIdentity: certName
+                ))
             }
         }
 

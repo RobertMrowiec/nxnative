@@ -69,8 +69,11 @@ extension AppViewModel {
         var savePath: String? = nil
         if SaveSyncService.shared.isICloudSyncEnabled && SaveSyncService.shared.isICloudDriveAvailable {
             let cover = GameCoverService.shared.coverImage(for: game)
-            if case .success(let cloudSaveDir) = SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
+            switch SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
+            case .success(let cloudSaveDir):
                 savePath = cloudSaveDir.path
+            case .failure(let error):
+                logs.append(LogEntry(level: .warning, message: "[iCloud] \(error.localizedDescription)"))
             }
         }
         

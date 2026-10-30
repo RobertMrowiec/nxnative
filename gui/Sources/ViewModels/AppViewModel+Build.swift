@@ -80,6 +80,25 @@ extension AppViewModel {
         
         let targetOutDir = useCustomOutputFolder ? customOutputFolder : URL(fileURLWithPath: defaultInstallPath).appendingPathComponent("Games")
         
+        let isAboveThreshold = (platform == .ios && shouldSuggestRomfsSplit)
+        let effectiveRomfsSeparate: Bool
+        if platform == .ios {
+            if userDidManuallyOverrideRomfsSeparate {
+                effectiveRomfsSeparate = romfsSeparate
+            } else {
+                effectiveRomfsSeparate = romfsSeparate || isAboveThreshold
+            }
+        } else {
+            effectiveRomfsSeparate = false
+        }
+        
+        if platform == .ios && isAboveThreshold && !romfsSeparate && !userDidManuallyOverrideRomfsSeparate {
+            logs.append(LogEntry(
+                level: .info,
+                message: "[Auto-Split] Game size (\(selectedGameSizeString)) exceeds configured threshold (\(Int(autoRomfsSplitLimitGB)) GB). Automatically applying --romfs separate."
+            ))
+        }
+        
         runner.startBuild(
             nxnativePath: nxnativePath,
             gameDirectory: targetGameDirectory,
@@ -92,7 +111,7 @@ extension AppViewModel {
             showFps: showFps,
             keepExtracted: keepExtracted,
             surveyOnly: surveyOnly,
-            romfsSeparate: romfsSeparate
+            romfsSeparate: effectiveRomfsSeparate
         )
     }
     

@@ -23,19 +23,22 @@ public struct DeveloperSigningTeam: Identifiable, Equatable, Hashable {
     public let teamType: String?
     public let isFreeProvisioningTeam: Bool
     public let hasCertificateInKeychain: Bool
+    public let signingIdentity: String?
 
     public init(
         id: String,
         name: String,
         teamType: String? = nil,
         isFreeProvisioningTeam: Bool = false,
-        hasCertificateInKeychain: Bool = false
+        hasCertificateInKeychain: Bool = false,
+        signingIdentity: String? = nil
     ) {
         self.id = id
         self.name = name
         self.teamType = teamType
         self.isFreeProvisioningTeam = isFreeProvisioningTeam
         self.hasCertificateInKeychain = hasCertificateInKeychain
+        self.signingIdentity = signingIdentity
     }
 
     public var displayName: String {
@@ -375,10 +378,16 @@ public final class DeviceDeploymentService: ObservableObject {
         let sign = Process()
         sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
 
-        if let team = chosenTeam, team.hasCertificateInKeychain {
+        let signingId = chosenTeam?.signingIdentity ?? (chosenTeam?.name.contains(":") == true ? chosenTeam?.name : nil)
+        if let team = chosenTeam, team.hasCertificateInKeychain, let validIdentity = signingId {
+            sign.arguments = ["--force", "--deep", "--sign", validIdentity, targetAppURL.path]
+            DispatchQueue.main.async {
+                self.activeDeployment.logLines.append("==> Signing with development identity: \(validIdentity)")
+            }
+        } else if let team = chosenTeam, team.hasCertificateInKeychain {
             sign.arguments = ["--force", "--deep", "--sign", team.name, targetAppURL.path]
             DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Signing with development identity: \(team.name)")
+                self.activeDeployment.logLines.append("==> Signing with identity: \(team.name)")
             }
         } else if let team = chosenTeam {
             sign.arguments = ["--force", "--deep", "--sign", "-", targetAppURL.path]
