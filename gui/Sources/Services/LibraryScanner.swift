@@ -246,20 +246,36 @@ public final class LibraryScanner {
     }
     
     public func launchGame(at url: URL, env: [String: String]? = nil, completion: @escaping (Bool, String?) -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            // Strip macOS quarantine and provenance attributes to satisfy Gatekeeper
-            let cleanProc = Process()
-            cleanProc.executableURL = URL(fileURLWithPath: "/usr/bin/xattr")
-            cleanProc.arguments = ["-cr", url.path]
-            try? cleanProc.run()
-            cleanProc.waitUntilExit()
+        guard url.pathExtension.lowercased() == "app" else {
+            completion(false, "Cannot launch non-macOS application bundle locally.")
+            return
+        }
 
-            // Re-sign bundle ad-hoc to guarantee AMFI accepts any modified metadata or resources
-            let signProc = Process()
-            signProc.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-            signProc.arguments = ["--force", "--deep", "--sign", "-", url.path]
-            try? signProc.run()
-            signProc.waitUntilExit()
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+
+            // 1. Remove macOS quarantine attribute safely with timeout to satisfy Gatekeeper
+            self.runProcessWithTimeout(executable: "/usr/bin/xattr", arguments: ["-d", "com.apple.quarantine", url.path], timeoutSeconds: 2.0)
+            self.runProcessWithTimeout(executable: "/usr/bin/xattr", arguments: ["-cr", url.appendingPathComponent("Contents/MacOS").path], timeoutSeconds: 2.0)
+
+            // 2. Ensure executable permissions and ad-hoc sign Mach-O binaries in Contents/MacOS (fast ~0.02s, not deep bundle hashing)
+            let fm = FileManager.default
+            let macosDir = url.appendingPathComponent("Contents/MacOS")
+            let dmhostURL = macosDir.appendingPathComponent("dmhost")
+            if fm.fileExists(atPath: dmhostURL.path) {
+                try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dmhostURL.path)
+                self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", dmhostURL.path], timeoutSeconds: 2.5)
+            }
+
+            if let binFiles = try? fm.contentsOfDirectory(at: macosDir, includingPropertiesForKeys: nil) {
+                for bin in binFiles where bin.lastPathComponent != "dmhost" {
+                    try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: bin.path)
+                    self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", bin.path], timeoutSeconds: 2.5)
+                }
+            }
+
+            // Quick ad-hoc sign bundle wrapper WITHOUT --deep (validates plist/bundle wrapper in 0.05s)
+            self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", url.path], timeoutSeconds: 2.5)
 
             DispatchQueue.main.async {
                 let config = NSWorkspace.OpenConfiguration()
@@ -270,13 +286,38 @@ public final class LibraryScanner {
                 }
                 config.environment = envDict
                 NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
-                    if let err = error { completion(false, err.localizedDescription) }
-                    else {
+                    if let err = error {
+                        completion(false, err.localizedDescription)
+                    } else {
                         GameControllerService.shared.activeRunningGameApp = app
                         completion(true, nil)
                     }
                 }
             }
+        }
+    }
+
+    @discardableResult
+    private func runProcessWithTimeout(executable: String, arguments: [String], timeoutSeconds: Double = 3.0) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            let deadline = DispatchTime.now() + timeoutSeconds
+            while process.isRunning && DispatchTime.now() < deadline {
+                usleep(30_000) // 30ms polling
+            }
+            if process.isRunning {
+                process.terminate()
+                return false
+            }
+            return process.terminationStatus == 0
+        } catch {
+            return false
         }
     }
 }

@@ -15,9 +15,9 @@ public struct MainView: View {
     internal var tabs: [(tag: Int, title: String, icon: String)] {
         [
             (0, viewModel.tr("nav.port_game"), "play.circle.fill"),
-            (1, viewModel.tr("nav.library"), "books.vertical.fill"),
-            (2, viewModel.tr("nav.compatibility"), "checklist.checked"),
-            (3, viewModel.tr("nav.controls"), "gamecontroller.fill"),
+            (1, viewModel.tr("nav.library"), "gamecontroller.fill"),
+            (2, viewModel.tr("nav.compatibility"), "books.vertical.fill"),
+            (3, viewModel.tr("nav.controls"), "arcade.stick.console.fill"),
             (4, viewModel.tr("nav.personalize"), "paintpalette.fill"),
             (5, viewModel.tr("nav.settings"), "gearshape.fill"),
             (6, viewModel.tr("nav.console"), "terminal.fill")

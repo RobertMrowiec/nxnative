@@ -200,8 +200,25 @@ extension SaveSyncService {
             return
         }
         let bundleId = game.bundleId ?? "com.nxnative.\(titleId)"
-        autoSyncSave(titleId: titleId, bundleId: bundleId, device: dev, game: game) { status, msg in
+        
+        var hasCalledCompletion = false
+        let completionLock = NSLock()
+        
+        let safeCompletion: (AutoSyncStatus?, String) -> Void = { status, msg in
+            completionLock.lock()
+            defer { completionLock.unlock() }
+            guard !hasCalledCompletion else { return }
+            hasCalledCompletion = true
             completion(status, msg)
+        }
+        
+        // Strict 3.0 second timeout: device latency must never block game launching
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            safeCompletion(nil, "Device auto-sync timed out (proceeding with launch)")
+        }
+        
+        autoSyncSave(titleId: titleId, bundleId: bundleId, device: dev, game: game) { status, msg in
+            safeCompletion(status, msg)
         }
     }
 
