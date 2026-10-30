@@ -6,11 +6,11 @@
 # 🎮 Supported Games & Platform Features Timeline
 > **Live Upstream Synchronization**: Verified compatibility matrix directly derived from [`seedds/nxnative`](https://github.com/seedds/nxnative) game profiles and host bring-up suites.
 
-[![Total Games](https://img.shields.io/badge/Verified%20Titles-111%20Playable-success.svg)](#complete-verified-games-catalog) [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-informational.svg)](https://github.com/seedds/nxnative) [![4GB Ready](https://img.shields.io/badge/4GB%20RAM-27%20Games-blue.svg)](#hardware-tier-guide) [![8GB Ready](https://img.shields.io/badge/8GB%20RAM-91%20Games-purple.svg)](#hardware-tier-guide) [![16GB Enthusiast](https://img.shields.io/badge/16GB%20RAM-111%20Games-orange.svg)](#hardware-tier-guide)
+[![Total Games](https://img.shields.io/badge/Verified%20Titles-114%20Playable-success.svg)](#complete-verified-games-catalog) [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-informational.svg)](https://github.com/seedds/nxnative) [![4GB Ready](https://img.shields.io/badge/4GB%20RAM-27%20Games-blue.svg)](#hardware-tier-guide) [![8GB Ready](https://img.shields.io/badge/8GB%20RAM-93%20Games-purple.svg)](#hardware-tier-guide) [![16GB Enthusiast](https://img.shields.io/badge/16GB%20RAM-114%20Games-orange.svg)](#hardware-tier-guide)
 
 ### 📑 Quick Navigation
 - [💻 Hardware & RAM Tier Guide](#hardware-ram-tier-guide)
-- [📚 Complete Verified Games Catalog (111 Titles)](#complete-verified-games-catalog)
+- [📚 Complete Verified Games Catalog (114 Titles)](#complete-verified-games-catalog)
 - [🚀 Platform Features Timeline (Newest to Oldest)](#platform-features-timeline-newest-to-oldest)
 - [🔄 How to Port an Unlisted Game](#how-to-port-an-unlisted-game)
 
@@ -22,9 +22,9 @@ Because NxNative performs **ahead-of-time native recompilation** into ARM64 Mach
 | Memory Tier | Mac Hardware (Apple Silicon) | iPhone / iPad Hardware | Playable Titles | Target Performance |
 | :--- | :--- | :--- | :---: | :--- |
 | **4 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **27 games** | Native 60 FPS • Lightweight 2D/3D |
-| **6 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **75 games** | Native 60 FPS • Standard 3D Titles |
-| **8 GB RAM** | M1/M2/M3/M4 with 8GB+ RAM | iPhone 15 Pro / 16 / 16 Pro, iPad Air/Pro M1+ | **91 games** | 1080p/4K 60 FPS • Flagship 3D Open World |
-| **16 GB+ RAM**| M1 Pro/Max, M2 Pro/Max, M3 Pro/Max, M4 Pro | iPhone 16 Pro / iPad Pro M2/M4 | **111 games (100%)** | 4K 60 FPS • Heavyweight Unreal / Monolith Games |
+| **6 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **77 games** | Native 60 FPS • Standard 3D Titles |
+| **8 GB RAM** | M1/M2/M3/M4 with 8GB+ RAM | iPhone 15 Pro / 16 / 16 Pro, iPad Air/Pro M1+ | **93 games** | 1080p/4K 60 FPS • Flagship 3D Open World |
+| **16 GB+ RAM**| M1 Pro/Max, M2 Pro/Max, M3 Pro/Max, M4 Pro | iPhone 16 Pro / iPad Pro M2/M4 | **114 games (100%)** | 4K 60 FPS • Heavyweight Unreal / Monolith Games |
 
 > [!TIP]
 > **Unified Memory Advantage**: macOS and iOS share memory dynamically between the CPU and Metal GPU. A Mac with 8GB Unified Memory can run 83% of the catalog, while 16GB handles 100% of tested titles with high-resolution textures.
@@ -32,7 +32,7 @@ Because NxNative performs **ahead-of-time native recompilation** into ARM64 Mach
 ---
 ## 📚 Complete Verified Games Catalog
 
-Currently tracking **111 tested game profiles** (105 NVN, 3 OpenGL, 3 Vulkan):
+Currently tracking **114 tested game profiles** (108 NVN, 3 OpenGL, 3 Vulkan):
 
 | Game Title | Title ID | Tested Build | Engine & Backend | Min RAM (Mac) | Min iOS Silicon | Highlights & Notes |
 | :--- | :---: | :---: | :--- | :---: | :---: | :--- |
@@ -70,6 +70,7 @@ Currently tracking **111 tested game profiles** (105 NVN, 3 OpenGL, 3 Vulkan):
 | [Donkey Kong Country: Tropical Freeze](nxnative/dm/games/0100C1F0051B6000/README.md) | `0100C1F0051B6000` | 1.0.2 | Retro Studios' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [DRAGON QUEST VII Reimagined](nxnative/dm/games/0100A9D01C446000/README.md) | `0100A9D01C446000` | 1.2.0 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
 | [DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition](nxnative/dm/games/01006C300E9F0000/README.md) | `01006C300E9F0000` | 1.0.4 | Unreal Engine 4.18 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.4** |
+| [EA SPORTS FC 27](nxnative/dm/games/0100C49025D3E000/README.md) | `0100C49025D3E000` | 1.8d.310c | Frostbite 2025.1.2 (its NVN renderer in an NRO) • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.8d.310c** |
 | [FINAL FANTASY CRYSTAL CHRONICLES Remastered Edition](nxnative/dm/games/0100CE4010AAC000/README.md) | `0100CE4010AAC000` | 1.0.3 | Unity 2018.4.2f1 IL2CPP, FMOD • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
 | [FINAL FANTASY RESONANCE](nxnative/dm/games/0100606026F12000/README.md) | `0100606026F12000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.1** |
 | [FINAL FANTASY RESONANCE, Asian release](nxnative/dm/games/0100B8A026F14000/README.md) | `0100B8A026F14000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
@@ -92,6 +93,7 @@ Currently tracking **111 tested game profiles** (105 NVN, 3 OpenGL, 3 Vulkan):
 | [Metroid Dread](nxnative/dm/games/010093801237C000/README.md) | `010093801237C000` | 2.1.0 | MercurySteam's engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
 | [Monster Hunter Rise](nxnative/dm/games/0100B04011742000/README.md) | `0100B04011742000` | 16.0.2 | Capcom's RE Engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 16.0.2** |
 | [Monster Train 2](nxnative/dm/games/010051701FB46000/README.md) | `010051701FB46000` | 1.1.1 | Unity 2022.3.54f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.1.1** |
+| [Need for Speed: Hot Pursuit Remastered](nxnative/dm/games/010029B0118E8000/README.md) | `010029B0118E8000` | 1.0.3 | Criterion's engine (Stellar Entertainment port) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [NieR:Automata The End of YoRHa Edition](nxnative/dm/games/010056B015FE8000/README.md) | `010056B015FE8000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.3** |
 | [NieR:Automata The End of YoRHa Edition, Asian release](nxnative/dm/games/0100B8E016F76000/README.md) | `0100B8E016F76000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
 | [OCTOPATH TRAVELER](nxnative/dm/games/010057D006492000/README.md) | `010057D006492000` | 1.0.5 | Unreal Engine 4.18 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
@@ -110,6 +112,7 @@ Currently tracking **111 tested game profiles** (105 NVN, 3 OpenGL, 3 Vulkan):
 | [Pokémon Shield](nxnative/dm/games/01008DB008C2C000/README.md) | `01008DB008C2C000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [Pokémon Sword](nxnative/dm/games/0100ABF008968000/README.md) | `0100ABF008968000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [Portal](nxnative/dm/games/01007BB017812000/README.md) | `01007BB017812000` | 1.0.3 | Valve's Source engine (28 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Portal 2](nxnative/dm/games/0100ABD01785C000/README.md) | `0100ABD01785C000` | 1.0.3 | Valve's Source engine (21 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [Raging Loop](nxnative/dm/games/010020400E1C2000/README.md) | `010020400E1C2000` | 1.0.0 (base) | Unity 2018.3.10f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
 | [Return of the Obra Dinn](nxnative/dm/games/010032E00E6E2000/README.md) | `010032E00E6E2000` | 1.0.1 | Unity 2017.4.28f1 IL2CPP • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 | [Rhythm Heaven Groove](nxnative/dm/games/0100D9F01D474000/README.md) | `0100D9F01D474000` | 1.0.0 (base) | Nintendo's own 2D engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
