@@ -26,6 +26,8 @@ extension SaveSyncService {
         }
         let save = resolvedSaveDirectory(forTitleId: titleId)
         let device = URL(fileURLWithPath: save.path + "_device")
+        normalizeBackslashSaveFiles(in: save)
+        normalizeBackslashSaveFiles(in: device)
         let dest = dmsyncFileURL(titleId: titleId)
 
         var entries: [(rel: String, abs: String, isFile: Bool, size: UInt64, mtime: Int64)] = []
@@ -89,6 +91,39 @@ extension SaveSyncService {
     }
 
     // MARK: - helpers
+
+    /// Migrates legacy save files created before `fwd_slashes` in `hle_fs.c` (e.g. `\savedata0.bin` -> `savedata0.bin`).
+    public func normalizeBackslashSaveFiles(in directory: URL) {
+        guard let items = try? fileManager.contentsOfDirectory(atPath: directory.path) else { return }
+        for item in items where item != ".DS_Store" {
+            let fullURL = directory.appendingPathComponent(item)
+            var isDir: ObjCBool = false
+            guard fileManager.fileExists(atPath: fullURL.path, isDirectory: &isDir) else { continue }
+            if isDir.boolValue {
+                normalizeBackslashSaveFiles(in: fullURL)
+                continue
+            }
+            guard item.contains("\\") else { continue }
+            let cleanRelative = item.replacingOccurrences(of: "\\", with: "/")
+                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            guard !cleanRelative.isEmpty && cleanRelative != item else { continue }
+            let cleanURL = directory.appendingPathComponent(cleanRelative)
+            try? fileManager.createDirectory(at: cleanURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+            if !fileManager.fileExists(atPath: cleanURL.path) {
+                try? fileManager.moveItem(at: fullURL, to: cleanURL)
+            } else {
+                // If both exist, keep whichever has a newer modification date (or if the backslash file was just copied in)
+                let srcDate = (try? fileManager.attributesOfItem(atPath: fullURL.path)[.modificationDate] as? Date) ?? .distantPast
+                let dstDate = (try? fileManager.attributesOfItem(atPath: cleanURL.path)[.modificationDate] as? Date) ?? .distantPast
+                if srcDate > dstDate {
+                    try? fileManager.removeItem(at: cleanURL)
+                    try? fileManager.moveItem(at: fullURL, to: cleanURL)
+                } else {
+                    try? fileManager.removeItem(at: fullURL)
+                }
+            }
+        }
+    }
 
     private static func dmsyncError(_ msg: String) -> NSError {
         NSError(domain: "SaveSyncService", code: 500, userInfo: [NSLocalizedDescriptionKey: msg])

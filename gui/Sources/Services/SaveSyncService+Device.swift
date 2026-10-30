@@ -35,12 +35,14 @@ extension SaveSyncService {
             }
 
             // The Mac app's own bundle ID is not the iPhone app's: asking devicectl for it gives
-            // ContainerLookupError. The iPhone app is found by title ID among the apps installed on the device.
-            guard let realBundleId = DeviceDeploymentService.shared.findBundleId(for: titleId, on: device) else {
+            // ContainerLookupError. The iPhone app is found by title ID or game name among the apps installed on the device.
+            guard let realBundleId = DeviceDeploymentService.shared.findBundleId(for: titleId, gameName: game?.name, on: device) else {
                 let msg = "O app iOS deste jogo não está instalado em \(device.name). Instale o IPA no iPhone primeiro. Com o iCloud ativo, o save já está em iCloud Drive/nxnative_launcher/\(titleId.uppercased()) e entra no app iOS ao abrir o jogo lá."
                 DispatchQueue.main.async { completion(.failed(msg), msg) }
                 return
             }
+
+            self.normalizeBackslashSaveFiles(in: saveDir)
 
             // iPhone reads <iCloud>/nxnative_launcher/<TITLE_ID>/save.dmsync; refresh it before comparing.
             if let g = game, self.isICloudSyncEnabled(for: g) {
@@ -53,6 +55,7 @@ extension SaveSyncService {
             }
 
             try? self.fileManager.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            let stagedSave = tempDir.appendingPathComponent("save", isDirectory: true)
 
             // Step 2: Extract device save into temporary staging folder
             let pullProcess = Process()
@@ -64,7 +67,7 @@ extension SaveSyncService {
                 "--domain-type", "appDataContainer",
                 "--domain-identifier", realBundleId,
                 "--source", "Documents/save",
-                "--destination", tempDir.path
+                "--destination", stagedSave.path
             ]
             pullProcess.standardOutput = pullPipe
             pullProcess.standardError = pullPipe
@@ -78,9 +81,9 @@ extension SaveSyncService {
                 deviceHasSave = false
             }
 
-            let stagedSave = tempDir.appendingPathComponent("save", isDirectory: true)
             var stagedFiles: [String] = []
             if deviceHasSave && self.fileManager.fileExists(atPath: stagedSave.path) {
+                self.normalizeBackslashSaveFiles(in: stagedSave)
                 stagedFiles = (try? self.fileManager.subpathsOfDirectory(atPath: stagedSave.path)) ?? []
             }
             let validStagedFiles = stagedFiles.filter { !$0.hasPrefix(".") && !$0.isEmpty }
@@ -159,6 +162,9 @@ extension SaveSyncService {
                 // Device save is newer -> Pull into Mac & iCloud
                 self.importStagedSaveToMac(stagedSave: stagedSave, saveDir: saveDir) { success, msg in
                     if success {
+                        if let g = game, self.isICloudSyncEnabled(for: g) {
+                            _ = self.writeDMSync(for: g)
+                        }
                         completion(.macUpdated, L10n.t("settings_modal.sync_mac_updated"))
                     } else {
                         completion(.failed(msg), msg)
@@ -168,6 +174,9 @@ extension SaveSyncService {
                 // Mac save is newer -> Push to device
                 self.pushSaveToDevice(titleId: titleId, bundleId: realBundleId, device: device) { success, msg in
                     if success {
+                        if let g = game, self.isICloudSyncEnabled(for: g) {
+                            _ = self.writeDMSync(for: g)
+                        }
                         completion(.deviceUpdated, L10n.t("settings_modal.sync_device_updated"))
                     } else {
                         completion(.failed(msg), msg)
@@ -184,6 +193,7 @@ extension SaveSyncService {
     ) {
         do {
             try fileManager.createDirectory(at: saveDir, withIntermediateDirectories: true)
+            normalizeBackslashSaveFiles(in: stagedSave)
             let items = try fileManager.contentsOfDirectory(atPath: stagedSave.path)
             for item in items {
                 let src = stagedSave.appendingPathComponent(item)
@@ -193,6 +203,7 @@ extension SaveSyncService {
                 }
                 try fileManager.copyItem(at: src, to: dst)
             }
+            normalizeBackslashSaveFiles(in: saveDir)
             DispatchQueue.main.async { [weak self] in
                 self?.objectWillChange.send()
                 completion(true, "Save imported successfully!")
@@ -250,6 +261,7 @@ extension SaveSyncService {
             return
         }
 
+        normalizeBackslashSaveFiles(in: saveDir)
         let realBundleId = DeviceDeploymentService.shared.findBundleId(for: titleId, on: device) ?? bundleId
 
         DispatchQueue.global(qos: .userInitiated).async {
@@ -262,7 +274,7 @@ extension SaveSyncService {
                 "--domain-type", "appDataContainer",
                 "--domain-identifier", realBundleId,
                 "--source", saveDir.path,
-                "--destination", "Documents"
+                "--destination", "Documents/save"
             ]
             process.standardOutput = pipe
             process.standardError = pipe
@@ -310,7 +322,7 @@ extension SaveSyncService {
                 "--domain-type", "appDataContainer",
                 "--domain-identifier", realBundleId,
                 "--source", "Documents/save",
-                "--destination", saveDir.deletingLastPathComponent().path
+                "--destination", saveDir.path
             ]
             process.standardOutput = pipe
             process.standardError = pipe
@@ -319,6 +331,9 @@ extension SaveSyncService {
                 try process.run()
                 process.waitUntilExit()
                 let success = process.terminationStatus == 0
+                if success {
+                    self?.normalizeBackslashSaveFiles(in: saveDir)
+                }
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let out = String(decoding: data, as: UTF8.self)
                 DispatchQueue.main.async {
