@@ -33,22 +33,40 @@ public struct GameSettingsSavesSectionView: View {
         .nxGlassCard(cornerRadius: 14)
     }
 
+    private var isGameICloudEnabledBinding: Binding<Bool> {
+        Binding(
+            get: {
+                saveService.isICloudSyncEnabled(for: game)
+            },
+            set: { newValue in
+                SoundEffectService.shared.play(.click)
+                let cover = GameCoverService.shared.coverImage(for: game)
+                saveService.setICloudSyncEnabled(newValue, for: game, cover: cover)
+                if newValue {
+                    backupStatusText = "Saves movidos para o iCloud: nxnative_launcher"
+                } else {
+                    backupStatusText = "Saves revertidos para o armazenamento local"
+                }
+            }
+        )
+    }
+
     private var iCloudCrossSaveCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 HStack(spacing: 8) {
                     Image(systemName: "icloud.fill")
-                        .foregroundColor(saveService.isICloudSyncEnabled ? Color.blue : Color.gray)
+                        .foregroundColor(saveService.isICloudSyncEnabled(for: game) ? Color.blue : Color.gray)
                         .font(.system(size: 15))
                     Text(L10n.t("settings_modal.icloud_sync"))
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(NXTheme.textPrimary)
                     
-                    Toggle("", isOn: $saveService.isICloudSyncEnabled)
+                    Toggle("", isOn: isGameICloudEnabledBinding)
                         .labelsHidden()
                         .toggleStyle(.switch)
                         .controlSize(.mini)
-                        .help(saveService.isICloudSyncEnabled ? "Turn off iCloud Sync to keep saves only on local Mac storage" : "Turn on iCloud Sync to share saves via iCloud Drive")
+                        .help(saveService.isICloudSyncEnabled(for: game) ? "Turn off iCloud Sync for this game to keep saves only on local Mac storage" : "Turn on iCloud Sync to share this game's saves via iCloud Drive")
                 }
 
                 Spacer()
@@ -67,7 +85,7 @@ public struct GameSettingsSavesSectionView: View {
 
             // Status Banner
             HStack(spacing: 8) {
-                if !saveService.isICloudSyncEnabled {
+                if !saveService.isICloudSyncEnabled(for: game) {
                     Circle()
                         .fill(Color.blue)
                         .frame(width: 7, height: 7)
@@ -87,7 +105,7 @@ public struct GameSettingsSavesSectionView: View {
                         .frame(width: 7, height: 7)
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(saveService.isICloudDriveAvailable ? "iCloud Drive Sync Active" : "iCloud Drive Disabled on macOS")
+                        Text(saveService.isICloudDriveAvailable ? "iCloud Drive Ativo para este Jogo" : "iCloud Drive Desativado no macOS")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(NXTheme.textPrimary)
 
@@ -111,10 +129,30 @@ public struct GameSettingsSavesSectionView: View {
                 }
                 .buttonStyle(NXSecondaryButtonStyle())
                 .controlSize(.mini)
-                .help(saveService.isICloudSyncEnabled ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
+                .help(saveService.isICloudSyncEnabled(for: game) ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
             }
             .padding(10)
             .nxGlassCard(cornerRadius: 10, isNested: true)
+
+            // Cross-Platform Sync Guide with iPhone
+            if saveService.isICloudSyncEnabled(for: game) {
+                HStack(spacing: 8) {
+                    Image(systemName: "iphone.gen3")
+                        .foregroundColor(.blue)
+                        .font(.system(size: 14))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sincronização com iPhone (iCloud Cross-Save)")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(NXTheme.textPrimary)
+                        Text("No iPhone, selecione a pasta 'nxnative_launcher' no iCloud Drive nas opções do jogo. Os saves sincronizam automaticamente em segundo plano via save.dmsync!")
+                            .font(.system(size: 10))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                }
+                .padding(8)
+                .background(Color.blue.opacity(0.12))
+                .cornerRadius(8)
+            }
 
             if let status = backupStatusText {
                 Text(status)

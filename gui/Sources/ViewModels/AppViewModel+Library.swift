@@ -81,11 +81,13 @@ extension AppViewModel {
         
         // Ensure iCloud Cross-Save is configured with cover art if iCloud Sync is enabled by user
         var savePath: String? = nil
-        if SaveSyncService.shared.isICloudSyncEnabled && SaveSyncService.shared.isICloudDriveAvailable {
+        var cloudSyncPath: String? = nil
+        if SaveSyncService.shared.isICloudSyncEnabled(for: game) && SaveSyncService.shared.isICloudDriveAvailable {
             let cover = GameCoverService.shared.coverImage(for: game)
             switch SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
             case .success(let cloudSaveDir):
                 savePath = cloudSaveDir.path
+                cloudSyncPath = SaveSyncService.shared.iCloudFolder(for: game).path
             case .failure(let error):
                 logs.append(LogEntry(level: .warning, message: "[iCloud] \(error.localizedDescription)"))
             }
@@ -97,6 +99,9 @@ extension AppViewModel {
                 self?.logs.append(LogEntry(level: .info, message: "Auto-sync on launch: \(msg)"))
             }
             var env = config.toEnvironmentDict(savePath: savePath)
+            if let csp = cloudSyncPath {
+                env["DM_SAVE_SYNC"] = csp
+            }
             let prof = InputProfileManager.shared.activeProfile
             env["DM_MOUSE_RIGHT_STICK"] = prof.mouseAsRightStick ? "1" : "0"
             env["DM_MOUSE_SENSITIVITY"] = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), prof.mouseSensitivity)
