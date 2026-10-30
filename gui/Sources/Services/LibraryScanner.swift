@@ -252,7 +252,12 @@ public final class LibraryScanner {
         }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            guard let self = self else { return }
+            guard let self = self else {
+                DispatchQueue.main.async {
+                    completion(false, "Internal error: LibraryScanner unavailable.")
+                }
+                return
+            }
 
             // 1. Remove macOS quarantine attribute safely with timeout to satisfy Gatekeeper
             self.runProcessWithTimeout(executable: "/usr/bin/xattr", arguments: ["-d", "com.apple.quarantine", url.path], timeoutSeconds: 2.0)
@@ -264,27 +269,34 @@ public final class LibraryScanner {
             let dmhostURL = macosDir.appendingPathComponent("dmhost")
             if fm.fileExists(atPath: dmhostURL.path) {
                 try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: dmhostURL.path)
-                self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", dmhostURL.path], timeoutSeconds: 2.5)
+                self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", dmhostURL.path], timeoutSeconds: 2.0)
             }
 
             if let binFiles = try? fm.contentsOfDirectory(at: macosDir, includingPropertiesForKeys: nil) {
                 for bin in binFiles where bin.lastPathComponent != "dmhost" {
                     try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: bin.path)
-                    self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", bin.path], timeoutSeconds: 2.5)
+                    self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", bin.path], timeoutSeconds: 2.0)
                 }
             }
 
             // Quick ad-hoc sign bundle wrapper WITHOUT --deep (validates plist/bundle wrapper in 0.05s)
-            self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", url.path], timeoutSeconds: 2.5)
+            self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", url.path], timeoutSeconds: 2.0)
 
             DispatchQueue.main.async {
                 let config = NSWorkspace.OpenConfiguration()
                 config.activates = true
-                var envDict = env ?? [:]
+                
+                // MANDATORY ZERO-HANG RULE: Inherit system environment (PATH, HOME, USER)
+                // dmhost and system libraries crash or abort if HOME/USER/PATH are missing!
+                var envDict = ProcessInfo.processInfo.environment
+                if let env = env {
+                    for (k, v) in env { envDict[k] = v }
+                }
                 if envDict["DM_LAUNCHER"] == nil {
                     envDict["DM_LAUNCHER"] = "0"
                 }
                 config.environment = envDict
+                
                 NSWorkspace.shared.openApplication(at: url, configuration: config) { app, error in
                     if let err = error {
                         completion(false, err.localizedDescription)

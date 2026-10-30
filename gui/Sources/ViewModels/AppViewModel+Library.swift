@@ -67,9 +67,10 @@ extension AppViewModel {
         
         let targetGameId = game.id
         // Fail-safe Watchdog: guarantees launchingGameId is reset if launch stalls
-        DispatchQueue.main.asyncAfter(deadline: .now() + 8.0) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { [weak self] in
             if self?.launchingGameId == targetGameId {
                 self?.launchingGameId = nil
+                SoundEffectService.shared.play(.error)
                 self?.logs.append(LogEntry(level: .warning, message: "Launch watchdog cleared stuck launching state for \(game.name)."))
             }
         }

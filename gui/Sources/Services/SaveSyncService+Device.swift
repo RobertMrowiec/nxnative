@@ -212,8 +212,8 @@ extension SaveSyncService {
             completion(status, msg)
         }
         
-        // Strict 3.0 second timeout: device latency must never block game launching
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+        // Strict 2.0 second timeout: device latency must never block game launching
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             safeCompletion(nil, "Device auto-sync timed out (proceeding with launch)")
         }
         
