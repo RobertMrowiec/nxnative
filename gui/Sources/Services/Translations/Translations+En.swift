@@ -483,6 +483,8 @@ extension Translations {
         "settings_modal.developer_mode_tip": "The first time, turn on Developer Mode on the device and trust the developer (Settings → General → VPN & Device Management).",
         "settings_modal.open_xcode_btn": "Open Xcode",
         "settings_modal.install_button": "Install on %@",
+        "settings_modal.auto_provisioning_status": "Provisioning app with Apple Developer...",
+        "settings_modal.auto_provisioning_detail": "Registering device and fetching official development profile via Xcode...",
         "settings_modal.copying_romfs_status": "Transferring game data (romfs.img)...",
         "settings_modal.copying_romfs_detail": "Transferring files to the app's Documents container on iOS...",
         "settings_modal.airdrop_help": "Send .ipa directly to iPhone via AirDrop",

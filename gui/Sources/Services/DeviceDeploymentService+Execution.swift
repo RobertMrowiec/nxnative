@@ -147,7 +147,7 @@ extension DeviceDeploymentService {
         activeDeployment.isRunning = false
 
         // Parse Failure Category
-        if output.contains("0xe8008014") || output.contains("ApplicationVerificationFailed") || output.contains("invalid signature") || output.contains("integridade não pôde ser verificada") {
+        if output.contains("0xe8008014") || output.contains("0xe8008015") || output.contains("ApplicationVerificationFailed") || output.contains("invalid signature") || output.contains("integridade não pôde ser verificada") {
             failDeployment(
                 category: .signatureVerificationFailed,
                 title: "iOS Signature Verification Failed",

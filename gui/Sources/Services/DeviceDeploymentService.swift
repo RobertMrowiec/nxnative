@@ -242,15 +242,15 @@ public final class DeviceDeploymentService: ObservableObject {
 
             guard self.activeDeployment.isRunning else { return }
 
-            // 2. Prepare code signature
+            // 2. Prepare code signature & automated provisioning
             DispatchQueue.main.async {
                 self.activeDeployment.phase = .signing
                 self.activeDeployment.progressFraction = 0.35
-                self.activeDeployment.statusMessage = "Verifying app signature..."
-                self.activeDeployment.detailMessage = "Ensuring bundle integrity before transfer..."
+                self.activeDeployment.statusMessage = "Verifying app signature & provisioning..."
+                self.activeDeployment.detailMessage = "Ensuring bundle integrity and Apple Developer profile..."
             }
 
-            self.applyCodeSignatureIfNeeded(targetAppURL: targetAppURL, team: team)
+            self.applyCodeSignatureAndProvisioning(targetAppURL: targetAppURL, device: device, team: team)
 
             guard self.activeDeployment.isRunning else { return }
 
@@ -359,51 +359,14 @@ public final class DeviceDeploymentService: ObservableObject {
         return (appURL, romfsURL, nil)
     }
 
-    // MARK: - Code Signing
+    // MARK: - Code Signing Backward-Compatibility Forwarder
     private func applyCodeSignatureIfNeeded(targetAppURL: URL, team: DeveloperSigningTeam?) {
-        let chosenTeam = team ?? selectedSigningTeam
-        let fm = FileManager.default
-        
-        // If a custom provisioning profile was configured or exists, embed it into the app bundle!
-        let customProfilePath = UserDefaults.standard.string(forKey: "NXNative_SavedCustomProvisioningProfilePath")
-        if let provPath = customProfilePath, !provPath.isEmpty, fm.fileExists(atPath: provPath) {
-            let dest = targetAppURL.appendingPathComponent("embedded.mobileprovision")
-            try? fm.removeItem(at: dest)
-            try? fm.copyItem(at: URL(fileURLWithPath: provPath), to: dest)
-            DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Embedded custom provisioning profile: \(URL(fileURLWithPath: provPath).lastPathComponent)")
-            }
-        }
-        
-        let sign = Process()
-        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-
-        let signingId = chosenTeam?.signingIdentity ?? (chosenTeam?.name.contains(":") == true ? chosenTeam?.name : nil)
-        if let team = chosenTeam, team.hasCertificateInKeychain, let validIdentity = signingId {
-            sign.arguments = ["--force", "--deep", "--sign", validIdentity, targetAppURL.path]
-            DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Signing with development identity: \(validIdentity)")
-            }
-        } else if let team = chosenTeam, team.hasCertificateInKeychain {
-            sign.arguments = ["--force", "--deep", "--sign", team.name, targetAppURL.path]
-            DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Signing with identity: \(team.name)")
-            }
-        } else if let team = chosenTeam {
-            sign.arguments = ["--force", "--deep", "--sign", "-", targetAppURL.path]
-            DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Signing for team \(team.displayName) (ad-hoc / Xcode development)...")
-            }
+        if let firstDevice = connectedDevices.first {
+            applyCodeSignatureAndProvisioning(targetAppURL: targetAppURL, device: firstDevice, team: team)
         } else {
-            // Apply ad-hoc signature
-            sign.arguments = ["--force", "--deep", "--sign", "-", targetAppURL.path]
-            DispatchQueue.main.async {
-                self.activeDeployment.logLines.append("==> Applying ad-hoc signature (--sign -)...")
-            }
+            let fallbackDev = ConnectedAppleDevice(id: "generic", name: "iOS Device", model: "iPhone", osVersion: "iOS", isPaired: true)
+            applyCodeSignatureAndProvisioning(targetAppURL: targetAppURL, device: fallbackDev, team: team)
         }
-
-        try? sign.run()
-        sign.waitUntilExit()
     }
     
     // MARK: - Custom Certificate & Profile Import

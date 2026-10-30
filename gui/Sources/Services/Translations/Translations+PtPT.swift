@@ -479,6 +479,8 @@ extension Translations {
         "settings_modal.developer_mode_tip": "Na primeira vez, ative o Modo de Desenvolvedor no dispositivo e confie no desenvolvedor (Ajustes → Geral → VPN e Gestão de Dispositivos).",
         "settings_modal.open_xcode_btn": "Abrir Xcode",
         "settings_modal.install_button": "Instalar no %@",
+        "settings_modal.auto_provisioning_status": "A provisionar app na Apple...",
+        "settings_modal.auto_provisioning_detail": "A registar iPhone e a obter perfil oficial de desenvolvimento via Xcode...",
         "settings_modal.copying_romfs_status": "Copiando dados do jogo (romfs.img)...",
         "settings_modal.copying_romfs_detail": "Transferindo ficheiros para o container Documents do aplicativo no iOS...",
         "settings_modal.airdrop_help": "Enviar .ipa diretamente para o iPhone via AirDrop",
