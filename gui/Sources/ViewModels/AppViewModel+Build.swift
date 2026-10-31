@@ -29,6 +29,7 @@ extension AppViewModel {
         
         buildWizardStep = 3
         isBuilding = true
+        buildingGameId = sel.id
         buildError = nil
         buildSuccessPath = nil
         progressFraction = 0.0
@@ -59,11 +60,22 @@ extension AppViewModel {
                 .appendingPathComponent(safeName)
             
             let fm = FileManager.default
-            if fm.fileExists(atPath: stagingDir.path) {
-                try? fm.removeItem(at: stagingDir)
-            }
             do {
-                try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+                if !fm.fileExists(atPath: stagingDir.path) {
+                    try fm.createDirectory(at: stagingDir, withIntermediateDirectories: true)
+                } else {
+                    // Clean up stale file symlinks only to update file references;
+                    // PRESERVE intermediate <id>_build folders and cached shaders so rebuilds are instant.
+                    if let existingItems = try? fm.contentsOfDirectory(at: stagingDir, includingPropertiesForKeys: [.isSymbolicLinkKey, .isDirectoryKey]) {
+                        for itemURL in existingItems {
+                            let name = itemURL.lastPathComponent
+                            if name.hasSuffix("_build") {
+                                continue // Preserve build folder, extraction caches, and compiled shaders!
+                            }
+                            try? fm.removeItem(at: itemURL)
+                        }
+                    }
+                }
                 for item in sel.files {
                     let linkURL = stagingDir.appendingPathComponent(item.url.lastPathComponent)
                     if fm.fileExists(atPath: linkURL.path) {
@@ -217,89 +229,16 @@ extension AppViewModel {
             detectEnvironment(customRyujinxDir: url.path)
         }
     }
-    
-    // MARK: - BuildRunner Delegates
-    public func buildRunner(_ runner: BuildRunner, didProduceLog entry: LogEntry) {
-        logs.append(entry)
-        if logs.count > 1200 {
-            logs.removeFirst(200)
-        }
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didUpdateStage stage: String, index: Int, total: Int) {
-        self.currentStageName = stage
-        self.stageIndex = index
-        self.totalStages = total
-        
-        for i in 0..<buildStages.count {
-            if buildStages[i].id < index && buildStages[i].isRunning {
-                buildStages[i].isRunning = false
-                buildStages[i].isCompleted = true
-            }
-        }
-        
-        if let existingIdx = buildStages.firstIndex(where: { $0.id == index }) {
-            buildStages[existingIdx].isRunning = true
-            buildStages[existingIdx].step = ""
+
+    public func findInRyujinx() {
+        if let detected = SystemDetector.shared.detectProdKeys() {
+            self.prodKeysPath = detected.path
+            self.prodKeysSource = detected.sourceName
+            self.isProdKeysValid = true
+            SoundEffectService.shared.play(.click)
         } else {
-            buildStages.append(BuildStageItem(id: index, name: stage, isRunning: true))
+            SoundEffectService.shared.play(.error)
+            self.showRyujinxNotFoundSheet = true
         }
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didUpdateStep step: String) {
-        self.currentStepName = step
-        if let idx = buildStages.firstIndex(where: { $0.id == stageIndex }) {
-            buildStages[idx].step = step
-        }
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didUpdateProgress fraction: Double, doneBytes: Double?, totalBytes: Double?, etaSeconds: Double?) {
-        self.progressFraction = fraction
-        self.etaSeconds = etaSeconds
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didEndStage stage: String, index: Int, ok: Bool, elapsed: Double?, summary: String?) {
-        if let idx = buildStages.firstIndex(where: { $0.id == index }) {
-            buildStages[idx].isRunning = false
-            buildStages[idx].isCompleted = ok
-            buildStages[idx].isFailed = !ok
-            buildStages[idx].elapsedSeconds = elapsed
-            buildStages[idx].summary = summary
-        }
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didFinishSuccess outputPath: String?) {
-        self.isBuilding = false
-        self.progressFraction = 1.0
-        self.currentStageName = "Build Completed!"
-        for i in 0..<buildStages.count {
-            buildStages[i].isRunning = false
-            buildStages[i].isCompleted = true
-        }
-        self.buildSuccessPath = outputPath
-        self.logs.append(LogEntry(level: .success, message: "Build succeeded! Output: \(outputPath ?? "Unknown")"))
-        
-        if let out = outputPath {
-            let targetURL = URL(fileURLWithPath: out)
-            GameCoverService.shared.injectCoverIntoBundle(at: targetURL, gameName: appName.isEmpty ? (selectedGame?.name ?? "Game") : appName, titleId: selectedGame?.titleId)
-        }
-        
-        refreshLibrary()
-        
-        SoundEffectService.shared.play(.launch)
-        NotificationService.shared.sendPortSuccessNotification(gameName: appName.isEmpty ? "Ported Game" : appName, outputPath: outputPath)
-    }
-    
-    public func buildRunner(_ runner: BuildRunner, didFinishWithError error: String) {
-        self.isBuilding = false
-        if let idx = buildStages.firstIndex(where: { $0.isRunning }) {
-            buildStages[idx].isRunning = false
-            buildStages[idx].isFailed = true
-        }
-        self.buildError = error
-        self.logs.append(LogEntry(level: .error, message: error))
-        
-        SoundEffectService.shared.play(.error)
-        NotificationService.shared.sendPortErrorNotification(gameName: appName.isEmpty ? "Game" : appName, error: error)
     }
 }

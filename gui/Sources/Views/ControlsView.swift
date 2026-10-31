@@ -54,6 +54,9 @@ public struct ControlsView: View {
                             )
                         }
                     }
+                    
+                    // Analog Stick Deadzone & Calibration (Exclusive to Game Controller mode)
+                    AnalogDeadzoneTestView(deadzone: $activeProfile.analogDeadzone)
                 } else {
                     // Simple Keyboard Mapping View
                     GlassCard {
@@ -76,9 +79,6 @@ public struct ControlsView: View {
                         }
                     }
                 }
-
-                // MARK: - Analog Stick Deadzone & Calibration (Enhancement 1)
-                AnalogDeadzoneTestView(deadzone: $activeProfile.analogDeadzone)
             }
             .padding(20)
         }

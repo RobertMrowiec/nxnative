@@ -166,7 +166,7 @@ public struct GameSettingsIosDeploymentView: View {
                         .foregroundColor(NXTheme.textSecondary)
                 } else {
                     Picker("", selection: $deviceService.selectedSigningTeam) {
-                        Text("None (Unsigned / Sideloading)").tag(Optional<DeveloperSigningTeam>.none)
+                        Text(L10n.t("settings.ios_unsigned_sideloading")).tag(Optional<DeveloperSigningTeam>.none)
                         ForEach(deviceService.signingTeams) { team in
                             Text(team.displayName)
                                 .tag(Optional(team))
@@ -180,7 +180,7 @@ public struct GameSettingsIosDeploymentView: View {
             // Custom Signing Identity Disclosure
             DisclosureGroup(isExpanded: $showCustomSigning) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Import external Developer Certificate (.p12) and Provisioning Profile (.mobileprovision) for sideloading or third-party signing accounts.")
+                    Text(L10n.t("settings.ios_custom_cert_desc"))
                         .font(.system(size: 10.5))
                         .foregroundColor(NXTheme.textSecondary)
                     
@@ -379,7 +379,7 @@ public struct GameSettingsIosDeploymentView: View {
                     }) {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.up.doc.fill")
-                            Text("Push RomFS Only")
+                            Text(L10n.t("settings.ios_push_romfs_only"))
                         }
                         .padding(.horizontal, 12)
                         .padding(.vertical, 5)

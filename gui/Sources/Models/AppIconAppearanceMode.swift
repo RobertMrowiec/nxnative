@@ -22,10 +22,27 @@ public enum AppIconCache {
         }
         lock.unlock()
 
-        let url = Bundle.main.url(forResource: name, withExtension: "png")
+        var url = Bundle.main.url(forResource: name, withExtension: "png")
             ?? Bundle.main.url(forResource: name, withExtension: "icns")
             ?? Bundle.main.url(forResource: "AppIcon", withExtension: "png")
             ?? Bundle.main.url(forResource: "AppIcon", withExtension: "icns")
+
+        if url == nil {
+            let cwd = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+            let candidates = [
+                cwd.appendingPathComponent("gui/Resources/\(name).png"),
+                cwd.appendingPathComponent("nxnative/gui/Resources/\(name).png"),
+                cwd.appendingPathComponent("Resources/\(name).png"),
+                cwd.appendingPathComponent("NxNative_Launcher.app/Contents/Resources/\(name).png"),
+                cwd.appendingPathComponent("nxnative/NxNative_Launcher.app/Contents/Resources/\(name).png"),
+                cwd.appendingPathComponent("gui/Resources/AppIcon-Light.png"),
+                cwd.appendingPathComponent("nxnative/gui/Resources/AppIcon-Light.png")
+            ]
+            for candidate in candidates where FileManager.default.fileExists(atPath: candidate.path) {
+                url = candidate
+                break
+            }
+        }
 
         guard let targetURL = url, let img = NSImage(contentsOf: targetURL) else {
             return nil

@@ -142,10 +142,10 @@ public struct GameSettingsSavesSectionView: View {
                         .foregroundColor(.blue)
                         .font(.system(size: 14))
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Sincronização com iPhone (iCloud Cross-Save)")
+                        Text(L10n.t("settings.icloud_sync_ios_title"))
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(NXTheme.textPrimary)
-                        Text("No iPhone, selecione a pasta 'nxnative_launcher' no iCloud Drive nas opções do jogo. Os saves sincronizam automaticamente em segundo plano via save.dmsync!")
+                        Text(L10n.t("settings.icloud_sync_ios_desc"))
                             .font(.system(size: 10))
                             .foregroundColor(NXTheme.textSecondary)
                     }

@@ -204,7 +204,13 @@ public final class SystemDetector {
     public func detectProdKeys(additionalSearchDir: String? = nil) -> ProdKeysDetectionResult? {
         var candidateLocations: [(path: String, name: String)] = [
             (NSString(string: "~/Library/Application Support/Ryujinx/system/prod.keys").expandingTildeInPath, "Ryujinx (App Support)"),
-            (NSString(string: "~/Library/Application Support/ryujinx/system/prod.keys").expandingTildeInPath, "Ryujinx (App Support)")
+            (NSString(string: "~/Library/Application Support/ryujinx/system/prod.keys").expandingTildeInPath, "Ryujinx (App Support)"),
+            (NSString(string: "~/Library/Application Support/Ryubing/system/prod.keys").expandingTildeInPath, "Ryubing (App Support)"),
+            (NSString(string: "~/Library/Application Support/ryubing/system/prod.keys").expandingTildeInPath, "Ryubing (App Support)"),
+            (NSString(string: "~/.config/Ryujinx/system/prod.keys").expandingTildeInPath, "Ryujinx Config"),
+            (NSString(string: "~/.config/ryujinx/system/prod.keys").expandingTildeInPath, "Ryujinx Config"),
+            (NSString(string: "~/.config/Ryubing/system/prod.keys").expandingTildeInPath, "Ryubing Config"),
+            (NSString(string: "~/.config/ryubing/system/prod.keys").expandingTildeInPath, "Ryubing Config")
         ]
         
         let root = resolveRootDirectory()
@@ -236,6 +242,24 @@ public final class SystemDetector {
             }
         }
         return nil
+    }
+
+    public func isRyujinxOrRyubingInstalled() -> Bool {
+        let appPaths = [
+            "/Applications/Ryujinx.app",
+            "/Applications/Ryubing.app",
+            NSString(string: "~/Applications/Ryujinx.app").expandingTildeInPath,
+            NSString(string: "~/Applications/Ryubing.app").expandingTildeInPath,
+            NSString(string: "~/Library/Application Support/Ryujinx").expandingTildeInPath,
+            NSString(string: "~/Library/Application Support/ryujinx").expandingTildeInPath,
+            NSString(string: "~/Library/Application Support/Ryubing").expandingTildeInPath,
+            NSString(string: "~/Library/Application Support/ryubing").expandingTildeInPath
+        ]
+        let fm = FileManager.default
+        for path in appPaths where fm.fileExists(atPath: path) {
+            return true
+        }
+        return false
     }
     
     internal func runQuickCommand(_ cmd: String, args: [String]) -> (output: String, success: Bool) {

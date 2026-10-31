@@ -231,7 +231,7 @@ public struct BuildBanners: View {
                     }
                     
                     Button(viewModel.tr("common.view_library")) {
-                        viewModel.selectedTab = 1
+                        viewModel.selectedTab = 0
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
                     
@@ -265,7 +265,7 @@ public struct BuildBanners: View {
             Spacer()
             
             Button(viewModel.tr("common.view_logs")) {
-                viewModel.selectedTab = 6
+                viewModel.selectedTab = 5
             }
             .buttonStyle(NXSecondaryButtonStyle())
         }

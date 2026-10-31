@@ -79,4 +79,17 @@ public enum LauncherHighlightTheme: String, CaseIterable, Identifiable {
             return Color(red: 0x60 / 255.0, green: 0xA5 / 255.0, blue: 0xFA / 255.0)
         }
     }
+
+    public var primaryNSColor: NSColor {
+        switch self {
+        case .electricPurple: return NSColor(red: 0x6F / 255.0, green: 0x31 / 255.0, blue: 0xFF / 255.0, alpha: 1.0)
+        case .nintendoRed:    return NSColor(red: 0xE6 / 255.0, green: 0x00 / 255.0, blue: 0x12 / 255.0, alpha: 1.0)
+        case .neonBlue:       return NSColor(red: 0x00 / 255.0, green: 0x84 / 255.0, blue: 0xFF / 255.0, alpha: 1.0)
+        case .emeraldGreen:   return NSColor(red: 0x10 / 255.0, green: 0xB9 / 255.0, blue: 0x81 / 255.0, alpha: 1.0)
+        case .sunsetOrange:   return NSColor(red: 0xF9 / 255.0, green: 0x73 / 255.0, blue: 0x16 / 255.0, alpha: 1.0)
+        case .cyberRose:      return NSColor(red: 0xEC / 255.0, green: 0x48 / 255.0, blue: 0x99 / 255.0, alpha: 1.0)
+        case .hyruleGold:     return NSColor(red: 0xD9 / 255.0, green: 0x77 / 255.0, blue: 0x06 / 255.0, alpha: 1.0)
+        case .deepCobalt:     return NSColor(red: 0x3B / 255.0, green: 0x82 / 255.0, blue: 0xF6 / 255.0, alpha: 1.0)
+        }
+    }
 }

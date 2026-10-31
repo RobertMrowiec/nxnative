@@ -111,6 +111,32 @@ public final class GameScanner {
         }
     }
     
+    /// Scans multiple directories and all their subdirectories recursively, aggregating and deduplicating game files.
+    public func scan(directories: [URL]) -> [GameFileItem] {
+        var allItems: [GameFileItem] = []
+        var seenPaths = Set<String>()
+        
+        for dir in directories {
+            let items = scan(directory: dir)
+            for item in items {
+                let standardPath = item.url.standardizedFileURL.path
+                if !seenPaths.contains(standardPath) {
+                    seenPaths.insert(standardPath)
+                    allItems.append(item)
+                }
+            }
+        }
+        
+        return allItems.sorted { a, b in
+            let scoreA: Int
+            switch a.type { case .base: scoreA = 0; case .update: scoreA = 1; case .dlc: scoreA = 2; case .unknown: scoreA = 3 }
+            let scoreB: Int
+            switch b.type { case .base: scoreB = 0; case .update: scoreB = 1; case .dlc: scoreB = 2; case .unknown: scoreB = 3 }
+            if scoreA != scoreB { return scoreA < scoreB }
+            return a.name.localizedStandardCompare(b.name) == .orderedAscending
+        }
+    }
+    
     /// Converte qualquer Title ID (Base ...000, Update ...800, ou DLC ...(Y+1)ZZZ) para o Title ID de 16 caracteres do jogo Base.
     public func baseApplicationTitleId(for tid: String) -> String? {
         let trimmed = tid.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()

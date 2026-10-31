@@ -5,7 +5,6 @@ public struct SwitchConsoleLibraryView: View {
     @ObservedObject public var viewModel: AppViewModel
     public let games: [PortedGame]
     @State private var scrollWheelMonitor: Any? = nil
-    @State private var suppressVerticalAutoScroll: Bool = false
     @State private var hoveredTargetGamePath: String? = nil
 
     public init(viewModel: AppViewModel, games: [PortedGame]) {
@@ -21,99 +20,225 @@ public struct SwitchConsoleLibraryView: View {
         games.filter { $0.platform == .ios }
     }
 
-    private var focusedGame: PortedGame? {
-        guard !games.isEmpty else { return nil }
-        let idx = max(0, min(viewModel.focusedGameIndex, games.count - 1))
-        return games[idx]
+    private var nonSwitchGames: [PortedGame] {
+        games.filter { $0.platform == .nonSwitch }
+    }
+
+    private var sortedUnportedGames: [SelectableGame] {
+        viewModel.unportedGames
     }
 
     public var body: some View {
-        ScrollViewReader { verticalProxy in
-            ScrollView(.vertical, showsIndicators: true) {
-                VStack(alignment: .leading, spacing: 18) {
-                    // MARK: - 1. Hero Section (Widescreen 16:9 Promo Art + Game Controls)
-                    if let selected = focusedGame {
-                        ConsoleHeroView(game: selected, viewModel: viewModel, height: 350)
-                            .id("hero_top")
-                            .frame(height: 350)
-                            .transition(.opacity.animation(.easeInOut(duration: 0.22)))
+        GeometryReader { geo in
+            let availableHeight = geo.size.height
+            let heroHeight: CGFloat = max(230, min(330, availableHeight * 0.40))
+
+            VStack(alignment: .leading, spacing: 0) {
+                // MARK: - 1. Pinned Hero Section (Always visible)
+                heroSection(height: heroHeight)
+                    .frame(height: heroHeight)
+                    .clipped()
+
+                // MARK: - 1.5 Pinned Filter and Sort Bar (Always accessible)
+                LibraryFilterSortBarView(viewModel: viewModel)
+                    .padding(.top, 2)
+                    .padding(.bottom, 4)
+
+                // MARK: - 2. Scrollable Games Catalog (Only this section scrolls)
+                ScrollViewReader { verticalProxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        catalogContent
+                            .padding(.bottom, 28)
                     }
-
-                    // MARK: - 2. Two Categories Shelves (Row 1: Mac, Row 2: iPhone / iPad)
-                    VStack(alignment: .leading, spacing: 18) {
-                        if !macGames.isEmpty {
-                            categoryShelf(
-                                title: "Mac (macOS Native)",
-                                icon: "laptopcomputer",
-                                count: macGames.count,
-                                countSuffix: macGames.count == 1 ? "game" : "games",
-                                categoryColor: NXTheme.primary,
-                                items: macGames
-                            )
-                            .id("shelf_mac")
-                        }
-
-                        if !iosGames.isEmpty {
-                            categoryShelf(
-                                title: "iPhone / iPad (iOS Port)",
-                                icon: "iphone.gen3",
-                                count: iosGames.count,
-                                countSuffix: iosGames.count == 1 ? "port" : "ports",
-                                categoryColor: NXTheme.secondary,
-                                items: iosGames
-                            )
-                            .id("shelf_ios")
-                        }
-
-                        if macGames.isEmpty && iosGames.isEmpty {
-                            VStack(spacing: 12) {
-                                Image(systemName: "gamecontroller")
-                                    .font(.system(size: 38))
-                                    .foregroundColor(NXTheme.textMuted)
-                                Text(viewModel.tr("console.no_games"))
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(NXTheme.textSecondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .nxScrollEdgeEffect(edges: [.top, .bottom])
+                    .onChange(of: viewModel.activeLibraryShelf) { newShelf in
+                        guard viewModel.activeGroupFilter != .all else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            switch newShelf {
+                            case .mac:
+                                verticalProxy.scrollTo("shelf_mac", anchor: .top)
+                            case .ios:
+                                verticalProxy.scrollTo("shelf_ios", anchor: .top)
+                            case .nonSwitch:
+                                verticalProxy.scrollTo("shelf_non_switch", anchor: .top)
+                            case .unportedSwitch:
+                                verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 140)
                         }
                     }
-                    .padding(.bottom, 32)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .nxScrollEdgeEffect(edges: [.top, .bottom])
-            .onChange(of: viewModel.focusedGameIndex) { _ in
-                if suppressVerticalAutoScroll {
-                    suppressVerticalAutoScroll = false
-                    return
+        }
+        .onAppear {
+            installScrollWheelForwarder()
+        }
+        .onDisappear {
+            removeScrollWheelForwarder()
+        }
+    }
+
+    // MARK: - Hero Section Builder
+    @ViewBuilder
+    private func heroSection(height: CGFloat) -> some View {
+        if viewModel.activeLibraryShelf == .unportedSwitch, let unported = viewModel.focusedUnportedGame {
+            ConsoleHeroView(unportedGame: unported, viewModel: viewModel, height: height)
+                .id("hero_unported_\(unported.id)")
+        } else if let selected = viewModel.currentFocusedGame {
+            ConsoleHeroView(game: selected, viewModel: viewModel, height: height)
+                .id("hero_game_\(selected.id.uuidString)")
+        } else if let fallback = games.first {
+            ConsoleHeroView(game: fallback, viewModel: viewModel, height: height)
+                .id("hero_fallback_\(fallback.id.uuidString)")
+        }
+    }
+
+    // MARK: - Catalog Content
+    @ViewBuilder
+    private var catalogContent: some View {
+        if viewModel.activeGroupFilter == .all {
+            UnifiedConsoleGridView(viewModel: viewModel, games: games)
+                .id("unified_grid")
+        } else {
+            VStack(alignment: .leading, spacing: 18) {
+                if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .mac) && !macGames.isEmpty {
+                    PortedCategoryShelfView(
+                        viewModel: viewModel,
+                        title: "Mac (macOS Native)",
+                        icon: "laptopcomputer",
+                        shelf: .mac,
+                        categoryColor: NXTheme.primary,
+                        items: macGames,
+                        hoveredTargetGamePath: $hoveredTargetGamePath
+                    )
+                    .id("shelf_mac")
                 }
-                if let focused = focusedGame {
-                    withAnimation(.easeInOut(duration: 0.22)) {
-                        if focused.platform == .macApp {
-                            verticalProxy.scrollTo("shelf_mac", anchor: .center)
-                        } else {
-                            verticalProxy.scrollTo("shelf_ios", anchor: .bottom)
+
+                if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .ios) && !iosGames.isEmpty {
+                    PortedCategoryShelfView(
+                        viewModel: viewModel,
+                        title: "iPhone / iPad (iOS Port)",
+                        icon: "iphone.gen3",
+                        shelf: .ios,
+                        categoryColor: NXTheme.secondary,
+                        items: iosGames,
+                        hoveredTargetGamePath: $hoveredTargetGamePath
+                    )
+                    .id("shelf_ios")
+                }
+
+                if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .nonSwitch) && !nonSwitchGames.isEmpty {
+                    PortedCategoryShelfView(
+                        viewModel: viewModel,
+                        title: "Non-Switch Games (macOS)",
+                        icon: "gamecontroller.fill",
+                        shelf: .nonSwitch,
+                        categoryColor: Color(red: 0.20, green: 0.82, blue: 0.60),
+                        items: nonSwitchGames,
+                        hoveredTargetGamePath: $hoveredTargetGamePath
+                    )
+                    .id("shelf_non_switch")
+                }
+
+                if viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .switchFiles {
+                    unportedShelf
+                        .id("shelf_unported")
+                }
+            }
+        }
+
+        if macGames.isEmpty && iosGames.isEmpty && nonSwitchGames.isEmpty && viewModel.unportedGames.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "gamecontroller")
+                    .font(.system(size: 38))
+                    .foregroundColor(NXTheme.textMuted)
+                Text(viewModel.tr("console.no_games"))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(NXTheme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 140)
+        }
+    }
+
+    // MARK: - Shelf 3: Nintendo Switch ROMs (Unported)
+    @ViewBuilder
+    private var unportedShelf: some View {
+        let baseCardSize: CGFloat = 144 * CGFloat(viewModel.libraryCardScale)
+        let verticalPadding: CGFloat = max(22, baseCardSize * 0.14)
+        let cardSpacing: CGFloat = max(20, baseCardSize * 0.13)
+        let items = sortedUnportedGames
+
+        VStack(alignment: .leading, spacing: 6) {
+            shelfHeader(
+                title: "Nintendo Switch (Unported ROMs)",
+                icon: "gamecontroller.fill",
+                count: items.count,
+                suffix: items.count == 1 ? "ROM" : "ROMs",
+                color: NXTheme.secondary
+            )
+
+            ScrollViewReader { horizontalProxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .center, spacing: cardSpacing) {
+                        ForEach(items.indices, id: \.self) { idx in
+                            let game = items[idx]
+                            let isFocused = (viewModel.activeLibraryShelf == .unportedSwitch) &&
+                                            (viewModel.focusedUnportedGameIndex == idx)
+
+                            UnportedGameCardView(
+                                game: game,
+                                viewModel: viewModel,
+                                isFocused: isFocused,
+                                baseSize: baseCardSize,
+                                onSelect: {
+                                    guard !viewModel.isAnyModalPresented else { return }
+                                    if isFocused {
+                                        SoundEffectService.shared.play(.click)
+                                        viewModel.selectedGame = game
+                                        viewModel.gameForPortModal = game
+                                    } else {
+                                        viewModel.selectUnportedGame(at: idx)
+                                    }
+                                }
+                            )
+                            .zIndex(isFocused ? 10 : 1)
+                            .id("card_unported_\(idx)")
                         }
+
+                        // Add Game Card (+)
+                        AddGameCardView(viewModel: viewModel, baseSize: baseCardSize)
+                            .id("card_unported_add")
+                    }
+                    .padding(.horizontal, 36)
+                    .padding(.vertical, verticalPadding)
+                }
+                .onChange(of: viewModel.focusedUnportedGameIndex) { newIdx in
+                    guard viewModel.activeLibraryShelf == .unportedSwitch else { return }
+                    withAnimation(.easeOut(duration: 0.16)) {
+                        horizontalProxy.scrollTo("card_unported_\(newIdx)", anchor: .center)
                     }
                 }
-            }
-            .onAppear {
-                installScrollWheelForwarder()
-            }
-            .onDisappear {
-                removeScrollWheelForwarder()
             }
         }
     }
 
-    /// Forwards vertical mouse-wheel scrolling over nested horizontal carousels to the outer vertical NSScrollView.
+    private func shelfHeader(title: String, icon: String, count: Int, suffix: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon).font(.system(size: 13, weight: .bold)).foregroundColor(color)
+            Text(title).font(.system(size: 13, weight: .bold, design: .rounded)).foregroundColor(NXTheme.textPrimary)
+            Text("· \(count) \(suffix)").font(.system(size: 11, weight: .semibold)).foregroundColor(.white.opacity(0.85))
+            Spacer()
+        }
+        .padding(.horizontal, 34)
+    }
+
+    /// Forwards vertical mouse-wheel scrolling over nested horizontal carousels or over the pinned Hero section to the catalog's vertical NSScrollView.
     private func installScrollWheelForwarder() {
         guard scrollWheelMonitor == nil else { return }
         scrollWheelMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-            guard !viewModel.isAnyModalPresented, viewModel.selectedTab == 1 else {
-                return event
-            }
-            guard !event.modifierFlags.contains(.shift),
+            guard !viewModel.isAnyModalPresented, viewModel.selectedTab == 0,
+                  !event.modifierFlags.contains(.shift),
                   abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX),
                   abs(event.scrollingDeltaY) > 0.01,
                   let window = event.window,
@@ -124,19 +249,37 @@ public struct SwitchConsoleLibraryView: View {
             var scrollViews: [NSScrollView] = []
             var cursor: NSView? = hitView
             while let current = cursor {
-                if let sv = current as? NSScrollView {
-                    scrollViews.append(sv)
-                }
+                if let sv = current as? NSScrollView { scrollViews.append(sv) }
                 cursor = current.superview
             }
 
             if scrollViews.count >= 2 {
-                let outerVerticalScrollView = scrollViews[1]
-                outerVerticalScrollView.scrollWheel(with: event)
+                scrollViews[1].scrollWheel(with: event)
                 return nil
+            } else if scrollViews.isEmpty {
+                // If scrolling over the pinned Hero section or filter bar, forward scroll to the catalog's vertical NSScrollView
+                if let catalogSV = findVerticalScrollView(in: window.contentView) {
+                    catalogSV.scrollWheel(with: event)
+                    return nil
+                }
             }
             return event
         }
+    }
+
+    private func findVerticalScrollView(in view: NSView?) -> NSScrollView? {
+        guard let root = view else { return nil }
+        var queue: [NSView] = [root]
+        while !queue.isEmpty {
+            let current = queue.removeFirst()
+            if let sv = current as? NSScrollView {
+                if sv.hasVerticalScroller || (sv.documentView?.bounds.height ?? 0) > sv.bounds.height {
+                    return sv
+                }
+            }
+            queue.append(contentsOf: current.subviews)
+        }
+        return nil
     }
 
     private func removeScrollWheelForwarder() {
@@ -144,141 +287,5 @@ public struct SwitchConsoleLibraryView: View {
             NSEvent.removeMonitor(monitor)
             scrollWheelMonitor = nil
         }
-    }
-
-    @ViewBuilder
-    private func categoryShelf(
-        title: String,
-        icon: String,
-        count: Int,
-        countSuffix: String,
-        categoryColor: Color,
-        items: [PortedGame]
-    ) -> some View {
-        let baseCardSize: CGFloat = 144 * CGFloat(viewModel.libraryCardScale)
-        let verticalPadding: CGFloat = max(22, baseCardSize * 0.14)
-        let cardSpacing: CGFloat = max(20, baseCardSize * 0.13)
-
-        VStack(alignment: .leading, spacing: 6) {
-            // Category Header
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(categoryColor)
-
-                Text(title)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundColor(NXTheme.textPrimary)
-
-                Text("· \(count) \(countSuffix)")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.85))
-
-                Spacer()
-            }
-            .padding(.horizontal, 34)
-
-            // Horizontal Scroll Carousel of Square 1:1 Nintendo Switch Tiles
-            ScrollViewReader { horizontalProxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .center, spacing: cardSpacing) {
-                        ForEach(items) { game in
-                            let isFocused = focusedGame?.url.standardized.path == game.url.standardized.path
-                            let isDropTarget = hoveredTargetGamePath == game.url.standardized.path &&
-                                               viewModel.draggedGame != nil &&
-                                               viewModel.draggedGame?.url.standardized.path != game.url.standardized.path
-
-                            SquareGameCardView(
-                                game: game,
-                                viewModel: viewModel,
-                                isFocused: isFocused,
-                                isDropTarget: isDropTarget,
-                                baseSize: baseCardSize,
-                                onSelect: {
-                                    guard !viewModel.isAnyModalPresented else { return }
-                                    if isFocused {
-                                        if game.platform == .macApp {
-                                            viewModel.launchGame(game)
-                                        } else {
-                                            SoundEffectService.shared.play(.click)
-                                            viewModel.gameForSettingsSheet = game
-                                        }
-                                    } else {
-                                        SoundEffectService.shared.play(.focus)
-                                        suppressVerticalAutoScroll = true
-                                        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                                            if let idx = games.firstIndex(where: { $0.url.standardized.path == game.url.standardized.path }) {
-                                                viewModel.focusedGameIndex = idx
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-                            .zIndex(isFocused ? 10 : (isDropTarget ? 8 : 1))
-                            .id("card_\(game.id.uuidString)")
-                            .onDrag {
-                                viewModel.draggedGame = game
-                                return NSItemProvider(object: game.url.standardized.path as NSString)
-                            }
-                            .onDrop(of: [.text, .plainText], delegate: GameReorderDropDelegate(
-                                target: game,
-                                viewModel: viewModel,
-                                hoveredTargetGamePath: $hoveredTargetGamePath,
-                                move: { viewModel.moveLibraryGame($0, onto: $1) }
-                            ))
-                        }
-                    }
-                    .padding(.horizontal, 36)
-                    .padding(.vertical, verticalPadding)
-                }
-                .onChange(of: viewModel.focusedGameIndex) { _ in
-                    if let focused = focusedGame, items.contains(where: { $0.id == focused.id }) {
-                        withAnimation(.easeInOut(duration: 0.22)) {
-                            horizontalProxy.scrollTo("card_\(focused.id.uuidString)", anchor: .center)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Live reordering: swaps dragged card into hovered card's slot on the same shelf.
-struct GameReorderDropDelegate: DropDelegate {
-    let target: PortedGame
-    let viewModel: AppViewModel
-    @Binding var hoveredTargetGamePath: String?
-    let move: (PortedGame, PortedGame) -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let dragged = viewModel.draggedGame,
-              dragged.platform == target.platform,
-              dragged.url.standardized.path != target.url.standardized.path else { return }
-
-        hoveredTargetGamePath = target.url.standardized.path
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
-            move(dragged, target)
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        guard let dragged = viewModel.draggedGame,
-              dragged.platform == target.platform else {
-            return DropProposal(operation: .forbidden)
-        }
-        return DropProposal(operation: .move)
-    }
-
-    func dropExited(info: DropInfo) {
-        if hoveredTargetGamePath == target.url.standardized.path {
-            hoveredTargetGamePath = nil
-        }
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        hoveredTargetGamePath = nil
-        viewModel.draggedGame = nil
-        SoundEffectService.shared.play(.click)
-        return true
     }
 }

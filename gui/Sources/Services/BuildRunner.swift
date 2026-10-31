@@ -73,7 +73,7 @@ public final class BuildRunner {
         switch platform {
         case .ios:
             arguments.append(contentsOf: ["--platform", "ios"])
-        case .macApp:
+        case .macApp, .nonSwitch:
             arguments.append(contentsOf: ["--platform", "mac-app"])
         }
         
@@ -304,7 +304,7 @@ public final class BuildRunner {
     private func resolveFinalOutputPath(gameDir: URL, customOut: URL?, platform: TargetPlatform, appName: String?) -> String {
         let searchDir = customOut ?? gameDir
         let fm = FileManager.default
-        let ext = (platform == .macApp) ? "app" : "ipa"
+        let ext = (platform == .macApp || platform == .nonSwitch) ? "app" : "ipa"
         
         // Search for newly generated file in destination folder
         if let items = try? fm.contentsOfDirectory(at: searchDir, includingPropertiesForKeys: [.contentModificationDateKey]) {

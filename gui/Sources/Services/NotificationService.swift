@@ -19,12 +19,13 @@ public final class NotificationService {
     public func sendPortSuccessNotification(gameName: String, outputPath: String?) {
         guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Game Porting Complete!"
+        content.title = LocalizationService.shared.t("notif.port_success_title")
         content.subtitle = gameName
         if let path = outputPath {
-            content.body = "Successfully built and ready to play at: \(URL(fileURLWithPath: path).lastPathComponent)"
+            let appName = URL(fileURLWithPath: path).lastPathComponent
+            content.body = LocalizationService.shared.format(key: "notif.port_success_body_path", arguments: [appName])
         } else {
-            content.body = "Successfully built and ready to play in your Games library."
+            content.body = LocalizationService.shared.t("notif.port_success_body")
         }
         content.sound = .default
         
@@ -44,9 +45,10 @@ public final class NotificationService {
     public func sendPortErrorNotification(gameName: String, error: String) {
         guard Bundle.main.bundleIdentifier != nil else { return }
         let content = UNMutableNotificationContent()
-        content.title = "Game Porting Failed"
+        content.title = LocalizationService.shared.t("notif.port_error_title")
         content.subtitle = gameName
-        content.body = error.count > 120 ? String(error.prefix(117)) + "..." : error
+        let trimmedErr = error.count > 120 ? String(error.prefix(117)) + "..." : error
+        content.body = LocalizationService.shared.format(key: "notif.port_error_body", arguments: [trimmedErr])
         content.sound = .defaultCritical
         
         let request = UNNotificationRequest(

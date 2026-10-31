@@ -13,6 +13,8 @@ extension AppViewModel {
         if isAnyModalPresented {
             if gameForSettingsSheet != nil {
                 handleSettingsModalGamepadAction(action)
+            } else if gameForPortModal != nil {
+                handlePortModalGamepadAction(action)
             } else if isGameActionMenuPresented {
                 switch action {
                 case .navigateUp: handleLibraryNavigateUp()
@@ -25,13 +27,14 @@ extension AppViewModel {
             return
         }
         
+        let tabCount = isDeveloperMode ? 6 : 5
         switch action {
         case .tabPrevious:
             SoundEffectService.shared.play(.tabSwitch)
-            selectedTab = (selectedTab - 1 + 7) % 7
+            selectedTab = (selectedTab - 1 + tabCount) % tabCount
         case .tabNext:
             SoundEffectService.shared.play(.tabSwitch)
-            selectedTab = (selectedTab + 1) % 7
+            selectedTab = (selectedTab + 1) % tabCount
         case .navigateLeft: handleNavigateLeft()
         case .navigateRight: handleNavigateRight()
         case .navigateDown: handleNavigateDown()
@@ -42,10 +45,10 @@ extension AppViewModel {
         case .contextAction: handleContextAction()
         case .menu:
             SoundEffectService.shared.play(.click)
-            if selectedTab == 1, let game = currentFocusedGame {
+            if selectedTab == 0, let game = currentFocusedGame {
                 gameForSettingsSheet = game
             } else {
-                selectedTab = 5 // Settings
+                selectedTab = 4 // Settings
             }
         case .options:
             handleOptionsAction()
@@ -55,20 +58,17 @@ extension AppViewModel {
     // MARK: - Navigation Handlers Across Tabs
     func handleNavigateLeft() {
         switch selectedTab {
-        case 0 where buildWizardStep > 1:
-            SoundEffectService.shared.play(.focus)
-            withAnimation(.easeInOut(duration: 0.2)) { goToWizardStep(buildWizardStep - 1) }
-        case 1:
+        case 0:
             handleLibraryNavigateLeft()
-        case 2:
+        case 1:
             handleCompatibilityNavigateLeft()
-        case 3:
+        case 2:
             let profiles = InputProfileManager.shared.profiles
             if let idx = profiles.firstIndex(where: { $0.id == InputProfileManager.shared.activeProfileId }), idx > 0 {
                 InputProfileManager.shared.activeProfileId = profiles[idx - 1].id
                 SoundEffectService.shared.play(.focus)
             }
-        case 4:
+        case 3:
             let themes = LauncherHighlightTheme.allCases
             if let idx = themes.firstIndex(of: highlightTheme), idx > 0 {
                 highlightTheme = themes[idx - 1]
@@ -80,20 +80,17 @@ extension AppViewModel {
     
     func handleNavigateRight() {
         switch selectedTab {
-        case 0 where buildWizardStep == 1 && selectedGame != nil:
-            SoundEffectService.shared.play(.focus)
-            withAnimation(.easeInOut(duration: 0.2)) { goToWizardStep(2) }
-        case 1:
+        case 0:
             handleLibraryNavigateRight()
-        case 2:
+        case 1:
             handleCompatibilityNavigateRight()
-        case 3:
+        case 2:
             let profiles = InputProfileManager.shared.profiles
             if let idx = profiles.firstIndex(where: { $0.id == InputProfileManager.shared.activeProfileId }), idx < profiles.count - 1 {
                 InputProfileManager.shared.activeProfileId = profiles[idx + 1].id
                 SoundEffectService.shared.play(.focus)
             }
-        case 4:
+        case 3:
             let themes = LauncherHighlightTheme.allCases
             if let idx = themes.firstIndex(of: highlightTheme), idx < themes.count - 1 {
                 highlightTheme = themes[idx + 1]
@@ -105,16 +102,11 @@ extension AppViewModel {
     
     func handleNavigateUp() {
         switch selectedTab {
-        case 0 where buildWizardStep == 1 && !detectedGames.isEmpty:
-            if let cur = selectedGame, let idx = detectedGames.firstIndex(of: cur), idx > 0 {
-                selectedGame = detectedGames[idx - 1]
-                SoundEffectService.shared.play(.focus)
-            }
-        case 1:
+        case 0:
             handleLibraryNavigateUp()
-        case 2:
+        case 1:
             handleCompatibilityNavigateUp()
-        case 5:
+        case 4:
             refreshPrerequisites()
         default: break
         }
@@ -122,17 +114,9 @@ extension AppViewModel {
     
     func handleNavigateDown() {
         switch selectedTab {
-        case 0 where buildWizardStep == 1 && !detectedGames.isEmpty:
-            if let cur = selectedGame, let idx = detectedGames.firstIndex(of: cur), idx < detectedGames.count - 1 {
-                selectedGame = detectedGames[idx + 1]
-                SoundEffectService.shared.play(.focus)
-            } else if selectedGame == nil {
-                selectedGame = detectedGames.first
-                SoundEffectService.shared.play(.focus)
-            }
-        case 1:
+        case 0:
             handleLibraryNavigateDown()
-        case 2:
+        case 1:
             handleCompatibilityNavigateDown()
         default: break
         }
@@ -141,36 +125,59 @@ extension AppViewModel {
     func handleConfirm() {
         switch selectedTab {
         case 0:
-            SoundEffectService.shared.play(.click)
-            if buildWizardStep == 1 {
-                if selectedGame != nil {
-                    withAnimation(.easeInOut(duration: 0.2)) { goToWizardStep(2) }
-                } else if let first = detectedGames.first {
-                    selectedGame = first
-                }
-            } else if buildWizardStep == 2 && canStartBuild {
-                withAnimation(.easeInOut(duration: 0.2)) { startBuild() }
-            }
-        case 1:
             if isGameActionMenuPresented {
                 SoundEffectService.shared.play(.click)
                 executeFocusedGameAction()
+            } else if activeGroupFilter == .all {
+                let items = unifiedItems(for: libraryGames)
+                if focusedUnifiedIndex == items.count {
+                    SoundEffectService.shared.play(.click)
+                    selectAdditionalGameFolder()
+                } else if items.indices.contains(focusedUnifiedIndex) {
+                    let item = items[focusedUnifiedIndex]
+                    switch item {
+                    case .ported(let game):
+                        if game.platform == .macApp || game.platform == .nonSwitch {
+                            launchGame(game)
+                        } else {
+                            SoundEffectService.shared.play(.click)
+                            gameForSettingsSheet = game
+                        }
+                    case .unported(let unported):
+                        SoundEffectService.shared.play(.click)
+                        selectedGame = unported
+                        gameForPortModal = unported
+                    }
+                }
+            } else if activeLibraryShelf == .unportedSwitch, let unported = focusedUnportedGame {
+                if isBuilding && (buildingGameId == unported.id || selectedGame?.id == unported.id) {
+                    SoundEffectService.shared.play(.click)
+                    cancelBuild()
+                } else {
+                    SoundEffectService.shared.play(.click)
+                    selectedGame = unported
+                    gameForPortModal = unported
+                }
             } else if let game = currentFocusedGame {
-                if game.platform == .macApp {
+                if game.platform == .macApp || game.platform == .nonSwitch {
                     launchGame(game)
                 } else {
                     SoundEffectService.shared.play(.click)
                     gameForSettingsSheet = game
                 }
+            } else if let unported = unportedGames.first {
+                SoundEffectService.shared.play(.click)
+                selectedGame = unported
+                gameForPortModal = unported
             }
-        case 2:
+        case 1:
             handleCompatibilityConfirm()
-        case 3:
+        case 2:
             SoundEffectService.shared.play(.click)
             var prof = InputProfileManager.shared.activeProfile
             prof.swapFaceButtons()
             InputProfileManager.shared.updateProfile(prof)
-        case 5:
+        case 4:
             SoundEffectService.shared.play(.click)
             if !prerequisites.allSatisfied { showInstallerSheet = true }
         default:
@@ -187,19 +194,18 @@ extension AppViewModel {
         }
         switch selectedTab {
         case 0:
-            if buildWizardStep > 1 {
-                SoundEffectService.shared.play(.click)
-                withAnimation(.easeInOut(duration: 0.2)) { goToWizardStep(buildWizardStep - 1) }
-            }
-        case 1:
             if isGameActionMenuPresented {
                 SoundEffectService.shared.play(.click)
                 withAnimation(.easeInOut(duration: 0.18)) { isGameActionMenuPresented = false }
+            } else if activeLibraryShelf == .unportedSwitch, let unported = focusedUnportedGame,
+                      isBuilding && (buildingGameId == unported.id || selectedGame?.id == unported.id) {
+                SoundEffectService.shared.play(.click)
+                cancelBuild()
             } else if isFocusOnDeck {
                 isFocusOnDeck = false
                 SoundEffectService.shared.play(.click)
             }
-        case 2:
+        case 1:
             handleCompatibilityCancel()
         default:
             break
@@ -208,16 +214,16 @@ extension AppViewModel {
     
     func handleSecondaryAction() {
         switch selectedTab {
-        case 1:
+        case 0:
             if let game = currentFocusedGame { launchGame(game) }
-        case 2:
+        case 1:
             handleCompatibilitySecondaryAction()
-        case 4:
+        case 3:
             SoundEffectService.shared.play(.click)
             withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
                 isLiquidGlassEnabled.toggle()
             }
-        case 6:
+        case 5:
             let allText = logs.map { "\($0.timestamp) [\($0.level.rawValue.uppercased())] \($0.message)" }.joined(separator: "\n")
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(allText, forType: .string)
@@ -228,13 +234,13 @@ extension AppViewModel {
     
     func handleContextAction() {
         switch selectedTab {
-        case 1:
+        case 0:
             if let game = currentFocusedGame {
                 SoundEffectService.shared.play(.click)
                 let profile = GameDetailsProfile.inspect(for: game)
                 revealSaveFolder(profile.saveDirectory)
             }
-        case 4:
+        case 3:
             SoundEffectService.shared.play(.click)
             withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
                 liquidGlassIntensity = (liquidGlassIntensity >= 0.5) ? 0.0 : 1.0
@@ -242,7 +248,7 @@ extension AppViewModel {
                     isLiquidGlassEnabled = true
                 }
             }
-        case 6:
+        case 5:
             SoundEffectService.shared.play(.click)
             logs.removeAll()
         default:
@@ -250,51 +256,6 @@ extension AppViewModel {
         }
     }
     
-    // MARK: - Game Action Menu Execution
-    public func executeFocusedGameAction() {
-        guard let game = currentFocusedGame else { return }
-        isGameActionMenuPresented = false
-        switch gameActionFocusedIndex {
-        case 0:
-            if game.platform == .macApp {
-                launchGame(game)
-            } else {
-                gameForSettingsSheet = game
-            }
-        case 1:
-            gameForSettingsSheet = game
-        case 2:
-            if game.platform == .ios {
-                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: game.url)
-            } else {
-                revealInFinder(url: game.url)
-            }
-        case 3:
-            let profile = GameDetailsProfile.inspect(for: game)
-            revealSaveFolder(profile.saveDirectory)
-        case 4:
-            if game.platform == .ios {
-                revealInFinder(url: game.url)
-            } else {
-                let cover = GameCoverService.shared.coverImage(for: game)
-                SaveSyncService.shared.revealCloudGameFolder(for: game, cover: cover)
-            }
-        case 5:
-            gameToRemove = game
-            showRemoveConfirm = true
-        case 6:
-            gameToTrash = game
-            showTrashConfirm = true
-        default:
-            break
-        }
-    }
-    
-    public var currentFocusedGame: PortedGame? {
-        guard !libraryGames.isEmpty else { return nil }
-        let clamped = max(0, min(focusedGameIndex, libraryGames.count - 1))
-        return libraryGames[clamped]
-    }
     func handleOptionsAction() {
         if gameForSettingsSheet != nil {
             if let g = gameForSettingsSheet { saveRuntimeConfig(activeSettingsConfig, for: g) }
@@ -302,7 +263,7 @@ extension AppViewModel {
             SoundEffectService.shared.play(.click)
             return
         }
-        if selectedTab == 1 && currentFocusedGame != nil {
+        if selectedTab == 0 && currentFocusedGame != nil {
             SoundEffectService.shared.play(.click)
             withAnimation(.easeInOut(duration: 0.18)) {
                 isGameActionMenuPresented.toggle()

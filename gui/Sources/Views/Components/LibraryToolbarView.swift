@@ -31,7 +31,7 @@ public struct LibraryToolbarView: View {
                     fallbackStroke: NXTheme.borderSubtle
                 )
                 
-                // Console Card Scale Slider Capsule (0.70x to 1.35x Liquid Glass Slider)
+                // Console Card Scale Slider Capsule (0.70x to 1.50x Liquid Glass Slider)
                 HStack(spacing: 8) {
                     Image(systemName: "minus.magnifyingglass")
                         .font(.system(size: 11, weight: .bold))
@@ -39,11 +39,11 @@ public struct LibraryToolbarView: View {
                     
                     NXLiquidGlassSlider(
                         value: $viewModel.libraryCardScale,
-                        in: 0.70...1.35,
+                        in: 0.70...1.50,
                         step: 0.05,
                         accentColor: NXTheme.primary
                     )
-                    .frame(width: 118)
+                    .frame(width: 124)
                     
                     Image(systemName: "plus.magnifyingglass")
                         .font(.system(size: 11, weight: .bold))
@@ -63,50 +63,6 @@ public struct LibraryToolbarView: View {
                 )
                 
                 Spacer()
-                
-                // Library Folder Indicator & Actions
-                HStack(spacing: 8) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "folder.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(NXTheme.secondary)
-                        Text(viewModel.libraryFolder?.lastPathComponent ?? viewModel.tr("library.default_games"))
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(NXTheme.textPrimary.opacity(0.9))
-                            .lineLimit(1)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .nxGlassBar(
-                        in: Capsule(),
-                        fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.65),
-                        fallbackStroke: NXTheme.borderSubtle
-                    )
-                    
-                    Button(viewModel.tr("library.change_folder")) {
-                        SoundEffectService.shared.play(.click)
-                        viewModel.selectLibraryFolder()
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.small)
-                    
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        viewModel.refreshLibrary()
-                    }) {
-                        HStack(spacing: 4) {
-                            if viewModel.isScanningLibrary {
-                                ProgressView()
-                                    .controlSize(.small)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
-                            }
-                            Text(viewModel.tr("library.refresh"))
-                        }
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.small)
-                }
             }
             .padding(.horizontal, useFloatingGlass ? 16 : 18)
             .padding(.vertical, useFloatingGlass ? 8 : 10)
@@ -130,6 +86,11 @@ public struct LibraryToolbarView: View {
                 },
                 alignment: .bottom
             )
+        }
+        .onAppear {
+            DispatchQueue.main.async {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
         }
     }
 }

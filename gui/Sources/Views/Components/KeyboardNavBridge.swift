@@ -101,13 +101,53 @@ public struct KeyboardNavBridge: NSViewRepresentable {
                 }
 
                 if textActive {
+                    let target = self.window?.attachedSheet ?? self.window ?? NSApp.keyWindow
+                    
                     // Smart Escape: unfocuses text input and immediately re-enables hotkeys
                     if event.keyCode == 53 {
-                        let target = self.window?.attachedSheet ?? self.window ?? NSApp.keyWindow
                         target?.makeFirstResponder(nil)
                         self.viewModel?.isTextInputActive = false
                         return nil
                     }
+                    
+                    // Down Arrow or Return: immediately unfocus text field and interact with games
+                    if event.keyCode == 125 { // Down Arrow
+                        target?.makeFirstResponder(nil)
+                        self.viewModel?.isTextInputActive = false
+                        self.viewModel?.handleNavigateDown()
+                        return nil
+                    }
+                    if event.keyCode == 36 || event.keyCode == 76 { // Return / Enter
+                        target?.makeFirstResponder(nil)
+                        self.viewModel?.isTextInputActive = false
+                        self.viewModel?.handleConfirm()
+                        return nil
+                    }
+                    
+                    // When search input is empty, any arrow key immediately unfocuses and navigates
+                    let isSearchEmpty = self.viewModel?.librarySearchText.isEmpty ?? true
+                    if isSearchEmpty {
+                        switch event.keyCode {
+                        case 123: // Left
+                            target?.makeFirstResponder(nil)
+                            self.viewModel?.isTextInputActive = false
+                            self.onKey?("left")
+                            return nil
+                        case 124: // Right
+                            target?.makeFirstResponder(nil)
+                            self.viewModel?.isTextInputActive = false
+                            self.onKey?("right")
+                            return nil
+                        case 126: // Up
+                            target?.makeFirstResponder(nil)
+                            self.viewModel?.isTextInputActive = false
+                            self.onKey?("up")
+                            return nil
+                        default:
+                            break
+                        }
+                    }
+                    
                     // Pass keystrokes directly to the text field without hotkey interception
                     return event
                 }
@@ -139,6 +179,11 @@ public struct KeyboardNavBridge: NSViewRepresentable {
                 }
 
                 // 3. Navigation hotkeys enabled: process launcher navigation keys
+                // System command guard: Never swallow macOS Command/Control shortcuts (e.g. Cmd+Q, Cmd+W, Cmd+C, Cmd+M, etc.)
+                if event.modifierFlags.contains(.command) || event.modifierFlags.contains(.control) {
+                    return event
+                }
+
                 switch event.keyCode {
                 case 48: // Tab key
                     let isShift = event.modifierFlags.contains(.shift)

@@ -23,8 +23,8 @@ public struct PersonalizationView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 headerView
-                highlightColorCard
                 launcherLanguageCard
+                highlightColorCard
                 SystemAppearanceCard(viewModel: viewModel)
                 soundEffectsCard
             }

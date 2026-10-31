@@ -2,29 +2,45 @@ import SwiftUI
 import AppKit
 
 public struct ConsoleHeroView: View {
-    public let game: PortedGame
+    public let game: PortedGame?
+    public let unportedGame: SelectableGame?
     @ObservedObject public var viewModel: AppViewModel
-    @ObservedObject private var artworkStore = ArtworkStore.shared
-    @ObservedObject private var deviceService = DeviceDeploymentService.shared
-    @Environment(\.nxLiquidGlass) private var glassEnv
+    @ObservedObject internal var artworkStore = ArtworkStore.shared
+    @ObservedObject internal var deviceService = DeviceDeploymentService.shared
+    @Environment(\.nxLiquidGlass) internal var glassEnv
     public let height: CGFloat
 
-    public init(game: PortedGame, viewModel: AppViewModel, height: CGFloat) {
+    public init(game: PortedGame? = nil, unportedGame: SelectableGame? = nil, viewModel: AppViewModel, height: CGFloat) {
         self.game = game
+        self.unportedGame = unportedGame
         self.viewModel = viewModel
         self.height = height
     }
 
     private var heroImage: NSImage? {
-        ArtworkStore.shared.loadWidescreenHero(for: game)
+        if let g = game {
+            return ArtworkStore.shared.loadWidescreenHero(for: g)
+        } else if let u = unportedGame {
+            return ArtworkStore.shared.loadWidescreenHero(titleId: u.titleId, gameName: u.name)
+        }
+        return nil
     }
 
-    private var config: GameRuntimeConfig {
-        viewModel.loadRuntimeConfig(for: game)
+    internal var config: GameRuntimeConfig {
+        if let g = game {
+            return viewModel.loadRuntimeConfig(for: g)
+        }
+        return GameRuntimeConfig()
     }
 
-    private var isLaunching: Bool {
-        viewModel.launchingGameId == game.id
+    internal var isLaunching: Bool {
+        guard let g = game else { return false }
+        return viewModel.launchingGameId == g.id
+    }
+
+    internal var isUnportedBuilding: Bool {
+        guard let u = unportedGame else { return false }
+        return viewModel.isBuilding && (viewModel.buildingGameId == u.id || viewModel.selectedGame?.id == u.id)
     }
 
     public var body: some View {
@@ -81,30 +97,41 @@ public struct ConsoleHeroView: View {
                 // Console Runtime Status Indicators
                 NXGlassContainer(spacing: 6) {
                     HStack(spacing: 8) {
-                        if game.platform == .macApp {
-                            statusPill(title: config.enable60FPS ? "60 FPS" : "30 FPS", active: config.enable60FPS)
-                            statusPill(title: config.isDockedMode ? "Docked" : "Handheld", active: true)
-                            if config.enableGameMode {
-                                statusPill(title: "Game Mode", active: true)
-                            }
-                            if config.enableMetalFXUpscale {
-                                statusPill(title: "MetalFX", active: true)
-                            }
-                            statusPill(title: "macOS Native", active: false)
-                        } else {
-                            statusPill(title: "iOS IPA Port", active: true)
-                            statusPill(title: "Handheld", active: false)
-                            if deviceService.activeDeployment.isRunning {
-                                statusPill(title: "Deploying (\(Int(deviceService.activeDeployment.progressFraction * 100))%)", active: true)
+                        if let g = game {
+                            if g.platform == .macApp {
+                                statusPill(title: config.enable60FPS ? "60 FPS" : "30 FPS", active: config.enable60FPS)
+                                statusPill(title: config.isDockedMode ? "Docked" : "Handheld", active: true)
+                                if config.enableGameMode {
+                                    statusPill(title: "Game Mode", active: true)
+                                }
+                                if config.enableMetalFXUpscale {
+                                    statusPill(title: "MetalFX", active: true)
+                                }
+                                statusPill(title: "macOS Native", active: false)
                             } else {
-                                statusPill(title: "iPhone & iPad", active: false)
+                                statusPill(title: "iOS IPA Port", active: true)
+                                statusPill(title: "Handheld", active: false)
+                                if deviceService.activeDeployment.isRunning {
+                                    statusPill(title: "Deploying (\(Int(deviceService.activeDeployment.progressFraction * 100))%)", active: true)
+                                } else {
+                                    statusPill(title: "iPhone & iPad", active: false)
+                                }
+                            }
+                        } else if let u = unportedGame {
+                            statusPill(title: "Nintendo Switch", active: true)
+                            statusPill(title: u.formattedSize, active: false)
+                            if u.updateCount > 0 {
+                                statusPill(title: "+\(u.updateCount) Updates", active: true)
+                            }
+                            if u.dlcCount > 0 {
+                                statusPill(title: "+\(u.dlcCount) DLCs", active: true)
                             }
                         }
                     }
                 }
 
                 // Clean Game Title
-                Text(game.name)
+                Text(game?.name ?? unportedGame?.name ?? "")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .foregroundColor(NXTheme.textPrimary)
                     .lineLimit(2)
@@ -113,111 +140,10 @@ public struct ConsoleHeroView: View {
                 // Interactive Liquid Glass Action Bar
                 NXGlassContainer(spacing: 12) {
                     HStack(spacing: 12) {
-                        if game.platform == .macApp {
-                            // Play Button Pill for Mac Apps
-                            Button(action: {
-                                viewModel.launchGame(game)
-                            }) {
-                                HStack(spacing: 8) {
-                                    if isLaunching {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                        Text(viewModel.tr("common.launching"))
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    } else {
-                                        Image(systemName: "play.fill")
-                                            .font(.system(size: 12))
-                                        Text(viewModel.tr("common.play"))
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 22)
-                                .padding(.vertical, 10)
-                                .contentShape(Capsule())
-                                .nxGlassInteractive(
-                                    in: Capsule(),
-                                    tint: NXTheme.primary.opacity(glassEnv.appearance == .liquid ? 0.76 : 0.88),
-                                    isSelected: true,
-                                    isInteractive: !isLaunching,
-                                    fallbackFill: NXTheme.primary,
-                                    fallbackSelectedFill: NXTheme.primary
-                                )
-                            }
-                            .buttonStyle(NXPressableButtonStyle())
-                            .disabled(isLaunching)
-                            .nxNoFocusRing()
-                        } else {
-                            // Send to Device Button for iOS IPAs
-                            Button(action: {
-                                SoundEffectService.shared.play(.click)
-                                viewModel.gameForSettingsSheet = game
-                            }) {
-                                HStack(spacing: 8) {
-                                    if deviceService.activeDeployment.isRunning {
-                                        ProgressView()
-                                            .controlSize(.small)
-                                        Text("\(deviceService.activeDeployment.phase.rawValue) (\(Int(deviceService.activeDeployment.progressFraction * 100))%)")
-                                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                                    } else {
-                                        Image(systemName: "arrow.up.forward.app")
-                                            .font(.system(size: 13))
-                                        Text(viewModel.tr("console.send_ios"))
-                                            .font(.system(size: 14, weight: .bold, design: .rounded))
-                                    }
-                                }
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 10)
-                                .contentShape(Capsule())
-                                .nxGlassInteractive(
-                                    in: Capsule(),
-                                    tint: NXTheme.primary.opacity(glassEnv.appearance == .liquid ? 0.76 : 0.88),
-                                    isSelected: true,
-                                    fallbackFill: NXTheme.primary,
-                                    fallbackSelectedFill: NXTheme.primary
-                                )
-                            }
-                            .buttonStyle(NXPressableButtonStyle())
-                            .nxNoFocusRing()
-
-                            // AirDrop Button for iOS
-                            heroSecondaryButton(
-                                icon: "airdrop",
-                                title: viewModel.tr("common.airdrop")
-                            ) {
-                                SoundEffectService.shared.play(.click)
-                                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: game.url)
-                            }
-                            .help(viewModel.tr("settings_modal.airdrop_help"))
-
-                            // Reveal in Finder Button for iOS
-                            heroSecondaryButton(
-                                icon: "folder.fill",
-                                title: viewModel.tr("console.reveal_ipa")
-                            ) {
-                                SoundEffectService.shared.play(.click)
-                                NSWorkspace.shared.activateFileViewerSelecting([game.url])
-                            }
-                        }
-
-                        // Options Button
-                        heroSecondaryButton(
-                            icon: "slider.horizontal.3",
-                            title: viewModel.tr("console.options")
-                        ) {
-                            SoundEffectService.shared.play(.click)
-                            viewModel.gameForSettingsSheet = game
-                        }
-
-                        // Saves Folder Button
-                        heroSecondaryButton(
-                            icon: "folder.fill",
-                            title: viewModel.tr("console.saves")
-                        ) {
-                            SoundEffectService.shared.play(.click)
-                            let profile = GameDetailsProfile.inspect(for: game)
-                            viewModel.revealSaveFolder(profile.saveDirectory)
+                        if let g = game {
+                            portedActionBar(for: g)
+                        } else if let u = unportedGame {
+                            unportedActionBar(for: u)
                         }
                     }
                     .padding(.top, 4)
@@ -227,39 +153,5 @@ public struct ConsoleHeroView: View {
             .padding(.bottom, 22)
         }
         .frame(height: height)
-    }
-
-    private func heroSecondaryButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: icon)
-                Text(title)
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-            }
-            .foregroundColor(NXTheme.textPrimary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .contentShape(Capsule())
-            .nxGlassInteractive(
-                in: Capsule(),
-                fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.85)
-            )
-        }
-        .buttonStyle(NXPressableButtonStyle())
-        .nxNoFocusRing()
-    }
-
-    private func statusPill(title: String, active: Bool) -> some View {
-        Text(title)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .nxGlassBar(
-                in: Capsule(),
-                tint: active ? NXTheme.primary.opacity(0.46) : NXTheme.glassSurface.opacity(0.28),
-                fallbackFill: active ? NXTheme.primary.opacity(0.35) : NXTheme.textMuted.opacity(0.24),
-                fallbackStroke: active ? NXTheme.secondary.opacity(0.45) : Color.white.opacity(0.12)
-            )
     }
 }

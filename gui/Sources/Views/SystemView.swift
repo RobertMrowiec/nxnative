@@ -13,22 +13,30 @@ public struct SystemView: View {
                 // Header & Action Bar
                 headerView
                 
+                // Developer Mode Switch Card (strictly in Settings)
+                developerModeCard
+                
                 VStack(spacing: 12) {
                     SystemKeysCard(viewModel: viewModel)
                     SystemToolsCard(viewModel: viewModel)
                 }
                 
-                VStack(spacing: 12) {
-                    SystemRepoCard(viewModel: viewModel)
-                    SystemPatchesCard(viewModel: viewModel)
+                if viewModel.isDeveloperMode {
+                    VStack(spacing: 12) {
+                        SystemRepoCard(viewModel: viewModel)
+                        SystemDirectoriesCard(viewModel: viewModel)
+                        SystemStorageAndDiagnosticsCard(viewModel: viewModel)
+                        SystemPatchesCard(viewModel: viewModel)
+                    }
                 }
-                
-                SystemDirectoriesCard(viewModel: viewModel)
-                SystemStorageAndDiagnosticsCard(viewModel: viewModel)
             }
             .padding(20)
         }
         .nxScrollEdgeEffect(edges: [.top, .bottom])
+        .sheet(isPresented: $viewModel.showRyujinxNotFoundSheet) {
+            RyujinxKeyMissingSheet(viewModel: viewModel)
+                .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
+        }
         .sheet(isPresented: $viewModel.showInstallerSheet) {
             InstallerSheetView(viewModel: viewModel)
                 .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
@@ -85,24 +93,34 @@ public struct SystemView: View {
                             }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
+                        .help(viewModel.tr("system.repair_all_help"))
                     }
-                    
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        viewModel.detectEnvironment()
-                        viewModel.checkForUpdates()
-                    }) {
-                        HStack(spacing: 6) {
-                            if viewModel.isCheckingPrerequisites || viewModel.isCheckingUpdate {
-                                ProgressView().controlSize(.small)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
-                                Text(viewModel.tr("system.recheck"))
-                            }
-                        }
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
                 }
+            }
+        }
+    }
+    
+    private var developerModeCard: some View {
+        GlassCard(padding: 14) {
+            HStack(spacing: 12) {
+                Image(systemName: "hammer.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(viewModel.isDeveloperMode ? NXTheme.primary : NXTheme.textSecondary)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(viewModel.tr("build.dev_mode_title"))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                    Text(viewModel.tr("build.dev_mode_desc"))
+                        .font(.system(size: 11))
+                        .foregroundColor(NXTheme.textSecondary)
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: $viewModel.isDeveloperMode)
+                    .labelsHidden()
+                    .toggleStyle(.switch)
             }
         }
     }

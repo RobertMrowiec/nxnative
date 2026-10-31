@@ -4,7 +4,8 @@ extension Translations {
     public static let english: [String: String] = [
         // Navigation
         "nav.port_game": "Port Game",
-        "nav.library": "Library",
+        "nav.library": "My Games",
+        "nav.my_games": "My Games",
         "nav.compatibility": "Compatibility",
         "nav.controls": "Controls",
         "nav.personalize": "Personalize",
@@ -32,6 +33,10 @@ extension Translations {
         "personalization.glass_frosted_desc": "Diffused satin glass with deeper backdrop attenuation and higher contrast",
         "personalization.glass_off_desc": "Disabled — classic Obsidian surfaces without dynamic refraction",
         "personalization.app_icon": "App Icon & Color Appearance",
+        "personalization.sync_accent": "Sync with Accent Color",
+        "personalization.bg_transparent": "Transparent",
+        "personalization.bg_light": "Light",
+        "personalization.bg_dark": "Dark",
         "personalization.sound_effects": "Console UI Sound Effects",
         "personalization.launcher_language": "Launcher Language",
         "personalization.launcher_language_subtitle": "Select the display language for the NxNative Launcher interface",
@@ -43,6 +48,14 @@ extension Translations {
         
         // Library
         "library.search_placeholder": "Search ported games...",
+        "library.shelf_ready_to_port": "Nintendo Switch (Ready to Port)",
+        "library.port_now": "Port Now",
+        "library.add_game_card": "Add Game or Folder",
+        "library.empty_drop_title": "Drag & Drop Game Folder Here",
+        "library.empty_drop_subtitle": "Supports folders with subfolders, NSP, NSZ, XCI, XCZ, updates and DLCs",
+        "library.choose_folder": "Choose Folder or Game",
+        "library.unported_badge": "SWITCH",
+        "library.stage_indicator": "Stage %02d/%02d",
         "library.empty_title": "No Ported Games Found",
         "library.empty_subtitle": "Games you convert (.app and .ipa) will automatically appear here.",
         "library.convert_now": "Convert a Game Now",
@@ -59,6 +72,11 @@ extension Translations {
         "library.trash_button": "Move to Trash",
         "library.trash_message": "This will safely move the compiled game file to your macOS Trash. You can restore it from Trash if needed, or empty Trash to free up storage.",
         "library.cancel": "Cancel",
+        "library.cancel_port": "Cancel Port",
+        "system.add_folder": "Add Folder...",
+        "system.folders_count": "folder(s)",
+        "common.clear_all": "Clear All",
+        "common.remove": "Remove",
         
         // Actions
         "actions.play_game": "Play",
@@ -264,6 +282,12 @@ extension Translations {
         "system.reset_default": "Reset Default",
         "system.keys_missing_desc": "No prod.keys located. Auto-detected from Ryujinx or choose manually.",
         "system.find_ryujinx": "Find in Ryujinx...",
+        "system.ryujinx_not_found_title": "Ryujinx / Ryubing Not Found",
+        "system.ryujinx_not_found_desc": "Could not locate a Ryujinx or Ryubing install on this Mac. Place your prod.keys here or choose the folder manually.",
+        "system.drop_keys_here": "Drop your prod.keys file or folder here",
+        "system.drop_keys_subtitle": "Drag and drop prod.keys or a Ryujinx system folder to auto-configure",
+        "system.select_folder": "Select Folder",
+        "system.select_prod_keys": "Select prod.keys",
         "system.verify_apply": "Verify & Apply",
         "system.select_repo_desc": "Select or download the nxnative repository folder...",
         "system.download_1click": "Download (1-Click)",
@@ -533,5 +557,30 @@ extension Translations {
         "system.icloud_reclaimed_success": "Freed ~%@ of iCloud storage!",
         "settings_modal.icloud_local_only": "Local Storage Only (iCloud Sync Off)",
         "settings_modal.icloud_local_only_desc": "Saves and snapshots are stored locally in Application Support",
-]
+        
+        // Port Game Modal
+        "port_modal.title": "Port Game",
+        "port_modal.detected_content": "Detected Game Files",
+        "port_modal.updates_dlcs": "Updates & DLCs",
+        "port_modal.no_updates_dlcs": "Base game only (No updates or DLCs found in folder)",
+        "port_modal.target_platform": "Target Platform",
+        "port_modal.platform_mac_title": "Mac (macOS Native)",
+        "port_modal.platform_mac_desc": "Builds a high-performance native Mac App ready to play.",
+        "port_modal.platform_ios_title": "iPhone / iPad (iOS Port)",
+        "port_modal.platform_ios_desc": "Builds an iOS IPA package for mobile devices.",
+        "port_modal.ios_deploy_prompt": "Send to iPhone / iPad upon completion?",
+        "port_modal.ios_deploy_now": "Deploy automatically to device with saved settings",
+        "port_modal.ios_deploy_later": "Port only now (Deploy later)",
+        "port_modal.advanced_settings": "Advanced Settings",
+        "port_modal.romfs_split_title": "RomFS Split Threshold: %d GB",
+        "port_modal.romfs_split_desc": "Splits RomFS into smaller parts for iOS installation limits.",
+        "port_modal.start_port_button": "Port Game Now",
+        
+        // Native Apple Notifications
+        "notif.port_success_title": "Game Porting Complete!",
+        "notif.port_success_body": "Successfully built and ready to play in My Games.",
+        "notif.port_success_body_path": "Successfully built and ready to play at: %@",
+        "notif.port_error_title": "Game Porting Failed",
+        "notif.port_error_body": "Build process failed: %@",
+    ]
 }

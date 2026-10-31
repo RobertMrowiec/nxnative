@@ -50,6 +50,6 @@ public struct PortedGame: Identifiable, Hashable {
     }
     
     public var isPlayableLocally: Bool {
-        platform == .macApp
+        platform == .macApp || platform == .nonSwitch
     }
 }

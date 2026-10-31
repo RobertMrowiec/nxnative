@@ -19,17 +19,15 @@ public struct LibraryView: View {
     }
     
     private var currentSelectedGame: PortedGame? {
-        guard !filteredGames.isEmpty else { return nil }
-        let index = max(0, min(viewModel.focusedGameIndex, filteredGames.count - 1))
-        return filteredGames[index]
+        viewModel.currentFocusedGame
     }
     
     public var body: some View {
         ZStack {
             Group {
                 // MARK: - Switch Dark Mode Console Showcase (Hero 16:9 + Square Tiles 1:1)
-                if filteredGames.isEmpty {
-                    emptyLibraryView
+                if filteredGames.isEmpty && viewModel.unportedGames.isEmpty {
+                    LibraryEmptyDropView(viewModel: viewModel)
                 } else {
                     SwitchConsoleLibraryView(viewModel: viewModel, games: filteredGames)
                 }
@@ -69,6 +67,10 @@ public struct LibraryView: View {
         .animation(.easeInOut(duration: 0.2), value: viewModel.isGameActionMenuPresented)
         .sheet(item: $viewModel.gameForSettingsSheet) { game in
             GameSettingsSheetView(viewModel: viewModel, game: game)
+                .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
+        }
+        .sheet(item: $viewModel.gameForPortModal) { game in
+            PortGameModalView(game: game, viewModel: viewModel)
                 .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
         }
         .confirmationDialog(
@@ -113,31 +115,5 @@ public struct LibraryView: View {
         } message: {
             Text(viewModel.tr("library.trash_message"))
         }
-    }
-    
-    private var emptyLibraryView: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "gamecontroller")
-                .font(.system(size: 44))
-                .foregroundColor(NXTheme.secondary.opacity(0.4))
-            
-            VStack(spacing: 4) {
-                Text(viewModel.tr("library.empty_title"))
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(NXTheme.textPrimary)
-                Text(viewModel.tr("library.empty_subtitle"))
-                    .font(.system(size: 12))
-                    .foregroundColor(NXTheme.textSecondary)
-            }
-            
-            Button(viewModel.tr("library.convert_now")) {
-                SoundEffectService.shared.play(.click)
-                viewModel.selectedTab = 0
-            }
-            .buttonStyle(NXPrimaryButtonStyle())
-            .controlSize(.regular)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(40)
     }
 }

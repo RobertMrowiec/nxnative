@@ -13,15 +13,17 @@ public struct MainView: View {
     }
     
     internal var tabs: [(tag: Int, title: String, icon: String)] {
-        [
-            (0, viewModel.tr("nav.port_game"), "play.circle.fill"),
-            (1, viewModel.tr("nav.library"), "gamecontroller.fill"),
-            (2, viewModel.tr("nav.compatibility"), "books.vertical.fill"),
-            (3, viewModel.tr("nav.controls"), "arcade.stick.console.fill"),
-            (4, viewModel.tr("nav.personalize"), "paintpalette.fill"),
-            (5, viewModel.tr("nav.settings"), "gearshape.fill"),
-            (6, viewModel.tr("nav.console"), "terminal.fill")
+        var items: [(tag: Int, title: String, icon: String)] = [
+            (0, viewModel.tr("nav.my_games"), "gamecontroller.fill"),
+            (1, viewModel.tr("nav.compatibility"), "books.vertical.fill"),
+            (2, viewModel.tr("nav.controls"), "arcade.stick.console.fill"),
+            (3, viewModel.tr("nav.personalize"), "paintpalette.fill"),
+            (4, viewModel.tr("nav.settings"), "gearshape.fill")
         ]
+        if viewModel.isDeveloperMode {
+            items.append((5, viewModel.tr("nav.console"), "terminal.fill"))
+        }
+        return items
     }
     
     internal var isCompactNav: Bool {
@@ -96,6 +98,16 @@ public struct MainView: View {
             LauncherUpdateSheet(viewModel: viewModel)
                 .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
         }
+        .onChange(of: viewModel.selectedTab) { _ in
+            DispatchQueue.main.async {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
+        .onAppear {
+            DispatchQueue.main.async {
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
     }
     
     @ViewBuilder
@@ -143,21 +155,23 @@ public struct MainView: View {
     private var selectedTabContent: some View {
         switch viewModel.selectedTab {
         case 0:
-            BuildView(viewModel: viewModel)
-        case 1:
             LibraryView(viewModel: viewModel)
-        case 2:
+        case 1:
             CompatibilityView(viewModel: viewModel)
-        case 3:
+        case 2:
             ControlsView()
-        case 4:
+        case 3:
             PersonalizationView(viewModel: viewModel)
-        case 5:
+        case 4:
             SystemView(viewModel: viewModel)
-        case 6:
-            LogsView(viewModel: viewModel)
+        case 5:
+            if viewModel.isDeveloperMode {
+                LogsView(viewModel: viewModel)
+            } else {
+                LibraryView(viewModel: viewModel)
+            }
         default:
-            EmptyView()
+            LibraryView(viewModel: viewModel)
         }
     }
 }
