@@ -11,3 +11,7 @@ NxNative_Launcher.app/
 *.dmg
 gui/Resources/python/
 gui/Resources/tools/
+# coverage.py data and its JSON report (pyproject.toml, [tool.coverage.run])
+.coverage
+.coverage.*
+/coverage.json
