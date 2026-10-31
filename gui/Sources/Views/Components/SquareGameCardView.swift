@@ -10,6 +10,7 @@ public struct SquareGameCardView: View {
     public let onSelect: () -> Void
     @ObservedObject private var artworkStore = ArtworkStore.shared
     @ObservedObject private var coverService = GameCoverService.shared
+    @ObservedObject private var deploymentTracker = IosDeploymentTracker.shared
 
     public init(
         game: PortedGame,
@@ -88,6 +89,13 @@ public struct SquareGameCardView: View {
                 .padding(8)
             }
         }
+        // iOS Sideload Renewal Countdown Badge (Top Right Corner)
+        .overlay(alignment: .topTrailing) {
+            if game.platform == .ios, let record = deploymentTracker.deploymentRecord(for: game) {
+                IosRenewalBadgeView(record: record)
+                    .padding(8)
+            }
+        }
         // MARK: - Switch Glowing Focus & Drop Target Frame
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -128,10 +136,14 @@ public struct SquareGameCardView: View {
                     Label(viewModel.tr("common.play"), systemImage: "play.fill")
                 }
             } else {
+                let isDeployed = deploymentTracker.isGameDeployed(game)
                 Button {
                     viewModel.gameForSettingsSheet = game
                 } label: {
-                    Label(viewModel.tr("actions.send_ios"), systemImage: "arrow.up.forward.app")
+                    Label(
+                        isDeployed ? viewModel.tr("actions.renew_ios") : viewModel.tr("actions.send_ios"),
+                        systemImage: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.up.forward.app"
+                    )
                 }
             }
 

@@ -53,6 +53,11 @@ build_app_bundle() {
             echo "==> Copiando ferramentas standalone embutidas..."
             cp -R "$GUI_DIR/Resources/tools" "$APP_BUNDLE/Contents/Resources/"
         fi
+        if [ -d "$REPO_ROOT/dm/ios/DmIOS.xcodeproj" ]; then
+            echo "==> Copiando projeto DmIOS.xcodeproj para provisionamento nativo..."
+            mkdir -p "$APP_BUNDLE/Contents/Resources/dm/ios"
+            cp -R "$REPO_ROOT/dm/ios/DmIOS.xcodeproj" "$APP_BUNDLE/Contents/Resources/dm/ios/"
+        fi
     fi
     
     cat <<EOF > "$APP_BUNDLE/Contents/Info.plist"
@@ -96,9 +101,9 @@ build_app_bundle() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.9.0</string>
+    <string>1.9.1</string>
     <key>CFBundleVersion</key>
-    <string>25</string>
+    <string>26</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -113,13 +118,14 @@ EOF
     codesign --force --deep --sign - "$APP_BUNDLE"
 }
 
-# Cria o aplicativo na raiz de NativePort e dentro de nxnative
+# Remove qualquer cópia duplicada interna no repositório
+rm -rf "$REPO_ROOT/NxNative_Launcher.app" 2>/dev/null || true
+
+# Cria apenas um aplicativo na pasta raiz de trabalho
 build_app_bundle "$WORKSPACE_DIR"
-build_app_bundle "$REPO_ROOT"
 
 # Limpa artefatos intermediários pesados do build para economizar espaço
 rm -rf "$GUI_DIR/.build" 2>/dev/null || true
 
 echo "==> Sucesso! Aplicativo criado com ícone em:"
 echo "    $WORKSPACE_DIR/NxNative_Launcher.app"
-echo "    $REPO_ROOT/NxNative_Launcher.app"

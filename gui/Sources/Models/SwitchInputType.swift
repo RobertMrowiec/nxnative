@@ -118,7 +118,7 @@ public enum SwitchButton: String, CaseIterable, Codable, Identifiable {
         case .dpadLeft: return "dpad.left"
         case .dpadRight: return "dpad.right"
         case .home: return "buttonHome"
-        case .capture: return "buttonOptions"
+        case .capture: return "buttonShare"
         }
     }
 }

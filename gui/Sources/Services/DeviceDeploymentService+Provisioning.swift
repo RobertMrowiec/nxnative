@@ -129,10 +129,15 @@ extension DeviceDeploymentService {
     ) -> ParsedProvisioningProfile? {
         let fm = FileManager.default
         let detectorRoot = SystemDetector.shared.detectNxnativeDirectory().path
-        let candidateProjects = [
-            URL(fileURLWithPath: detectorRoot).appendingPathComponent("dm/ios/DmIOS.xcodeproj").path,
-            "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/dm/ios/DmIOS.xcodeproj"
-        ]
+        var candidateProjects: [String] = []
+        if let res = Bundle.main.resourceURL {
+            candidateProjects.append(res.appendingPathComponent("dm/ios/DmIOS.xcodeproj").path)
+            candidateProjects.append(res.appendingPathComponent("tools/DmIOS.xcodeproj").path)
+        }
+        candidateProjects.append(Bundle.main.bundleURL.appendingPathComponent("Contents/Resources/dm/ios/DmIOS.xcodeproj").path)
+        candidateProjects.append(URL(fileURLWithPath: detectorRoot).appendingPathComponent("dm/ios/DmIOS.xcodeproj").path)
+        candidateProjects.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Applications/NxPorts/dm/ios/DmIOS.xcodeproj").path)
+        candidateProjects.append("/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/dm/ios/DmIOS.xcodeproj")
 
         guard let projectPath = candidateProjects.first(where: { fm.fileExists(atPath: $0) }) else {
             return nil
@@ -293,32 +298,47 @@ extension DeviceDeploymentService {
             }
         }
 
-        // 5. Run codesign with entitlements
-        let sign = Process()
-        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
-        var signArgs = ["--force", "--deep"]
-
-        if let entURL = tempEntitlementsURL {
-            signArgs.append(contentsOf: ["--entitlements", entURL.path])
-        }
-
+        // 5. Determine signing identity
         let signingId = chosenTeam?.signingIdentity ?? (chosenTeam?.name.contains(":") == true ? chosenTeam?.name : nil)
+        let resolvedIdentity: String
         if let team = chosenTeam, team.hasCertificateInKeychain, let validIdentity = signingId {
-            signArgs.append(contentsOf: ["--sign", validIdentity, targetAppURL.path])
+            resolvedIdentity = validIdentity
             DispatchQueue.main.async {
                 self.activeDeployment.logLines.append("==> Signing with development identity: \(validIdentity)")
             }
         } else if let team = chosenTeam, team.hasCertificateInKeychain {
-            signArgs.append(contentsOf: ["--sign", team.name, targetAppURL.path])
+            resolvedIdentity = team.name
             DispatchQueue.main.async {
                 self.activeDeployment.logLines.append("==> Signing with identity: \(team.name)")
             }
         } else {
-            signArgs.append(contentsOf: ["--sign", "-", targetAppURL.path])
+            resolvedIdentity = "-"
             DispatchQueue.main.async {
                 self.activeDeployment.logLines.append("==> Signing with ad-hoc identity...")
             }
         }
+
+        // 6. Sign embedded frameworks first if present
+        let frameworksDir = targetAppURL.appendingPathComponent("Frameworks")
+        if let fwItems = try? fm.contentsOfDirectory(at: frameworksDir, includingPropertiesForKeys: nil) {
+            for fw in fwItems where fw.pathExtension == "framework" || fw.pathExtension == "dylib" {
+                let fwProc = Process()
+                fwProc.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+                fwProc.arguments = ["--force", "--sign", resolvedIdentity, fw.path]
+                try? fwProc.run()
+                fwProc.waitUntilExit()
+            }
+        }
+
+        // 7. Run fast bundle signature without --deep to avoid hashing gigabytes of RomFS
+        let sign = Process()
+        sign.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
+        var signArgs = ["--force"]
+
+        if let entURL = tempEntitlementsURL {
+            signArgs.append(contentsOf: ["--entitlements", entURL.path])
+        }
+        signArgs.append(contentsOf: ["--sign", resolvedIdentity, targetAppURL.path])
 
         sign.arguments = signArgs
         try? sign.run()

@@ -94,7 +94,8 @@ public struct PortedCategoryShelfView: View {
                 .onChange(of: shelf == .mac ? viewModel.focusedMacIndex : (shelf == .ios ? viewModel.focusedIosIndex : viewModel.focusedNonSwitchIndex)) { newIdx in
                     guard viewModel.activeLibraryShelf == shelf else { return }
                     withAnimation(.easeOut(duration: 0.16)) {
-                        horizontalProxy.scrollTo("card_\(shelf.rawValue)_\(newIdx)", anchor: .center)
+                        let anchor: UnitPoint = newIdx == 0 ? .leading : (newIdx >= items.count - 1 ? .trailing : .center)
+                        horizontalProxy.scrollTo("card_\(shelf.rawValue)_\(newIdx)", anchor: anchor)
                     }
                 }
             }

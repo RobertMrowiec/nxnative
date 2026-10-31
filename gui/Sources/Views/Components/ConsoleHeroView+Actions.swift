@@ -51,10 +51,18 @@ extension ConsoleHeroView {
                         Text("\(deviceService.activeDeployment.phase.rawValue) (\(Int(deviceService.activeDeployment.progressFraction * 100))%)")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                     } else {
-                        Image(systemName: "arrow.up.forward.app")
+                        let isDeployed = IosDeploymentTracker.shared.isGameDeployed(g)
+                        let record = IosDeploymentTracker.shared.deploymentRecord(for: g)
+                        let isExpired = record?.isExpired ?? false
+
+                        Image(systemName: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.up.forward.app")
                             .font(.system(size: 13))
-                        Text(viewModel.tr("console.send_ios"))
-                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                        Text(
+                            isDeployed
+                                ? (isExpired ? viewModel.tr("console.renew_ios_expired") : viewModel.tr("console.renew_ios"))
+                                : viewModel.tr("console.send_ios")
+                        )
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
                     }
                 }
                 .foregroundColor(.white)
@@ -63,10 +71,10 @@ extension ConsoleHeroView {
                 .contentShape(Capsule())
                 .nxGlassInteractive(
                     in: Capsule(),
-                    tint: NXTheme.primary.opacity(glassEnv.appearance == .liquid ? 0.76 : 0.88),
+                    tint: ((IosDeploymentTracker.shared.deploymentRecord(for: g)?.isExpired ?? false) ? Color.red : NXTheme.primary).opacity(glassEnv.appearance == .liquid ? 0.76 : 0.88),
                     isSelected: true,
-                    fallbackFill: NXTheme.primary,
-                    fallbackSelectedFill: NXTheme.primary
+                    fallbackFill: ((IosDeploymentTracker.shared.deploymentRecord(for: g)?.isExpired ?? false) ? Color.red : NXTheme.primary),
+                    fallbackSelectedFill: ((IosDeploymentTracker.shared.deploymentRecord(for: g)?.isExpired ?? false) ? Color.red : NXTheme.primary)
                 )
             }
             .buttonStyle(NXPressableButtonStyle())
@@ -90,6 +98,15 @@ extension ConsoleHeroView {
                 SoundEffectService.shared.play(.click)
                 NSWorkspace.shared.activateFileViewerSelecting([g.url])
             }
+        }
+
+        // Controls Guide Button
+        heroSecondaryButton(
+            icon: "gamecontroller.fill",
+            title: viewModel.tr("controls.guide_title")
+        ) {
+            SoundEffectService.shared.play(.click)
+            viewModel.showControlsGuideSheet = true
         }
 
         // Options Button

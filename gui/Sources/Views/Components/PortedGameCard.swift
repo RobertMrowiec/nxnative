@@ -5,6 +5,7 @@ public struct PortedGameCard: View {
     public let game: PortedGame
     @ObservedObject public var viewModel: AppViewModel
     public let onDelete: (PortedGame) -> Void
+    @ObservedObject private var deploymentTracker = IosDeploymentTracker.shared
     
     public init(game: PortedGame, viewModel: AppViewModel, onDelete: @escaping (PortedGame) -> Void) {
         self.game = game
@@ -28,6 +29,10 @@ public struct PortedGameCard: View {
                         .clipShape(Capsule())
                     
                     Spacer()
+                    
+                    if game.platform == .ios, let record = deploymentTracker.deploymentRecord(for: game) {
+                        IosRenewalBadgeView(record: record)
+                    }
                     
                     // Quick Setting Pills (Current Config - White text for high contrast)
                     HStack(spacing: 4) {

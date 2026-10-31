@@ -21,9 +21,8 @@ public struct UnifiedConsoleGridView: View {
         let verticalPadding: CGFloat = max(22, baseCardSize * 0.14)
         let columns = [GridItem(.adaptive(minimum: baseCardSize, maximum: baseCardSize * 1.05), spacing: cardSpacing)]
 
-        ScrollViewReader { gridProxy in
-            LazyVGrid(columns: columns, spacing: cardSpacing) {
-                ForEach(items.indices, id: \.self) { idx in
+        LazyVGrid(columns: columns, spacing: cardSpacing) {
+            ForEach(items.indices, id: \.self) { idx in
                     let item = items[idx]
                     let isFocused = viewModel.focusedUnifiedIndex == idx
                     
@@ -116,13 +115,6 @@ public struct UnifiedConsoleGridView: View {
                     viewModel.unifiedGridColumnsCount = colCount
                 }
             }
-            .onChange(of: viewModel.focusedUnifiedIndex) { newIdx in
-                withAnimation(.easeOut(duration: 0.16)) {
-                    let isFirstRow = newIdx < max(1, viewModel.unifiedGridColumnsCount)
-                    gridProxy.scrollTo("unified_card_\(newIdx)", anchor: isFirstRow ? .top : .center)
-                }
-            }
-        }
     }
 }
 

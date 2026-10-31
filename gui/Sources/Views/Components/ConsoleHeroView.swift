@@ -7,6 +7,7 @@ public struct ConsoleHeroView: View {
     @ObservedObject public var viewModel: AppViewModel
     @ObservedObject internal var artworkStore = ArtworkStore.shared
     @ObservedObject internal var deviceService = DeviceDeploymentService.shared
+    @ObservedObject internal var deploymentTracker = IosDeploymentTracker.shared
     @Environment(\.nxLiquidGlass) internal var glassEnv
     public let height: CGFloat
 

@@ -98,6 +98,10 @@ public struct MainView: View {
             LauncherUpdateSheet(viewModel: viewModel)
                 .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
         }
+        .sheet(isPresented: $viewModel.showControlsGuideSheet) {
+            UniversalControlsGuideView(viewModel: viewModel)
+                .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
+        }
         .onChange(of: viewModel.selectedTab) { _ in
             DispatchQueue.main.async {
                 NSApp.keyWindow?.makeFirstResponder(nil)
