@@ -110,8 +110,14 @@ extension DeviceDeploymentService {
             }
         }
 
-        // Otherwise return the newest unexpired profile matching this device
-        return teamProfiles.sorted(by: { $0.expirationDate > $1.expirationDate }).first
+        // Check for an unexpired wildcard profile (* or .* at the end)
+        if let wildcard = teamProfiles.first(where: { $0.applicationIdentifier.hasSuffix("*") }) {
+            return wildcard
+        }
+
+        // Never return an unrelated game's profile!
+        // Returning another game's profile would cause iOS to treat this as an update to that other game and overwrite it.
+        return nil
     }
 
     /// Triggers headless Xcode background provisioning with Apple Developer servers.

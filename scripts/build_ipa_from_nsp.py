@@ -833,6 +833,15 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
     only the shader tables change with installed DLC or newly decoded compute kernels. Returns the version's display version"""
     src = sorted(p for p in g.dir.iterdir() if p.is_file() and (p.name not in DERIVED_SKIP or shader_only and p.name == 'patches.py'))
     T, disp = '\t', nacp.version(d / 'control.nacp') or '?'
+    if not shader_only:
+        try:
+            rfs_src = (d / 'romfs_manifest.tsv') if (d / 'romfs_manifest.tsv').is_file() else ((d / 'RomFS') if (d / 'RomFS').is_dir() else (d / 'ExeFS'))
+            F = pg.facts_of(d / 'ExeFS', rfs_src)
+            guessed = pg.guess(F).get('modules')
+            if guessed and guessed[0]:
+                mods = guessed[0].split()
+        except Exception:
+            mods = [m for m in mods if (d / 'ExeFS' / m).is_file()]
     row = T.join(['build', ver, disp] + [f'{m}={build_id(d / "ExeFS" / m)}' for m in mods if (d / 'ExeFS' / m).exists()])
     out, put = [f'# Derived from game profile {g.dir} by scripts/build_ipa_from_nsp.py for {ver} ({disp}), a version that profile was not brought up on:',
                 '# its keys as they are, this version\'s build row, and shader tables made from this version\'s own files'], False
@@ -849,10 +858,8 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
             if not put: out += [row, f'package{T}{ver}', f'shader_versions{T}{ver}']; put = True
             continue
         if not shader_only and tag == 'modules':
-            avail = [m for m in parts[1].split() if (d / 'ExeFS' / m).is_file()]
-            if avail:
-                out.append(f'modules{T}{" ".join(avail)}')
-                continue
+            out.append(f'modules{T}{" ".join(mods)}')
+            continue
         out.append(line)
     text, kf = '\n'.join(out) + '\n', derived_key(pdir)   # beside the profile, not in it: no tool reads it as a table
     key = fingerprint(('files', src), text)
@@ -1118,7 +1125,7 @@ def rewrite(py, repo, exe_dir, out, env, logs, g, provisional=False):
     PROG.stage('rewrite', step='checking the inputs')
     nro_dir = out.with_name('nro_' + out.name.removeprefix('patched_'))
     nros = collect_nros(py, repo, rfs.source(exe_dir.parent), nro_dir, env, logs)
-    if provisional and nros: g = nro_modules(g, exe_dir, nros)
+    if (provisional or 'profile' in str(g.dir)) and nros: g = nro_modules(g, exe_dir, nros)
     mods = [m for m in g.words('modules') if (exe_dir / m).is_file()]
     manifest = nro_dir / 'nro.tsv'
     src = {m: exe_dir / m for m in mods} | nros

@@ -9,7 +9,7 @@ public final class DiagnosticsService {
     public func generateAndCopyReport(lastLogLines: [String] = []) -> String {
         var sections: [String] = []
 
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.8.9"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.9.0"
         sections.append("### NxNative Launcher Diagnostic Report")
         sections.append("- **App Version:** \(version) (Native Apple Silicon)")
         sections.append("- **macOS Version:** \(ProcessInfo.processInfo.operatingSystemVersionString)")
