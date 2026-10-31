@@ -44,8 +44,9 @@ public final class CompatibilityService {
         
         let fm = FileManager.default
         let candidates = [
-            URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/docs/images/switch_titles_artwork.json"),
             fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/nxnative/switch_titles_artwork.json"),
+            fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/nxnative/artwork/switch_titles_artwork.json"),
+            URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/docs/images/switch_titles_artwork.json"),
             Bundle.main.url(forResource: "switch_titles_artwork", withExtension: "json")
         ].compactMap { $0 }
         

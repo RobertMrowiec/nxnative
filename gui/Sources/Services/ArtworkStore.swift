@@ -259,8 +259,9 @@ public final class ArtworkStore: ObservableObject {
         lock.unlock()
 
         let candidates = [
-            self.localRepoDir.appendingPathComponent("switch_titles_artwork.json"),
-            self.artworkDir.appendingPathComponent("switch_titles_artwork.json")
+            self.artworkDir.appendingPathComponent("switch_titles_artwork.json"),
+            self.artworkDir.deletingLastPathComponent().appendingPathComponent("switch_titles_artwork.json"),
+            self.localRepoDir.appendingPathComponent("switch_titles_artwork.json")
         ]
         guard let url = candidates.first(where: { fileManager.fileExists(atPath: $0.path) }),
               let fileData = try? Data(contentsOf: url, options: .mappedIfSafe) else {

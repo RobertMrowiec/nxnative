@@ -190,11 +190,13 @@ def fetch_cover_from_sources(tid, title, dest_path):
 
 def main():
     force = "--force" in sys.argv
+    export_repo = "--export-repo" in sys.argv
     home = os.path.expanduser("~")
     cache_dir = os.path.join(home, "Library/Application Support/nxnative/covers")
     repo_covers_dir = "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/docs/images/covers"
     os.makedirs(cache_dir, exist_ok=True)
-    os.makedirs(repo_covers_dir, exist_ok=True)
+    if export_repo:
+        os.makedirs(repo_covers_dir, exist_ok=True)
     
     base_games = "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/dm/games"
     pattern = re.compile(r"^#\s+(.+?)(?:\s+\(`?([0-9A-Fa-f]{16})`?\))?$")
@@ -216,20 +218,18 @@ def main():
         dest_cache = os.path.join(cache_dir, f"{tid}.jpg")
         dest_repo = os.path.join(repo_covers_dir, f"{tid}.jpg")
         
-        needs_redownload = force or (tid in CHANGED_IDS) or not is_valid_portrait(dest_repo)
+        needs_redownload = force or (tid in CHANGED_IDS) or not is_valid_portrait(dest_cache)
         if not needs_redownload:
-            if not is_valid_portrait(dest_cache):
-                shutil.copyfile(dest_repo, dest_cache)
+            if export_repo and is_valid_portrait(dest_cache) and not is_valid_portrait(dest_repo):
+                shutil.copyfile(dest_cache, dest_repo)
             return ("OK", tid, title, "cached")
             
         ok, url, sz = fetch_cover_from_sources(tid, title, dest_cache)
         if ok:
-            shutil.copyfile(dest_cache, dest_repo)
+            if export_repo:
+                shutil.copyfile(dest_cache, dest_repo)
             return ("DL", tid, title, f"{url} ({sz}B)")
         else:
-            # Remove stale landscape image if present so we know it needs fallback
-            if os.path.isfile(dest_repo) and not is_valid_portrait(dest_repo):
-                os.remove(dest_repo)
             if os.path.isfile(dest_cache) and not is_valid_portrait(dest_cache):
                 os.remove(dest_cache)
             return ("MISS", tid, title, None)

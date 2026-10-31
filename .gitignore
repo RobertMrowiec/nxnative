@@ -15,3 +15,19 @@ gui/Resources/tools/
 .coverage
 .coverage.*
 /coverage.json
+
+# Clean-Room & Legal Compliance: No copyrighted box art, covers, heroes, icons or scraped store databases in repo
+docs/images/covers/
+docs/images/heroes/
+docs/images/icons/
+docs/images/switch_titles_artwork.json
+docs/images/*.jpg
+docs/images/*.png
+!docs/images/banner.png
+!docs/images/banner_monochrome.png
+!docs/images/header_banner.png
+!docs/images/screenshots/
+!docs/images/screenshots/*
+!docs/images/gifs/
+!docs/images/gifs/*
+
