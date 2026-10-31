@@ -365,8 +365,11 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=()):
 
 
 def build_id(nso):
-    with open(nso, 'rb') as f:
-        f.seek(0x40); return f.read(16).hex()
+    try:
+        with open(nso, 'rb') as f:
+            f.seek(0x40); return f.read(16).hex()
+    except (OSError, FileNotFoundError):
+        return None
 
 
 def _gone(func, path, exc):   # shutil.rmtree's onexc hook (Python 3.12+, the script's floor)
@@ -459,7 +462,7 @@ def package_title_reader(repo, keys, env):
 
 
 def version_of(path):
-    m = re.search(r'\[v(\d+)\]', path.name)
+    m = re.search(r'(?:\[v|\(v|[\s_-]v)(\d+)(?:\]|\)|[\s._-]|$)', path.name, re.I)
     return int(m.group(1)) if m else None
 
 
@@ -839,10 +842,17 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
         ids = {'title_id': f'title_id{T}{app:016X}', 'program_id': f'program_id{T}{(pg.npdm(d / "ExeFS/main.npdm")[1] or app):016X}'}
         out.insert(1, f'# under title ID {app:016X}, not the profile\'s {g.title_id:016X}')
     for line in (g.dir / 'game.tsv').read_text(encoding='utf-8').splitlines():
-        if line.split(T, 1)[0] in ids: out.append(ids[line.split(T, 1)[0]]); continue
-        if not shader_only and line.split(T, 1)[0] in ('build', 'package', 'shader_versions'):
+        parts = line.split(T, 1)
+        tag = parts[0]
+        if tag in ids: out.append(ids[tag]); continue
+        if not shader_only and tag in ('build', 'package', 'shader_versions'):
             if not put: out += [row, f'package{T}{ver}', f'shader_versions{T}{ver}']; put = True
             continue
+        if not shader_only and tag == 'modules':
+            avail = [m for m in parts[1].split() if (d / 'ExeFS' / m).is_file()]
+            if avail:
+                out.append(f'modules{T}{" ".join(avail)}')
+                continue
         out.append(line)
     text, kf = '\n'.join(out) + '\n', derived_key(pdir)   # beside the profile, not in it: no tool reads it as a table
     key = fingerprint(('files', src), text)
@@ -1043,14 +1053,23 @@ def extract_aoc(nx, keys, repo, work, app, fam, logs):
 def build_mismatch(d, name, g):   # the modules of an extraction whose build ID is not the one the profile's build row of that version registers ([] = the registered build)
     want = g.builds().get(name)
     if want is None: return [f'{name} has no build row']
-    return [f'{m} {build_id(d / "ExeFS" / m)} (registered {bid})' for m, bid in want.items() if m != 'display' and build_id(d / 'ExeFS' / m) != bid]
+    out = []
+    for m, bid in want.items():
+        if m == 'display': continue
+        mod_path = d / 'ExeFS' / m
+        bid_found = build_id(mod_path)
+        if bid_found is None:
+            out.append(f'{m} missing (registered {bid})')
+        elif bid_found != bid:
+            out.append(f'{m} {bid_found} (registered {bid})')
+    return out
 
 
 def patch_files(repo, exe_dir, mods, game_id=None):
     """The patch files that name one of the modules' builds (dm/tools/sdk_patches.py, dm/games/*/patches.py): patch_nso.py loads them all but applies only those of a module's
     build ID. The selected game's file also counts for unknown builds: it may supply MATCH_CUTS. Another game's rules do not change this game's rewrite. sdk_patches.py always counts:
     its MATCH_CUTS are SDK-wide and apply to builds it does not name. The patches.py of profiles in DM_GAMES_DIR (a provisional profile's) count too, as patch_nso.py loads them"""
-    ids = {build_id(exe_dir / m) for m in mods}
+    ids = {bid for m in mods if (bid := build_id(exe_dir / m)) is not None}
     selected = Path(game_id).name if game_id else None
     extra = [p for d in os.environ.get('DM_GAMES_DIR', '').split(os.pathsep) if d for p in sorted(Path(d).glob('*/patches.py'))]
     sdk_wide = repo / 'dm/tools/sdk_patches.py'
@@ -1100,7 +1119,7 @@ def rewrite(py, repo, exe_dir, out, env, logs, g, provisional=False):
     nro_dir = out.with_name('nro_' + out.name.removeprefix('patched_'))
     nros = collect_nros(py, repo, rfs.source(exe_dir.parent), nro_dir, env, logs)
     if provisional and nros: g = nro_modules(g, exe_dir, nros)
-    mods = g.words('modules')
+    mods = [m for m in g.words('modules') if (exe_dir / m).is_file()]
     manifest = nro_dir / 'nro.tsv'
     src = {m: exe_dir / m for m in mods} | nros
     names = list(src)

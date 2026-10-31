@@ -575,6 +575,10 @@ extension Translations {
         "port_modal.romfs_split_title": "RomFS Split Threshold: %d GB",
         "port_modal.romfs_split_desc": "Splits RomFS into smaller parts for iOS installation limits.",
         "port_modal.start_port_button": "Port Game Now",
+        "port_modal.start_and_deploy_button": "Port & Send to %@",
+        "port_modal.start_and_deploy_generic": "Port & Send to iPhone / iPad",
+        "port_modal.ios_deploy_now_desc": "Installs directly onto connected iPhone or iPad upon completion.",
+        "port_modal.ios_deploy_later_desc": "Generates the .ipa package to install later via Finder or sideload.",
         
         // Native Apple Notifications
         "notif.port_success_title": "Game Porting Complete!",

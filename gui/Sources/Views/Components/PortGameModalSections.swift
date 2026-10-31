@@ -79,6 +79,7 @@ public struct PortPlatformSelectorView: View {
 // MARK: - iOS Immediate Auto-Deploy vs Later Choice View
 public struct PortIosDeployChoiceView: View {
     @ObservedObject public var viewModel: AppViewModel
+    @ObservedObject private var deviceService = DeviceDeploymentService.shared
     
     public init(viewModel: AppViewModel) {
         self.viewModel = viewModel
@@ -86,7 +87,7 @@ public struct PortIosDeployChoiceView: View {
     
     public var body: some View {
         GlassCard(padding: 12) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Label(viewModel.tr("port_modal.ios_deploy_prompt"), systemImage: "iphone.badge.play")
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(NXTheme.textPrimary)
@@ -94,6 +95,7 @@ public struct PortIosDeployChoiceView: View {
                 VStack(spacing: 6) {
                     deployChoiceRow(
                         title: viewModel.tr("port_modal.ios_deploy_now"),
+                        subtitle: deviceService.selectedDevice != nil ? "\(deviceService.selectedDevice!.name) (\(deviceService.selectedDevice!.model))" : viewModel.tr("port_modal.ios_deploy_now_desc"),
                         icon: "bolt.fill",
                         isSelected: viewModel.autoDeployToDeviceOnFinish,
                         index: 2
@@ -104,6 +106,7 @@ public struct PortIosDeployChoiceView: View {
                     
                     deployChoiceRow(
                         title: viewModel.tr("port_modal.ios_deploy_later"),
+                        subtitle: viewModel.tr("port_modal.ios_deploy_later_desc"),
                         icon: "clock.arrow.circlepath",
                         isSelected: !viewModel.autoDeployToDeviceOnFinish,
                         index: 3
@@ -112,11 +115,105 @@ public struct PortIosDeployChoiceView: View {
                         viewModel.portModalFocusIndex = 3
                     }
                 }
+                
+                if viewModel.autoDeployToDeviceOnFinish {
+                    Divider().opacity(0.15)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        // Device Selection Row
+                        HStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "iphone.gen3")
+                                    .foregroundColor(NXTheme.primary)
+                                    .font(.system(size: 12))
+                                Text(L10n.t("settings_modal.install_on_label"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(NXTheme.textPrimary)
+                            }
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                SoundEffectService.shared.play(.click)
+                                deviceService.refreshDevicesAndTeams()
+                            }) {
+                                HStack(spacing: 3) {
+                                    if deviceService.isDetecting {
+                                        ProgressView().controlSize(.mini)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                    Text(L10n.t("settings_modal.refresh_label"))
+                                }
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                            .controlSize(.mini)
+                            .disabled(deviceService.isDetecting)
+                            
+                            if deviceService.connectedDevices.isEmpty {
+                                Text(L10n.t("settings_modal.no_devices"))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(NXTheme.textSecondary)
+                            } else {
+                                Picker("", selection: $deviceService.selectedDevice) {
+                                    ForEach(deviceService.connectedDevices) { dev in
+                                        Text("\(dev.name) (\(dev.model) • iOS \(dev.osVersion))")
+                                            .tag(Optional(dev))
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                .frame(maxWidth: 220)
+                                
+                                Circle()
+                                    .fill(Color(red: 0.13, green: 0.77, blue: 0.37))
+                                    .frame(width: 6, height: 6)
+                            }
+                        }
+                        
+                        // Signing Team Row
+                        HStack(spacing: 8) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "person.badge.shield.checkmark")
+                                    .foregroundColor(NXTheme.primary)
+                                    .font(.system(size: 12))
+                                Text(L10n.t("settings_modal.signing_team_label"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(NXTheme.textPrimary)
+                            }
+                            
+                            Spacer()
+                            
+                            if deviceService.signingTeams.isEmpty {
+                                Text(L10n.t("settings_modal.no_teams_found"))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(NXTheme.textSecondary)
+                            } else {
+                                Picker("", selection: $deviceService.selectedSigningTeam) {
+                                    Text(L10n.t("settings.ios_unsigned_sideloading")).tag(Optional<DeveloperSigningTeam>.none)
+                                    ForEach(deviceService.signingTeams) { team in
+                                        Text(team.displayName)
+                                            .tag(Optional(team))
+                                    }
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                .frame(maxWidth: 240)
+                            }
+                        }
+                    }
+                    .padding(8)
+                    .background(NXTheme.glassSurfaceElevated.opacity(0.35))
+                    .cornerRadius(8)
+                }
+            }
+        }
+        .onAppear {
+            if deviceService.connectedDevices.isEmpty || deviceService.signingTeams.isEmpty {
+                deviceService.refreshDevicesAndTeams()
             }
         }
     }
     
-    private func deployChoiceRow(title: String, icon: String, isSelected: Bool, index: Int, action: @escaping () -> Void) -> some View {
+    private func deployChoiceRow(title: String, subtitle: String? = nil, icon: String, isSelected: Bool, index: Int, action: @escaping () -> Void) -> some View {
         let isFocused = viewModel.portModalFocusIndex == index
         return Button(action: {
             SoundEffectService.shared.play(.click)
@@ -129,9 +226,16 @@ public struct PortIosDeployChoiceView: View {
                 Image(systemName: icon)
                     .font(.system(size: 11))
                     .foregroundColor(isSelected ? NXTheme.primary : NXTheme.textSecondary)
-                Text(title)
-                    .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-                    .foregroundColor(NXTheme.textPrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
+                        .foregroundColor(NXTheme.textPrimary)
+                    if let sub = subtitle, !sub.isEmpty {
+                        Text(sub)
+                            .font(.system(size: 9.5))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                }
                 Spacer()
             }
             .padding(.horizontal, 10)

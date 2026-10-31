@@ -575,6 +575,10 @@ extension Translations {
         "port_modal.romfs_split_title": "Limite de Separação RomFS: %d GB",
         "port_modal.romfs_split_desc": "Divide o RomFS em partes menores para os limites do iOS ou partições FAT32.",
         "port_modal.start_port_button": "Portar Jogo Agora",
+        "port_modal.start_and_deploy_button": "Portar e Enviar para %@",
+        "port_modal.start_and_deploy_generic": "Portar e Enviar para iPhone / iPad",
+        "port_modal.ios_deploy_now_desc": "Instala diretamente no iPhone ou iPad conectado ao concluir.",
+        "port_modal.ios_deploy_later_desc": "Gera apenas o arquivo .ipa para instalar depois via Finder ou sideload.",
         
         // Notificações Nativas da Apple
         "notif.port_success_title": "Port Concluído!",

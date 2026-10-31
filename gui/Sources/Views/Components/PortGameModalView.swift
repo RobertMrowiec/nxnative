@@ -55,6 +55,9 @@ public struct PortGameModalView: View {
             if viewModel.appName.isEmpty {
                 viewModel.appName = game.name
             }
+            if DeviceDeploymentService.shared.connectedDevices.isEmpty || DeviceDeploymentService.shared.signingTeams.isEmpty {
+                DeviceDeploymentService.shared.refreshDevicesAndTeams()
+            }
         }
     }
     
@@ -200,8 +203,17 @@ public struct PortGameModalView: View {
                 viewModel.startBuild()
             }) {
                 HStack(spacing: 6) {
-                    Image(systemName: "play.fill")
-                    Text(viewModel.tr("port_modal.start_port_button"))
+                    if viewModel.platform == .ios && viewModel.autoDeployToDeviceOnFinish {
+                        Image(systemName: "iphone.and.arrow.forward")
+                        if let dev = DeviceDeploymentService.shared.selectedDevice {
+                            Text(viewModel.tr("port_modal.start_and_deploy_button", dev.name))
+                        } else {
+                            Text(viewModel.tr("port_modal.start_and_deploy_generic"))
+                        }
+                    } else {
+                        Image(systemName: "play.fill")
+                        Text(viewModel.tr("port_modal.start_port_button"))
+                    }
                 }
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .padding(.horizontal, 16)
