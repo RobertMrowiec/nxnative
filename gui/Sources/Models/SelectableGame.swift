@@ -1,6 +1,6 @@
 import Foundation
 
-public struct SelectableGame: Identifiable, Equatable {
+public struct SelectableGame: Identifiable, Hashable {
     public let id: String
     public let name: String
     public let titleId: String?
@@ -39,5 +39,13 @@ public struct SelectableGame: Identifiable, Equatable {
         if updateCount > 0 { parts.append("\(updateCount) Update" + (updateCount > 1 ? "s" : "")) }
         if dlcCount > 0 { parts.append("\(dlcCount) DLC" + (dlcCount > 1 ? "s" : "")) }
         return parts.joined(separator: ", ")
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+    
+    public static func == (lhs: SelectableGame, rhs: SelectableGame) -> Bool {
+        lhs.id == rhs.id
     }
 }

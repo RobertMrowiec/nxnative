@@ -6,6 +6,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     // MARK: - Storage Keys for Persistence
     public enum StorageKeys {
         public static let savedGameFolder = "NXNative_SavedGameFolder"
+        public static let savedGameFolders = "NXNative_SavedGameFolders"
         public static let savedLibraryFolder = "NXNative_SavedLibraryFolder"
         public static let savedCustomOutputFolder = "NXNative_SavedCustomOutputFolder"
         public static let savedUseCustomOutput = "NXNative_SavedUseCustomOutput"
@@ -30,6 +31,11 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         public static let savedCustomProvisioningProfilePath = "NXNative_SavedCustomProvisioningProfilePath"
         public static let savedMenuBarIconStyle = "NXNative_SavedMenuBarIconStyle"
         public static let savedAllowOtherMetal = "NXNative_SavedAllowOtherMetal"
+        public static let savedDeveloperMode = "NXNative_SavedDeveloperMode"
+        public static let savedNonSwitchAppPaths = "NXNative_SavedNonSwitchAppPaths"
+        public static let savedLastPlayedDates = "NXNative_SavedLastPlayedDates"
+        public static let savedActiveGroupFilter = "NXNative_SavedActiveGroupFilter"
+        public static let savedActiveSortOption = "NXNative_SavedActiveSortOption"
     }
     
     // MARK: - Workspace & Paths
@@ -57,13 +63,16 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         didSet {
             if let folder = selectedGameFolder {
                 UserDefaults.standard.set(folder.path, forKey: StorageKeys.savedGameFolder)
-                scanGameFolder(folder)
+                addGameFolder(folder)
             } else {
                 UserDefaults.standard.removeObject(forKey: StorageKeys.savedGameFolder)
-                detectedFiles = []
-                detectedGames = []
-                selectedGame = nil
             }
+        }
+    }
+    @Published public var gameFolders: [URL] = [] {
+        didSet {
+            let paths = gameFolders.map { $0.path }
+            UserDefaults.standard.set(paths, forKey: StorageKeys.savedGameFolders)
         }
     }
     @Published public var detectedFiles: [GameFileItem] = []
@@ -76,6 +85,28 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
                 self.evaluateAutoRomfsSplit()
             }
         }
+    }
+    
+    // MARK: - Port Modal & Auto Deployment
+    @Published public var gameForPortModal: SelectableGame? = nil
+    @Published public var autoDeployToDeviceOnFinish: Bool = false
+    @Published public var buildingGameId: String? = nil
+    
+    public func isGameAlreadyPorted(_ selectable: SelectableGame) -> Bool {
+        let cleanSelectable = GameScanner.shared.cleanGameTitle(selectable.name).lowercased()
+        return libraryGames.contains { ported in
+            if let selTid = selectable.titleId, !selTid.isEmpty,
+               let portTid = ported.titleId, !portTid.isEmpty,
+               selTid.caseInsensitiveCompare(portTid) == .orderedSame {
+                return true
+            }
+            let cleanPorted = GameScanner.shared.cleanGameTitle(ported.name).lowercased()
+            return cleanSelectable == cleanPorted
+        }
+    }
+    
+    public var unportedGames: [SelectableGame] {
+        detectedGames.filter { !isGameAlreadyPorted($0) }
     }
     
     // MARK: - Drag & Drop & ZIP
@@ -130,6 +161,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
     }
     @Published public var draggedGame: PortedGame? = nil
+    @Published public var draggedItemPath: String? = nil
     @Published public var isTextInputActive: Bool = false
     @Published public var gameForSettingsSheet: PortedGame? = nil {
         didSet {
@@ -153,6 +185,59 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var showRemoveConfirm: Bool = false
     @Published public var gameToTrash: PortedGame? = nil
     @Published public var showTrashConfirm: Bool = false
+    
+    // MARK: - Non-Switch Games & Filtering & Sorting
+    @Published public var savedNonSwitchAppPaths: [String] = [] {
+        didSet {
+            UserDefaults.standard.set(savedNonSwitchAppPaths, forKey: StorageKeys.savedNonSwitchAppPaths)
+            refreshLibrary()
+        }
+    }
+    @Published public var lastPlayedTimestamps: [String: Double] = [:] {
+        didSet {
+            UserDefaults.standard.set(lastPlayedTimestamps, forKey: StorageKeys.savedLastPlayedDates)
+        }
+    }
+    @Published public var activeGroupFilter: LibraryGroupFilter = .categories {
+        didSet {
+            UserDefaults.standard.set(activeGroupFilter.rawValue, forKey: StorageKeys.savedActiveGroupFilter)
+        }
+    }
+    @Published public var activeSortOption: LibrarySortOption = .lastPlayed {
+        didSet {
+            UserDefaults.standard.set(activeSortOption.rawValue, forKey: StorageKeys.savedActiveSortOption)
+            applyActiveSorting()
+        }
+    }
+    
+    public func recordLastPlayed(for game: PortedGame) {
+        let key = game.uniqueKey
+        let now = Date().timeIntervalSince1970
+        var dict = lastPlayedTimestamps
+        dict[key] = now
+        lastPlayedTimestamps = dict
+    }
+    
+    public func lastPlayedDate(for game: PortedGame) -> Date? {
+        if let ts = lastPlayedTimestamps[game.uniqueKey] {
+            return Date(timeIntervalSince1970: ts)
+        }
+        return nil
+    }
+    
+    public func addNonSwitchGame(url: URL) {
+        let path = url.standardized.path
+        guard FileManager.default.fileExists(atPath: path), url.pathExtension.lowercased() == "app" else { return }
+        if !savedNonSwitchAppPaths.contains(path) {
+            var paths = savedNonSwitchAppPaths
+            paths.append(path)
+            savedNonSwitchAppPaths = paths
+        }
+    }
+    
+    public func removeNonSwitchGame(path: String) {
+        savedNonSwitchAppPaths.removeAll { $0 == path }
+    }
     
     // MARK: - Compatibility Database
     @Published public var compatibleGames: [CompatibleGameItem] = []
@@ -308,6 +393,14 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var buildError: String? = nil
     @Published public var buildSuccessPath: String? = nil
     @Published public var buildWizardStep: Int = 1
+    @Published public var isDeveloperMode: Bool = false {
+        didSet {
+            UserDefaults.standard.set(isDeveloperMode, forKey: StorageKeys.savedDeveloperMode)
+            if !isDeveloperMode && selectedTab == 5 {
+                selectedTab = 0
+            }
+        }
+    }
     @Published public var iconAppearanceMode: AppIconAppearanceMode = .light {
         didSet {
             UserDefaults.standard.set(iconAppearanceMode.rawValue, forKey: StorageKeys.savedIconAppearanceMode)
@@ -370,6 +463,16 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     // MARK: - Navigation & Gamepad State
     @Published public var selectedTab: Int = 0
     @Published public var focusedGameIndex: Int = 0
+    @Published public var focusedMacIndex: Int = 0
+    @Published public var focusedIosIndex: Int = 0
+    @Published public var focusedNonSwitchIndex: Int = 0
+    @Published public var focusedUnifiedIndex: Int = 0
+    @Published public var unifiedGridColumnsCount: Int = 4
+    @Published public var activeLibraryShelf: LibraryShelfFocus = .mac
+    @Published public var focusedUnportedGameIndex: Int = 0
+    @Published public var portModalFocusIndex: Int = 0
+    @Published public var isPortAdvancedExpanded: Bool = false
+    @Published public var showRyujinxNotFoundSheet: Bool = false
     @Published public var isFocusOnDeck: Bool = false
     @Published public var isGameActionMenuPresented: Bool = false
     @Published public var gameActionFocusedIndex: Int = 0
@@ -491,7 +594,10 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             self.libraryCardSize = size
         }
         if let savedScale = UserDefaults.standard.object(forKey: StorageKeys.savedLibraryCardScale) as? Double {
-            self.libraryCardScale = max(0.70, min(1.35, savedScale))
+            self.libraryCardScale = max(0.70, min(1.50, savedScale))
+        }
+        if let savedDev = UserDefaults.standard.object(forKey: StorageKeys.savedDeveloperMode) as? Bool {
+            self.isDeveloperMode = savedDev
         }
         if let savedLang = UserDefaults.standard.string(forKey: StorageKeys.savedLauncherLanguage),
            let lang = AppLanguage(rawValue: savedLang) {
@@ -504,11 +610,44 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         
         detectEnvironment()
         
-        if let savedGamePath = UserDefaults.standard.string(forKey: StorageKeys.savedGameFolder) {
+        // Load Game Folders
+        if let savedFolders = UserDefaults.standard.stringArray(forKey: StorageKeys.savedGameFolders) {
+            let urls = savedFolders.compactMap { path -> URL? in
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: path, isDirectory: &isDir), isDir.boolValue {
+                    return URL(fileURLWithPath: path)
+                }
+                return nil
+            }
+            self.gameFolders = urls
+            self.selectedGameFolder = urls.first
+        } else if let savedGamePath = UserDefaults.standard.string(forKey: StorageKeys.savedGameFolder) {
             var isDir: ObjCBool = false
             if FileManager.default.fileExists(atPath: savedGamePath, isDirectory: &isDir), isDir.boolValue {
-                self.selectedGameFolder = URL(fileURLWithPath: savedGamePath)
+                let singleURL = URL(fileURLWithPath: savedGamePath)
+                self.selectedGameFolder = singleURL
+                self.gameFolders = [singleURL]
             }
+        }
+        
+        // Load Non-Switch Games
+        if let savedNonSwitch = UserDefaults.standard.stringArray(forKey: StorageKeys.savedNonSwitchAppPaths) {
+            self.savedNonSwitchAppPaths = savedNonSwitch
+        }
+        
+        // Load Last Played Dates
+        if let savedDates = UserDefaults.standard.dictionary(forKey: StorageKeys.savedLastPlayedDates) as? [String: Double] {
+            self.lastPlayedTimestamps = savedDates
+        }
+        
+        // Load Filters & Sorting
+        if let savedFilter = UserDefaults.standard.string(forKey: StorageKeys.savedActiveGroupFilter),
+           let filter = LibraryGroupFilter(rawValue: savedFilter) {
+            self.activeGroupFilter = filter
+        }
+        if let savedSort = UserDefaults.standard.string(forKey: StorageKeys.savedActiveSortOption),
+           let sort = LibrarySortOption(rawValue: savedSort) {
+            self.activeSortOption = sort
         }
         
         if let savedHidden = UserDefaults.standard.stringArray(forKey: StorageKeys.savedHiddenGamePaths) {
@@ -516,6 +655,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
         
         InputProfileManager.shared.exportActiveMappingToDisk(libraryFolder: self.libraryFolder)
+        scanAllGameFolders()
         refreshLibrary()
         checkForUpdates()
         loadCompatibleGames()

@@ -94,20 +94,14 @@ public struct ControllerPromptBar: View {
         let optionsBtn = controllerService.activeBrand == .xbox ? "⧉" : (isPS ? "OPT" : "−")
         
         switch viewModel.selectedTab {
-        case 0: // Port Game Wizard
-            controllerPill(glyph: confirmBtn, action: viewModel.buildWizardStep == 1 ? "Select / Next" : (viewModel.buildWizardStep == 2 ? "Start Porting" : "Status"), color: brandAColor)
-            if viewModel.buildWizardStep > 1 {
-                controllerPill(glyph: cancelBtn, action: "Prev Step", color: brandBColor)
-            }
-            if viewModel.buildWizardStep == 1 && !viewModel.detectedGames.isEmpty {
-                dpadPill(glyph: "↑/↓", action: "Choose Game")
-            }
-            
-        case 1: // Library
+        case 0: // My Games
             if viewModel.isGameActionMenuPresented {
                 controllerPill(glyph: confirmBtn, action: "Execute", color: brandAColor)
                 controllerPill(glyph: cancelBtn, action: "Close", color: brandBColor)
                 dpadPill(glyph: "↑/↓", action: "Navigate")
+            } else if viewModel.isBuilding && viewModel.activeLibraryShelf == .unportedSwitch && (viewModel.buildingGameId == viewModel.focusedUnportedGame?.id || viewModel.selectedGame?.id == viewModel.focusedUnportedGame?.id) {
+                controllerPill(glyph: cancelBtn, action: viewModel.tr("library.cancel_port"), color: Color.red)
+                dpadPill(glyph: "←/→", action: "Browse")
             } else {
                 let isIOS = viewModel.currentFocusedGame?.platform == .ios
                 if isIOS {
@@ -120,7 +114,7 @@ public struct ControllerPromptBar: View {
                 controllerPill(glyph: yBtn, action: "Saves", color: brandYColor)
             }
             
-        case 2: // Compatibility
+        case 1: // Compatibility
             if viewModel.compatibilityFocusArea == .filters {
                 dpadPill(glyph: "←/→", action: "Filter")
                 dpadPill(glyph: "↓", action: "Games")
@@ -131,10 +125,10 @@ public struct ControllerPromptBar: View {
                 controllerPill(glyph: cancelBtn, action: "Filters", color: brandBColor)
             }
             
-        case 3: // Controls
+        case 2: // Controls
             controllerPill(glyph: confirmBtn, action: "Calibrate", color: brandAColor)
             
-        case 4: // Personalize
+        case 3: // Personalize
             dpadPill(glyph: "←/→", action: "Highlight Color")
             controllerPill(
                 glyph: xBtn,
@@ -147,11 +141,11 @@ public struct ControllerPromptBar: View {
                 color: brandYColor
             )
             
-        case 5: // Settings
+        case 4: // Settings
             controllerPill(glyph: confirmBtn, action: "Install Tools", color: brandAColor)
             controllerPill(glyph: xBtn, action: "Check Updates", color: brandXColor)
             
-        case 6: // Console / Logs
+        case 5: // Console / Logs
             controllerPill(glyph: xBtn, action: "Copy", color: brandXColor)
             controllerPill(glyph: yBtn, action: "Clear", color: brandBColor)
             
@@ -164,16 +158,14 @@ public struct ControllerPromptBar: View {
     @ViewBuilder
     private var keyboardPromptsForCurrentContext: some View {
         switch viewModel.selectedTab {
-        case 0: // Port Game
-            keyboardKeyBadge(glyph: "↑/↓", action: "Choose")
-            keyboardKeyBadge(glyph: "↵ Enter", action: "Next / Port")
-            keyboardKeyBadge(glyph: "⎋ Esc", action: "Back")
-            
-        case 1: // Library
+        case 0: // My Games
             if viewModel.isGameActionMenuPresented {
                 keyboardKeyBadge(glyph: "↑/↓", action: "Navigate")
                 keyboardKeyBadge(glyph: "↵ Enter", action: "Execute")
                 keyboardKeyBadge(glyph: "⎋ Esc", action: "Close")
+            } else if viewModel.isBuilding && viewModel.activeLibraryShelf == .unportedSwitch && (viewModel.buildingGameId == viewModel.focusedUnportedGame?.id || viewModel.selectedGame?.id == viewModel.focusedUnportedGame?.id) {
+                keyboardKeyBadge(glyph: "⎋ Esc", action: viewModel.tr("library.cancel_port"))
+                keyboardKeyBadge(glyph: "← / →", action: "Browse")
             } else {
                 let isIOS = viewModel.currentFocusedGame?.platform == .ios
                 keyboardKeyBadge(glyph: "← / →", action: "Browse")
@@ -182,7 +174,7 @@ public struct ControllerPromptBar: View {
                 keyboardKeyBadge(glyph: ",", action: "Settings")
             }
             
-        case 2: // Compatibility
+        case 1: // Compatibility
             if viewModel.compatibilityFocusArea == .filters {
                 keyboardKeyBadge(glyph: "← / →", action: "Filter")
                 keyboardKeyBadge(glyph: "↓", action: "Browse Games")
@@ -193,10 +185,10 @@ public struct ControllerPromptBar: View {
             }
             keyboardKeyBadge(glyph: "R", action: "Refresh")
             
-        case 3: // Controls
+        case 2: // Controls
             keyboardKeyBadge(glyph: "Space", action: "Calibrate")
             
-        case 4: // Personalize
+        case 3: // Personalize
             keyboardKeyBadge(glyph: "← / →", action: "Highlight Color")
             keyboardKeyBadge(
                 glyph: "G",
@@ -207,11 +199,11 @@ public struct ControllerPromptBar: View {
                 action: viewModel.tr(viewModel.liquidGlassAppearance.titleLocalizationKey)
             )
             
-        case 5: // Settings
+        case 4: // Settings
             keyboardKeyBadge(glyph: "I", action: "Install Tools")
             keyboardKeyBadge(glyph: "U", action: "Check Updates")
             
-        case 6: // Console
+        case 5: // Console
             keyboardKeyBadge(glyph: "C", action: "Copy Logs")
             keyboardKeyBadge(glyph: "K", action: "Clear")
             

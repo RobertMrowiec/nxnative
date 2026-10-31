@@ -58,6 +58,7 @@ extension AppViewModel {
 
     // MARK: - Modal Presentation & Navigation Guard
     public var isAnyModalPresented: Bool {
+        gameForPortModal != nil ||
         gameForSettingsSheet != nil ||
         isGameActionMenuPresented ||
         showAboutSheet ||
@@ -90,6 +91,10 @@ extension AppViewModel {
 
     public var iosLibraryGames: [PortedGame] {
         libraryGames.filter { $0.platform == .ios }
+    }
+
+    public var nonSwitchLibraryGames: [PortedGame] {
+        libraryGames.filter { $0.platform == .nonSwitch }
     }
 
     public var diskSpaceWarningMessage: String? {

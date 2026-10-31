@@ -33,6 +33,9 @@ public enum ImageDownsampler {
             return nil
         }
         let size = NSSize(width: CGFloat(thumbnail.width), height: CGFloat(thumbnail.height))
-        return NSImage(cgImage: thumbnail, size: size)
+        let rep = NSBitmapImageRep(cgImage: thumbnail)
+        let img = NSImage(size: size)
+        img.addRepresentation(rep)
+        return img
     }
 }

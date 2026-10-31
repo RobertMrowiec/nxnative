@@ -55,7 +55,7 @@ public struct SystemKeysCard: View {
                     .buttonStyle(NXSecondaryButtonStyle())
                     
                     Button(viewModel.tr("system.find_ryujinx")) {
-                        viewModel.selectRyujinxFolder()
+                        viewModel.findInRyujinx()
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
                 }

@@ -152,8 +152,12 @@ public final class ArtworkStore: ObservableObject {
     }
 
     public func loadWidescreenHero(for game: PortedGame) -> NSImage? {
-        let tid = (game.titleId ?? CompatibilityService.shared.findTitleId(forGameTitle: game.name))?.uppercased()
-        let cacheKey = "hero_\(tid ?? game.name)" as NSString
+        loadWidescreenHero(titleId: game.titleId, gameName: game.name)
+    }
+
+    public func loadWidescreenHero(titleId: String?, gameName: String) -> NSImage? {
+        let tid = (titleId ?? CompatibilityService.shared.findTitleId(forGameTitle: gameName))?.uppercased()
+        let cacheKey = "hero_\(tid ?? gameName)" as NSString
         if let cached = memoryCache.object(forKey: cacheKey) {
             return cached
         }
@@ -175,7 +179,7 @@ public final class ArtworkStore: ObservableObject {
         }
 
         // 2. Local docs images repository via gallery map or fuzzy match
-        if let repoImage = findLocalRepoHero(for: game.name, titleId: tid) {
+        if let repoImage = findLocalRepoHero(for: gameName, titleId: tid) {
             cacheImage(repoImage, forKey: cacheKey)
             return repoImage
         }
@@ -186,7 +190,7 @@ public final class ArtworkStore: ObservableObject {
         }
 
         // 4. Immediate fallback: return cover art so screen is never dark/blank
-        if let cover = GameCoverService.shared.coverImage(for: game) {
+        if let cover = GameCoverService.shared.coverImage(titleId: tid, gameName: gameName) {
             return cover
         }
 

@@ -182,7 +182,15 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 5. Asynchronously fetch from online databases (GameTDB, Libretro, Nintendo CDN)
+        // 5. For Non-Switch games, use high-resolution macOS application bundle icon
+        if game.platform == .nonSwitch {
+            let icon = NSWorkspace.shared.icon(forFile: game.url.path)
+            icon.size = NSSize(width: 320, height: 320)
+            cacheImage(icon, forKeys: lookupKeys)
+            return icon
+        }
+
+        // 6. Asynchronously fetch from online databases (GameTDB, Libretro, Nintendo CDN)
         fetchOfficialCoverAsync(titleId: titleId, gameName: game.name, targetAppURL: game.url, gameKey: key)
         return nil
     }

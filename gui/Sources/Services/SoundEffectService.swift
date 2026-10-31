@@ -19,10 +19,12 @@ public final class SoundEffectService: ObservableObject {
     private let lock = NSLock()
     
     // Minimum interval between identical sound triggers (prevents double-tap / gesture bounce)
-    private let debounceInterval: TimeInterval = 0.22
+    private let debounceInterval: TimeInterval = 0.04
     
-    // Minimum interval between distinct UI sounds (prevents click + focus or card + button collision)
-    private let globalThrottleInterval: TimeInterval = 0.18
+    // Minimum interval between distinct UI sounds (prevents click + focus collision)
+    private let globalThrottleInterval: TimeInterval = 0.03
+    
+    private let audioQueue = DispatchQueue(label: "com.nxnative.audio", qos: .userInteractive)
     
     @Published public var isSoundEnabled: Bool {
         didSet {
@@ -84,7 +86,7 @@ public final class SoundEffectService: ObservableObject {
         
         guard let sound = sound else { return }
         
-        DispatchQueue.main.async {
+        audioQueue.async {
             // Use independent copy to avoid stopping or clipping audio buffer in AppKit CoreAudio
             if let player = sound.copy() as? NSSound {
                 player.play()

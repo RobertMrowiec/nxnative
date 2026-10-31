@@ -4,7 +4,8 @@ extension Translations {
     public static let portuguese: [String: String] = [
         // Navigation
         "nav.port_game": "Portar Jogo",
-        "nav.library": "Biblioteca",
+        "nav.library": "Meus Jogos",
+        "nav.my_games": "Meus Jogos",
         "nav.compatibility": "Compatibilidade",
         "nav.controls": "Controles",
         "nav.personalize": "Personalizar",
@@ -32,6 +33,10 @@ extension Translations {
         "personalization.glass_frosted_desc": "Vidro acetinado difuso com maior atenuação de fundo e contraste elevado",
         "personalization.glass_off_desc": "Desativado — superfícies clássicas Obsidian sem refração dinâmica",
         "personalization.app_icon": "Ícone do App e Aparência",
+        "personalization.sync_accent": "Sincronizar com Cor de Destaque",
+        "personalization.bg_transparent": "Transparente",
+        "personalization.bg_light": "Claro",
+        "personalization.bg_dark": "Escuro",
         "personalization.sound_effects": "Efeitos Sonoros da Interface",
         "personalization.launcher_language": "Idioma do Launcher",
         "personalization.launcher_language_subtitle": "Selecione o idioma de exibição da interface do NxNative Launcher",
@@ -43,6 +48,14 @@ extension Translations {
         
         // Library
         "library.search_placeholder": "Pesquisar jogos portados...",
+        "library.shelf_ready_to_port": "Nintendo Switch (Prontos para Portar)",
+        "library.port_now": "Portar Agora",
+        "library.add_game_card": "Adicionar Jogo ou Pasta",
+        "library.empty_drop_title": "Arraste Jogos ou Pastas Aqui",
+        "library.empty_drop_subtitle": "Suporta pastas com subpastas, arquivos NSP, NSZ, XCI, XCZ, atualizações e DLCs",
+        "library.choose_folder": "Selecionar Pasta ou Jogo",
+        "library.unported_badge": "SWITCH",
+        "library.stage_indicator": "Stage %02d/%02d",
         "library.empty_title": "Nenhum Jogo Portado Encontrado",
         "library.empty_subtitle": "Jogos convertidos (.app e .ipa) aparecerão automaticamente aqui.",
         "library.convert_now": "Converter um Jogo Agora",
@@ -59,6 +72,11 @@ extension Translations {
         "library.trash_button": "Mover para o Lixo",
         "library.trash_message": "Esta ação moverá com segurança o arquivo do jogo para a Lixeira do macOS. Você poderá recuperá-lo da Lixeira se necessário ou esvaziá-la para liberar espaço.",
         "library.cancel": "Cancelar",
+        "library.cancel_port": "Cancelar Port",
+        "system.add_folder": "Adicionar Pasta...",
+        "system.folders_count": "pasta(s)",
+        "common.clear_all": "Limpar Tudo",
+        "common.remove": "Remover",
         
         // Actions
         "actions.play_game": "Jogar",
@@ -264,6 +282,12 @@ extension Translations {
         "system.reset_default": "Restaurar Padrão",
         "system.keys_missing_desc": "Nenhum prod.keys localizado. Detectado do Ryujinx ou escolha manualmente.",
         "system.find_ryujinx": "Buscar no Ryujinx...",
+        "system.ryujinx_not_found_title": "Ryujinx / Ryubing Não Encontrado",
+        "system.ryujinx_not_found_desc": "Não foi possível localizar o Ryujinx ou Ryubing instalado neste Mac. Insira seu prod.keys ou selecione a pasta manualmente.",
+        "system.drop_keys_here": "Arraste e solte o arquivo prod.keys ou pasta aqui",
+        "system.drop_keys_subtitle": "Solte o arquivo prod.keys ou a pasta system do Ryujinx para autoconfigurar",
+        "system.select_folder": "Selecionar Pasta",
+        "system.select_prod_keys": "Selecionar prod.keys",
         "system.verify_apply": "Verificar e Aplicar",
         "system.select_repo_desc": "Selecione ou baixe a pasta do repositório nxnative...",
         "system.download_1click": "Baixar (1 Clique)",
@@ -533,5 +557,30 @@ extension Translations {
         "system.icloud_reclaimed_success": "Liberado ~%@ do armazenamento do iCloud!",
         "settings_modal.icloud_local_only": "Armazenamento Local (iCloud Desativado)",
         "settings_modal.icloud_local_only_desc": "Saves e snapshots são mantidos localmente em Application Support",
-]
+        
+        // Port Game Modal
+        "port_modal.title": "Portar Jogo",
+        "port_modal.detected_content": "Arquivos do Jogo Detectados",
+        "port_modal.updates_dlcs": "Atualizações & DLCs",
+        "port_modal.no_updates_dlcs": "Apenas jogo base (nenhum update ou DLC na pasta)",
+        "port_modal.target_platform": "Plataforma de Destino",
+        "port_modal.platform_mac_title": "Mac (macOS Native)",
+        "port_modal.platform_mac_desc": "Compila um Mac App nativo de alto desempenho pronto para jogar.",
+        "port_modal.platform_ios_title": "iPhone / iPad (iOS Port)",
+        "port_modal.platform_ios_desc": "Gera um pacote IPA para instalação em dispositivos iOS.",
+        "port_modal.ios_deploy_prompt": "Deseja enviar para o iPhone / iPad ao concluir?",
+        "port_modal.ios_deploy_now": "Enviar automaticamente para o dispositivo (usar configurações atuais)",
+        "port_modal.ios_deploy_later": "Apenas portar agora (deixar para enviar depois)",
+        "port_modal.advanced_settings": "Configurações Avançadas",
+        "port_modal.romfs_split_title": "Limite de Separação RomFS: %d GB",
+        "port_modal.romfs_split_desc": "Divide o RomFS em partes menores para os limites do iOS ou partições FAT32.",
+        "port_modal.start_port_button": "Portar Jogo Agora",
+        
+        // Notificações Nativas da Apple
+        "notif.port_success_title": "Port Concluído!",
+        "notif.port_success_body": "O jogo foi portado com sucesso e está pronto na sua biblioteca.",
+        "notif.port_success_body_path": "O jogo foi portado com sucesso e está pronto em: %@",
+        "notif.port_error_title": "Falha ao Portar Jogo",
+        "notif.port_error_body": "O processo de build falhou: %@",
+    ]
 }

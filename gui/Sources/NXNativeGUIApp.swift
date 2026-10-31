@@ -50,6 +50,13 @@ struct NXNativeGUIApp: App {
                 }
                 .keyboardShortcut("M", modifiers: [.command])
             }
+            
+            CommandGroup(replacing: .appTermination) {
+                Button("Quit NxNative Launcher") {
+                    NSApplication.shared.terminate(nil)
+                }
+                .keyboardShortcut("q", modifiers: [.command])
+            }
         }
     }
 }

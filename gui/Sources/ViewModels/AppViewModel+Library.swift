@@ -21,14 +21,20 @@ extension AppViewModel {
         }
         
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let games = LibraryScanner.shared.scan(directories: searchDirs)
+            guard let self = self else { return }
+            let extraURLs = self.savedNonSwitchAppPaths.map { URL(fileURLWithPath: $0) }
+            let games = LibraryScanner.shared.scan(directories: searchDirs, extraAppURLs: extraURLs)
             DispatchQueue.main.async {
-                guard let self = self else { return }
                 let visible = LibraryOrder.apply(to: games.filter { !self.hiddenGamePaths.contains($0.url.standardized.path) })
                 self.libraryGames = visible
                 if self.focusedGameIndex >= visible.count {
                     self.focusedGameIndex = max(0, visible.count - 1)
                 }
+                self.focusedMacIndex = max(0, min(self.focusedMacIndex, max(0, self.macLibraryGames.count - 1)))
+                self.focusedIosIndex = max(0, min(self.focusedIosIndex, max(0, self.iosLibraryGames.count - 1)))
+                self.focusedNonSwitchIndex = max(0, min(self.focusedNonSwitchIndex, max(0, self.nonSwitchLibraryGames.count - 1)))
+                self.focusedUnportedGameIndex = max(0, min(self.focusedUnportedGameIndex, max(0, self.unportedGames.count - 1)))
+                self.syncFocusedGameIndex()
                 self.isScanningLibrary = false
                 
                 // Automatically ensure every game in the library has its correct official cover and input mapping
@@ -54,122 +60,6 @@ extension AppViewModel {
             self.libraryFolder = url
             refreshLibrary()
         }
-    }
-    
-    public func launchGame(_ game: PortedGame) {
-        guard game.isPlayableLocally else {
-            logs.append(LogEntry(level: .warning, message: "Cannot launch iOS IPA locally on Mac. Please deploy to an iPhone or iPad."))
-            return
-        }
-        guard launchingGameId == nil else { return }
-        launchingGameId = game.id
-        SoundEffectService.shared.play(.launch)
-        
-        let targetGameId = game.id
-        // Fail-safe Watchdog: guarantees launchingGameId is reset if launch stalls
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) { [weak self] in
-            if self?.launchingGameId == targetGameId {
-                self?.launchingGameId = nil
-                SoundEffectService.shared.play(.error)
-                self?.logs.append(LogEntry(level: .warning, message: "Launch watchdog cleared stuck launching state for \(game.name)."))
-            }
-        }
-        
-        let config = GameRuntimeConfig.load(for: game)
-        config.applyToDisk(for: game)
-        InputProfileManager.shared.exportMapping(for: game, config: config)
-        
-        // Ensure iCloud Cross-Save is configured with cover art if iCloud Sync is enabled by user
-        var savePath: String? = nil
-        var cloudSyncPath: String? = nil
-        if SaveSyncService.shared.isICloudSyncEnabled(for: game) && SaveSyncService.shared.isICloudDriveAvailable {
-            let cover = GameCoverService.shared.coverImage(for: game)
-            switch SaveSyncService.shared.ensureCloudSaveConfigured(for: game, cover: cover) {
-            case .success(let cloudSaveDir):
-                savePath = cloudSaveDir.path
-                cloudSyncPath = SaveSyncService.shared.iCloudRootURL.path
-            case .failure(let error):
-                logs.append(LogEntry(level: .warning, message: "[iCloud] \(error.localizedDescription)"))
-            }
-        }
-        
-        // Auto-sync saves with connected device before launch if available
-        SaveSyncService.shared.autoSyncOnLaunch(for: game) { [weak self] status, msg in
-            if let status = status, status != .noSaves && status != .alreadyInSync {
-                self?.logs.append(LogEntry(level: .info, message: "Auto-sync on launch: \(msg)"))
-            }
-            var env = config.toEnvironmentDict(savePath: savePath)
-            if let csp = cloudSyncPath {
-                env["DM_SAVE_SYNC"] = csp
-            }
-            let prof = InputProfileManager.shared.resolveProfile(for: game, config: config)
-            let bundleMapping = game.url.appendingPathComponent("Contents/Resources/dm/input_mapping.json")
-            if FileManager.default.fileExists(atPath: bundleMapping.path) {
-                env["DM_INPUT_MAPPING"] = bundleMapping.path
-            }
-            env["DM_MOUSE_RIGHT_STICK"] = prof.mouseAsRightStick ? "1" : "0"
-            env["DM_MOUSE_SENSITIVITY"] = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), prof.mouseSensitivity)
-            env["DM_MOUSE_INVERT_X"] = prof.mouseInvertX ? "1" : "0"
-            env["DM_MOUSE_INVERT_Y"] = prof.mouseInvertY ? "1" : "0"
-            LibraryScanner.shared.launchGame(at: game.url, env: env) { [weak self] success, error in
-                DispatchQueue.main.async {
-                    if success {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                            if self?.launchingGameId == targetGameId {
-                                self?.launchingGameId = nil
-                            }
-                        }
-                        self?.runningGameTitle = game.name
-                        self?.logs.append(LogEntry(level: .success, message: "Launched game: \(game.name)"))
-                        MemoryOptimizer.shared.optimizeForBackground(viewModel: self)
-                        
-                        // Observe game termination to clear runningGameTitle and pack save.dmsync for iOS iCloud sync
-                        if let runningApp = GameControllerService.shared.activeRunningGameApp {
-                            NotificationCenter.default.addObserver(
-                                forName: NSWorkspace.didTerminateApplicationNotification,
-                                object: nil,
-                                queue: .main
-                            ) { [weak self] notif in
-                                if let termApp = notif.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                                   termApp.processIdentifier == runningApp.processIdentifier {
-                                    self?.runningGameTitle = nil
-                                    if SaveSyncService.shared.isICloudSyncEnabled(for: game) {
-                                        DispatchQueue.global(qos: .utility).async {
-                                            _ = SaveSyncService.shared.writeDMSync(for: game)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else {
-                        // Immediately clear launching state on error so user is never locked out
-                        if self?.launchingGameId == targetGameId {
-                            self?.launchingGameId = nil
-                        }
-                        self?.runningGameTitle = nil
-                        SoundEffectService.shared.play(.error)
-                        let errMsg = error ?? "Unknown error"
-                        self?.logs.append(LogEntry(level: .error, message: "Failed to launch game: \(errMsg)"))
-                    }
-                }
-            }
-        }
-    }
-    
-    public func loadRuntimeConfig(for game: PortedGame) -> GameRuntimeConfig {
-        let key = game.uniqueKey
-        if let cached = runtimeConfigCache[key] {
-            return cached
-        }
-        let loaded = GameRuntimeConfig.load(for: game)
-        runtimeConfigCache[key] = loaded
-        return loaded
-    }
-    
-    public func saveRuntimeConfig(_ config: GameRuntimeConfig, for game: PortedGame) {
-        runtimeConfigCache[game.uniqueKey] = config
-        config.save(for: game)
-        logs.append(LogEntry(level: .success, message: "Saved settings for \(game.name)"))
     }
     
     public func revealInFinder(url: URL) {
@@ -223,36 +113,163 @@ extension AppViewModel {
 
     public func deletePortedGame(_ game: PortedGame) { deleteGameToTrash(game) }
     
-    public func scanGameFolder(_ folder: URL) {
+    // MARK: - Multiple Game Folders & Subfolder Scanning
+    public func addGameFolder(_ url: URL) {
+        let standardized = url.standardizedFileURL
+        if !gameFolders.contains(where: { $0.standardizedFileURL.path == standardized.path }) {
+            gameFolders.append(standardized)
+        }
+        if selectedGameFolder == nil {
+            selectedGameFolder = standardized
+        }
+        scanAllGameFolders()
+    }
+    
+    public func removeGameFolder(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        gameFolders.removeAll { $0.standardizedFileURL.path == path }
+        if selectedGameFolder?.standardizedFileURL.path == path {
+            selectedGameFolder = gameFolders.first
+        }
+        scanAllGameFolders()
+    }
+    
+    public func scanAllGameFolders() {
+        guard !gameFolders.isEmpty else {
+            detectedFiles = []
+            detectedGames = []
+            selectedGame = nil
+            return
+        }
+        let folders = gameFolders
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let files = GameScanner.shared.scan(directory: folder)
+            let files = GameScanner.shared.scan(directories: folders)
             let games = GameScanner.shared.groupFilesIntoGames(files: files)
             DispatchQueue.main.async {
                 self?.detectedFiles = files
                 self?.detectedGames = games
-                self?.selectedGame = games.first
-                
-                if let self = self, let firstGame = games.first {
+                if self?.selectedGame == nil || !games.contains(where: { $0.id == self?.selectedGame?.id }) {
+                    self?.selectedGame = games.first
+                }
+                if let self = self, let firstGame = games.first, self.appName.isEmpty {
                     self.appName = firstGame.name
                 }
             }
         }
     }
     
+    public func scanGameFolder(_ folder: URL) {
+        addGameFolder(folder)
+    }
+    
+    public func selectAdditionalGameFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Choose Game Folders"
+        panel.message = "Select folders holding your game NSP, NSZ, or XCI files."
+        
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                addGameFolder(url)
+            }
+        }
+    }
+    
+    // MARK: - Sorting Helpers & Unified Items
+    public func resetLibraryOrganization() {
+        activeGroupFilter = .categories
+        activeSortOption = .lastPlayed
+        applyActiveSorting()
+    }
+
+    public func applyActiveSorting() {
+        switch activeSortOption {
+        case .lastPlayed:
+            libraryGames.sort { a, b in
+                let dateA = lastPlayedDate(for: a) ?? Date.distantPast
+                let dateB = lastPlayedDate(for: b) ?? Date.distantPast
+                if dateA != dateB {
+                    return dateA > dateB
+                }
+                return a.modificationDate > b.modificationDate
+            }
+            detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .name:
+            libraryGames.sort { a, b in
+                a.name.localizedStandardCompare(b.name) == .orderedAscending
+            }
+            detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        case .ported:
+            libraryGames.sort { a, b in
+                a.modificationDate > b.modificationDate
+            }
+            detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+        }
+        LibraryOrder.save(libraryGames)
+    }
+
+    public func sortGames(_ games: [PortedGame]) -> [PortedGame] {
+        switch activeSortOption {
+        case .lastPlayed:
+            return games.sorted { a, b in
+                let dateA = lastPlayedDate(for: a) ?? Date.distantPast
+                let dateB = lastPlayedDate(for: b) ?? Date.distantPast
+                if dateA != dateB {
+                    return dateA > dateB
+                }
+                return a.modificationDate > b.modificationDate
+            }
+        case .name:
+            return games.sorted { a, b in
+                a.name.localizedStandardCompare(b.name) == .orderedAscending
+            }
+        case .ported:
+            return games.sorted { a, b in
+                a.modificationDate > b.modificationDate
+            }
+        }
+    }
+    
+    public func sortUnportedGames(_ games: [SelectableGame]) -> [SelectableGame] {
+        return games.sorted { a, b in
+            a.name.localizedStandardCompare(b.name) == .orderedAscending
+        }
+    }
+
+    public func unifiedItems(for games: [PortedGame]) -> [UnifiedLibraryItem] {
+        let portedItems = games.map { UnifiedLibraryItem.ported($0) }
+        let unportedItems = unportedGames.map { UnifiedLibraryItem.unported($0) }
+        var combined = portedItems + unportedItems
+
+        switch activeSortOption {
+        case .name:
+            combined.sort { a, b in
+                a.name.localizedStandardCompare(b.name) == .orderedAscending
+            }
+        case .lastPlayed, .ported:
+            combined = LibraryOrder.applyUnified(to: combined)
+        }
+        return combined
+    }
+    
     // MARK: - Drag and Drop & ZIP
     public func handleDroppedURLs(_ urls: [URL]) {
         dropErrorMessage = nil
-        guard let first = urls.first else { return }
-        
-        var isDir: ObjCBool = false
-        if FileManager.default.fileExists(atPath: first.path, isDirectory: &isDir) {
-            if isDir.boolValue {
-                self.selectedGameFolder = first
-            } else if first.pathExtension.lowercased() == "zip" {
-                extractDroppedZip(zipURL: first)
-            } else {
-                let parent = first.deletingLastPathComponent()
-                self.selectedGameFolder = parent
+        for url in urls {
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) {
+                if isDir.boolValue {
+                    addGameFolder(url)
+                } else if url.pathExtension.lowercased() == "app" {
+                    addNonSwitchGame(url: url)
+                } else if url.pathExtension.lowercased() == "zip" {
+                    extractDroppedZip(zipURL: url)
+                } else {
+                    let parent = url.deletingLastPathComponent()
+                    addGameFolder(parent)
+                }
             }
         }
     }

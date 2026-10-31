@@ -24,25 +24,25 @@ public struct SystemDirectoriesCard: View {
                         .foregroundColor(NXTheme.secondary)
                 }
                 
-                // Game ROMs Directory
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(viewModel.tr("system.roms_folder"))
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(NXTheme.textPrimary)
+                // Game ROMs Directories (Multi-Folder with Recursive Subfolders)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(viewModel.tr("system.roms_folder"))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(NXTheme.textPrimary)
+                        
+                        Spacer()
+                        
+                        Text("\(viewModel.gameFolders.count) \(viewModel.tr("system.folders_count"))")
+                            .font(.system(size: 11))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
                     
-                    HStack(spacing: 8) {
+                    if viewModel.gameFolders.isEmpty {
                         HStack {
-                            if let folder = viewModel.selectedGameFolder {
-                                Text(folder.path)
-                                    .font(.system(size: 12, design: .monospaced))
-                                    .foregroundColor(NXTheme.textPrimary)
-                                    .lineLimit(1)
-                                    .truncationMode(.middle)
-                            } else {
-                                Text(viewModel.tr("system.no_folder_selected"))
-                                    .font(.system(size: 12))
-                                    .foregroundColor(NXTheme.textSecondary)
-                            }
+                            Text(viewModel.tr("system.no_folder_selected"))
+                                .font(.system(size: 12))
+                                .foregroundColor(NXTheme.textSecondary)
                             Spacer()
                         }
                         .padding(.horizontal, 10)
@@ -53,15 +53,63 @@ public struct SystemDirectoriesCard: View {
                             RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .stroke(NXTheme.specularRim, lineWidth: 0.8)
                         )
-                        
-                        Button(viewModel.tr("common.choose_folder")) {
-                            viewModel.selectGameFolder()
+                    } else {
+                        VStack(spacing: 6) {
+                            ForEach(viewModel.gameFolders, id: \.self) { folder in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "folder.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(NXTheme.secondary)
+                                    
+                                    Text(folder.path)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(NXTheme.textPrimary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    
+                                    Spacer()
+                                    
+                                    Button {
+                                        SoundEffectService.shared.play(.click)
+                                        viewModel.removeGameFolder(folder)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.red.opacity(0.85))
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .help(viewModel.tr("common.remove"))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(NXTheme.glassSurfaceElevated)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(NXTheme.specularRim, lineWidth: 0.8)
+                                )
+                            }
+                        }
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            viewModel.selectAdditionalGameFolder()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "folder.badge.plus")
+                                Text(viewModel.tr("system.add_folder"))
+                            }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
                         
-                        if viewModel.selectedGameFolder != nil {
-                            Button(viewModel.tr("common.clear")) {
+                        if !viewModel.gameFolders.isEmpty {
+                            Button(viewModel.tr("common.clear_all")) {
+                                SoundEffectService.shared.play(.click)
+                                viewModel.gameFolders.removeAll()
                                 viewModel.selectedGameFolder = nil
+                                viewModel.scanAllGameFolders()
                             }
                             .buttonStyle(NXSecondaryButtonStyle())
                         }

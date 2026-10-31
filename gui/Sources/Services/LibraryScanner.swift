@@ -9,7 +9,7 @@ public final class LibraryScanner {
     
     private init() {}
     
-    public func scan(directories: [URL]) -> [PortedGame] {
+    public func scan(directories: [URL], extraAppURLs: [URL] = []) -> [PortedGame] {
         let fm = FileManager.default
         var games: [PortedGame] = []
         var seenURLs = Set<URL>()
@@ -67,6 +67,16 @@ public final class LibraryScanner {
             }
         }
         
+        // Scan explicitly added Non-Switch Apps
+        for appURL in extraAppURLs {
+            let path = appURL.standardized.path
+            guard !seenURLs.contains(appURL), fm.fileExists(atPath: path), appURL.pathExtension.lowercased() == "app" else { continue }
+            seenURLs.insert(appURL)
+            if let game = parseMacApp(at: appURL) {
+                games.append(game)
+            }
+        }
+        
         return games.sorted { $0.modificationDate > $1.modificationDate }
     }
     
@@ -85,8 +95,10 @@ public final class LibraryScanner {
         var titleId: String? = nil
         var version: String? = nil
         
+        var rawPlist: [String: Any]? = nil
         if let data = try? Data(contentsOf: plistURL),
            let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any] {
+            rawPlist = plist
             if let dispName = plist["CFBundleDisplayName"] as? String, !dispName.isEmpty {
                 name = dispName
             } else if let bundleName = plist["CFBundleName"] as? String, !bundleName.isEmpty {
@@ -97,29 +109,40 @@ public final class LibraryScanner {
             version = plist["CFBundleShortVersionString"] as? String
         }
         
-        // Secondary titleId extraction if missing from DMTitleID
-        if titleId == nil || titleId?.isEmpty == true {
-            if let bid = bundleId {
-                let range = NSRange(bid.startIndex..., in: bid)
-                if let regex = try? NSRegularExpression(pattern: "(0100[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
-                   let match = regex.firstMatch(in: bid, range: range),
-                   let r = Range(match.range(at: 1), in: bid) {
-                    titleId = String(bid[r]).uppercased()
+        let hasDmhost = fm.fileExists(atPath: url.appendingPathComponent("Contents/MacOS/dmhost").path)
+        let hasExplicitDmTitleId = rawPlist?["DMTitleID"] != nil
+        
+        // Secondary titleId extraction if missing from DMTitleID (only if it has dmhost or DMTitleID)
+        if hasDmhost || hasExplicitDmTitleId {
+            if titleId == nil || titleId?.isEmpty == true {
+                if let bid = bundleId {
+                    let range = NSRange(bid.startIndex..., in: bid)
+                    if let regex = try? NSRegularExpression(pattern: "(0100[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
+                       let match = regex.firstMatch(in: bid, range: range),
+                       let r = Range(match.range(at: 1), in: bid) {
+                        titleId = String(bid[r]).uppercased()
+                    }
                 }
             }
-        }
-        if titleId == nil || titleId?.isEmpty == true {
-            let fname = url.lastPathComponent
-            let range = NSRange(fname.startIndex..., in: fname)
-            if let regex = try? NSRegularExpression(pattern: "\\[(0100[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
-               let match = regex.firstMatch(in: fname, range: range),
-               let r = Range(match.range(at: 1), in: fname) {
-                titleId = String(fname[r]).uppercased()
+            if titleId == nil || titleId?.isEmpty == true {
+                let fname = url.lastPathComponent
+                let range = NSRange(fname.startIndex..., in: fname)
+                if let regex = try? NSRegularExpression(pattern: "\\[(0100[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
+                   let match = regex.firstMatch(in: fname, range: range),
+                   let r = Range(match.range(at: 1), in: fname) {
+                    titleId = String(fname[r]).uppercased()
+                }
             }
+            if titleId == nil || titleId?.isEmpty == true {
+                titleId = CompatibilityService.shared.findTitleId(forGameTitle: name)?.uppercased()
+            }
+        } else {
+            // Non-Switch Game: do not force a Switch Title ID
+            titleId = nil
         }
-        if titleId == nil || titleId?.isEmpty == true {
-            titleId = CompatibilityService.shared.findTitleId(forGameTitle: name)?.uppercased()
-        }
+        
+        let isSwitchPort = hasDmhost || hasExplicitDmTitleId || (titleId != nil && titleId?.hasPrefix("0100") == true)
+        let targetPlatform: TargetPlatform = isSwitchPort ? .macApp : .nonSwitch
         
         // Fast instant size retrieval without blocking RomFS traversal
         var size: Int64 = sizeCache[url] ?? 0
@@ -129,6 +152,11 @@ public final class LibraryScanner {
                 size = Int64(imgSize)
             } else if let exeSize = (try? url.appendingPathComponent("Contents/MacOS/dmhost").resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
                 size = Int64(exeSize)
+            } else if let exeName = rawPlist?["CFBundleExecutable"] as? String,
+                      let exeSize = (try? url.appendingPathComponent("Contents/MacOS/\(exeName)").resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                size = Int64(exeSize)
+            } else if let appSize = (try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                size = Int64(appSize)
             }
         }
         
@@ -137,7 +165,7 @@ public final class LibraryScanner {
         return PortedGame(
             name: name,
             url: url,
-            platform: .macApp,
+            platform: targetPlatform,
             sizeBytes: size,
             modificationDate: modDate,
             bundleId: bundleId,

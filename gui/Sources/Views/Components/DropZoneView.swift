@@ -19,31 +19,39 @@ public struct DropZoneView: View {
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundColor(NXTheme.secondary)
                 }
-                .frame(maxWidth: .infinity, minHeight: 110)
+                .frame(maxWidth: .infinity, minHeight: 120)
             } else {
                 VStack(spacing: 10) {
-                    Image(systemName: isTargeted ? "arrow.down.doc.fill" : "square.and.arrow.down.on.square.fill")
+                    Image(systemName: isTargeted ? "arrow.down.doc.fill" : "plus.rectangle.on.folder.fill")
                         .symbolRenderingMode(.hierarchical)
                         .font(.system(size: 34))
-                        .foregroundColor(isTargeted ? NXTheme.secondary : NXTheme.textSecondary)
+                        .foregroundColor(isTargeted ? NXTheme.secondary : NXTheme.primary)
                         .scaleEffect(isTargeted ? 1.15 : 1.0)
                         .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isTargeted)
                     
                     VStack(spacing: 4) {
-                        Text(isTargeted ? viewModel.tr("build.dropzone_title") : viewModel.tr("build.dropzone_subtitle"))
+                        Text(viewModel.tr("build.dropzone_gamer_title"))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundColor(NXTheme.textPrimary)
                         
-                        Text(viewModel.tr("build.dropzone_formats"))
+                        Text(viewModel.tr("build.dropzone_gamer_sub"))
                             .font(.system(size: 11))
                             .foregroundColor(NXTheme.textSecondary)
                     }
                     
-                    Button(viewModel.tr("common.choose_folder")) {
-                        viewModel.selectGameFolder()
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            viewModel.selectGameFolder()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "folder.badge.plus")
+                                Text(viewModel.tr("common.choose_folder"))
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        .controlSize(.small)
                     }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.small)
                     .padding(.top, 4)
                     
                     if let folder = viewModel.selectedGameFolder {
@@ -59,6 +67,7 @@ public struct DropZoneView: View {
                             
                             Button(viewModel.tr("common.clear")) {
                                 viewModel.selectedGameFolder = nil
+                                viewModel.selectedGame = nil
                             }
                             .buttonStyle(NXSecondaryButtonStyle())
                             .controlSize(.mini)
@@ -90,19 +99,26 @@ public struct DropZoneView: View {
             }
         }
         .padding(16)
-        .nxGlassCard(cornerRadius: 12, isNested: true)
+        .nxGlassCard(cornerRadius: 14, isNested: true)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(isTargeted ? NXTheme.primary.opacity(0.20) : Color.clear)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(isTargeted ? NXTheme.primary.opacity(0.18) : Color.white.opacity(0.02))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(
-                    isTargeted ? NXTheme.secondary : Color.clear,
-                    style: StrokeStyle(lineWidth: isTargeted ? 1.8 : 1, dash: isTargeted ? [6] : [])
-                )
-        )
-        .shadow(color: isTargeted ? NXTheme.primary.opacity(0.35) : .clear, radius: 12, x: 0, y: 4)
+        .overlay {
+            if isTargeted {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        NXTheme.secondary,
+                        style: StrokeStyle(lineWidth: 1.8, dash: [6])
+                    )
+            } else {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        NXTheme.specularRim,
+                        style: StrokeStyle(lineWidth: 1, dash: [4])
+                    )
+            }
+        }
         .animation(.spring(response: 0.28, dampingFraction: 0.75), value: isTargeted)
         .onDrop(of: [.fileURL], isTargeted: $isTargeted) { providers in
             var urls: [URL] = []

@@ -8,81 +8,132 @@ public struct BuildGameSection: View {
     }
     
     public var body: some View {
-        GlassCard {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    Label(viewModel.tr("build.step_1_title"), systemImage: "gamecontroller.fill")
-                        .symbolRenderingMode(.hierarchical)
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundColor(NXTheme.textPrimary)
+        VStack(spacing: 16) {
+            // Main Drop Target
+            DropZoneView(viewModel: viewModel)
+            
+            // Multiple Detected Games Selector (if folder contains >1 title)
+            if viewModel.detectedGames.count > 1 {
+                detectedGamesList
+            }
+            
+            // Selected Game Profile Hero Card
+            if let game = viewModel.selectedGame {
+                selectedGameHeroCard(game)
+            }
+        }
+    }
+    
+    private func selectedGameHeroCard(_ game: SelectableGame) -> some View {
+        GlassCard(padding: 14) {
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    if let cover = GameCoverService.shared.coverImage(titleId: game.titleId, gameName: game.name) {
+                        Image(nsImage: cover)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 48, height: 72)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(NXTheme.specularRim, lineWidth: 0.8)
+                            )
+                    } else {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(NXTheme.primary.opacity(0.18))
+                                .frame(width: 48, height: 72)
+                            Image(systemName: "gamecontroller.fill")
+                                .font(.system(size: 22))
+                                .foregroundColor(NXTheme.secondary)
+                        }
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(game.name)
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                            .foregroundColor(NXTheme.textPrimary)
+                            .lineLimit(1)
+                        
+                        if let titleId = game.titleId, !titleId.isEmpty {
+                            Text(titleId)
+                                .font(.system(size: 11, design: .monospaced))
+                                .foregroundColor(NXTheme.textSecondary)
+                        }
+                        
+                        HStack(spacing: 8) {
+                            Text(game.formattedSize)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .foregroundColor(NXTheme.secondary)
+                            
+                            if game.updateCount > 0 {
+                                Text(viewModel.tr("build.badge_updates", game.updateCount))
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(Color.blue.opacity(0.4))
+                                    .clipShape(Capsule())
+                            }
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                                    .font(.system(size: 11))
+                                Text(viewModel.tr("build.game_ready_badge"))
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                            }
+                        }
+                    }
+                    
                     Spacer()
                 }
                 
-                // Drag & Drop Area
-                DropZoneView(viewModel: viewModel)
+                Divider().opacity(0.15)
                 
-                if viewModel.selectedGameFolder != nil {
-                    if viewModel.detectedFiles.isEmpty {
-                        noFilesWarning
-                    } else {
-                        detectedGamesList
-                    }
-                }
-                
-                // Storage Space Status Alert
-                storageStatusView
-                
-                // Pre-flight Cryptographic Keys & File Check
-                keyCheckStatusView
-                
-                // Continue to Step 2 Action
-                if viewModel.selectedGame != nil {
-                    HStack {
-                        Spacer()
-                        Button(action: {
-                            withAnimation(.easeInOut(duration: 0.25)) {
-                                viewModel.goToWizardStep(2)
-                            }
-                        }) {
-                            HStack(spacing: 8) {
-                                Text(viewModel.tr("build.continue_config"))
-                                Image(systemName: "arrow.right.circle.fill")
-                            }
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 8)
+                HStack {
+                    if let avail = viewModel.availableDiskBytes {
+                        let availStr = ByteCountFormatter.string(fromByteCount: avail, countStyle: .file)
+                        HStack(spacing: 6) {
+                            Image(systemName: "externaldrive.fill")
+                                .foregroundColor(NXTheme.textSecondary)
+                                .font(.system(size: 11))
+                            Text(viewModel.tr("build.storage_clear_badge", availStr))
+                                .font(.system(size: 11))
+                                .foregroundColor(NXTheme.textSecondary)
                         }
-                        .buttonStyle(NXPrimaryButtonStyle())
                     }
-                    .padding(.top, 4)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+                            viewModel.goToWizardStep(2)
+                        }
+                    }) {
+                        HStack(spacing: 6) {
+                            Text(viewModel.tr("build.continue_config"))
+                            Image(systemName: "arrow.right.circle.fill")
+                        }
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 7)
+                    }
+                    .buttonStyle(NXPrimaryButtonStyle())
                 }
             }
         }
-    }
-    
-    private var noFilesWarning: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(NXTheme.tertiary)
-            Text(viewModel.tr("build.no_files_found"))
-                .font(.system(size: 12))
-                .foregroundColor(NXTheme.textSecondary)
-        }
-        .padding(8)
-        .background(NXTheme.tertiary.opacity(0.12))
-        .cornerRadius(8)
     }
     
     private var detectedGamesList: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        GlassCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(viewModel.tr("build.select_game_detected", viewModel.detectedGames.count))
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(NXTheme.textPrimary)
-                Spacer()
-            }
-            
-            NXGlassContainer(spacing: 8) {
+                
                 VStack(spacing: 6) {
                     ForEach(viewModel.detectedGames) { game in
                         SelectableGameCard(
@@ -96,96 +147,6 @@ public struct BuildGameSection: View {
                     }
                 }
             }
-        }
-        .padding(.top, 4)
-    }
-    
-    @ViewBuilder
-    private var storageStatusView: some View {
-        if let diskWarning = viewModel.diskSpaceWarningMessage {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "externaldrive.badge.xmark")
-                    .font(.system(size: 20))
-                    .foregroundColor(NXTheme.tertiary)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(viewModel.tr("build.low_disk_title"))
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundColor(NXTheme.tertiary)
-                    Text(diskWarning)
-                        .font(.system(size: 11))
-                        .foregroundColor(NXTheme.textSecondary)
-                }
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(NXTheme.tertiary.opacity(0.12))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(NXTheme.tertiary.opacity(0.35), lineWidth: 1)
-            )
-        } else if let avail = viewModel.availableDiskBytes, let sel = viewModel.selectedGame {
-            let availStr = ByteCountFormatter.string(fromByteCount: avail, countStyle: .file)
-            HStack(spacing: 8) {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                    .font(.system(size: 14))
-                Text(viewModel.tr("build.storage_ready", availStr, sel.name))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(NXTheme.textSecondary)
-            }
-            .padding(.horizontal, 4)
-        }
-    }
-    
-    @ViewBuilder
-    private var keyCheckStatusView: some View {
-        if let sel = viewModel.selectedGame, !viewModel.prodKeysPath.isEmpty {
-            let keysUrl = URL(fileURLWithPath: viewModel.prodKeysPath)
-            let files = sel.files.map(\.url)
-            let result = KeyCheckService.shared.verify(keysURL: keysUrl, gameFiles: files)
-            
-            HStack(spacing: 8) {
-                switch result {
-                case .fits(let fw, _):
-                    Image(systemName: "key.fill")
-                        .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                    Text(viewModel.tr("build.prodkeys_verified", fw))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                case .outdatedMasterKey(let gen, let missing, let fw):
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(Color(red: 0.98, green: 0.65, blue: 0.12))
-                    Text(viewModel.tr("build.prodkeys_missing_key", missing, String(gen), fw))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.98, green: 0.65, blue: 0.12))
-                case .wrongHeaderKey:
-                    Image(systemName: "xmark.octagon.fill")
-                        .foregroundColor(Color(red: 0.91, green: 0.14, blue: 0.14))
-                    Text(viewModel.tr("build.prodkeys_invalid_header"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.91, green: 0.14, blue: 0.14))
-                case .noHeaderKey:
-                    Image(systemName: "xmark.octagon.fill")
-                        .foregroundColor(Color(red: 0.91, green: 0.14, blue: 0.14))
-                    Text(viewModel.tr("build.prodkeys_missing_header"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(Color(red: 0.91, green: 0.14, blue: 0.14))
-                case .unreadableKeys:
-                    Image(systemName: "questionmark.circle.fill")
-                        .foregroundColor(NXTheme.textMuted)
-                    Text(viewModel.tr("build.prodkeys_unparseable"))
-                        .font(.system(size: 11))
-                        .foregroundColor(NXTheme.textMuted)
-                case .cannotCheck:
-                    EmptyView()
-                }
-            }
-            .padding(8)
-            .background(NXTheme.glassSurfaceElevated.opacity(0.6))
-            .cornerRadius(8)
         }
     }
 }
