@@ -538,5 +538,18 @@ extension Translations {
         "menubar.icon_style_symbol": "Símbolo Branco (Sem Fundo)",
         "menubar.icon_style_dark": "Escuro",
         "menubar.icon_style_light_color": "Claro com Cor",
+        "settings.ios_custom_cert_title": "Certificado e Perfil de Assinatura Personalizados (.p12 / .mobileprovision)",
+        "settings.ios_select_p12": "Selecionar Certificado .p12",
+        "settings.ios_p12_password_placeholder": "Palavra-passe do P12 (se existir)",
+        "settings.ios_import_keychain": "Importar para as Chaves",
+        "settings.ios_importing": "A importar...",
+        "settings.ios_select_profile": "Selecionar .mobileprovision",
+        "settings.ios_sideload_guide_title": "Guia de Sideloading e Instalação Direta",
+        "settings.ios_sideload_guide_desc": "• Não assinado / AirDrop: O iOS padrão não instala IPAs brutos diretamente. Abra o IPA pelo AltStore, SideStore, Sideloadly ou TrollStore.\n• Instalação Direta via Cabo: Selecione a sua equipa da Apple acima. O NxNative fará o aprovisionamento e assinatura automáticos via Xcode para o seu aparelho.",
+        "controls.guide_title": "Controlos do Jogo",
+        "controls.guide_subtitle": "Referência Rápida de Teclado Mac e Comandos (Xbox / DualSense / Switch Pro)",
+        "controls.title_screen_tip_title": "Ativação no Ecrã Inicial (Pressione L + R)",
+        "controls.title_screen_tip_desc": "Quase todos os jogos de Switch exigem pressionar L + R em simultâneo no ecrã inicial para detetar e emparelhar o comando.",
+        "controls.customize_keybindings": "Personalizar Controlos...",
 ]
 }

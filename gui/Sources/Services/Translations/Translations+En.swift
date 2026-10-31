@@ -608,5 +608,13 @@ extension Translations {
         "notif.port_success_body_path": "Successfully built and ready to play at: %@",
         "notif.port_error_title": "Game Porting Failed",
         "notif.port_error_body": "Build process failed: %@",
+        "settings.ios_custom_cert_title": "Custom Signing Certificate & Profile (.p12 / .mobileprovision)",
+        "settings.ios_select_p12": "Select .p12 Certificate",
+        "settings.ios_p12_password_placeholder": "P12 Password (if any)",
+        "settings.ios_import_keychain": "Import to Keychain",
+        "settings.ios_importing": "Importing...",
+        "settings.ios_select_profile": "Select .mobileprovision",
+        "settings.ios_sideload_guide_title": "Sideloading & Direct Installation Guide",
+        "settings.ios_sideload_guide_desc": "• Unsigned / AirDrop: Stock iOS cannot install raw IPAs directly. Open the IPA via AltStore, SideStore, Sideloadly, or TrollStore.\n• Direct Cable Install: Select your Apple Developer / Personal Team above. NxNative will automatically provision and sign it via Xcode for your device.",
     ]
 }

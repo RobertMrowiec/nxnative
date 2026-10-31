@@ -224,6 +224,6 @@ public struct GameSettingsSheetView: View {
             footerBar(onDismiss: { dismiss() })
         }
         .nxSheetSurface()
-        .frame(minWidth: 500, idealWidth: 560, maxWidth: 640, minHeight: 560, idealHeight: 640, maxHeight: 740)
+        .frame(minWidth: 640, idealWidth: 700, maxWidth: 780, minHeight: 580, idealHeight: 660, maxHeight: 780)
     }
 }
