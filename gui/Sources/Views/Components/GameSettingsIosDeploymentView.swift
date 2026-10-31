@@ -192,7 +192,7 @@ public struct GameSettingsIosDeploymentView: View {
                         .foregroundColor(NXTheme.textSecondary)
                     
                     HStack(spacing: 8) {
-                        Button("Select .p12 Certificate") {
+                        Button(L10n.t("settings.ios_select_p12")) {
                             let panel = NSOpenPanel()
                             panel.canChooseFiles = true
                             panel.canChooseDirectories = false
@@ -229,12 +229,12 @@ public struct GameSettingsIosDeploymentView: View {
                     
                     if !p12Path.isEmpty {
                         HStack(spacing: 8) {
-                            SecureField("P12 Password (if any)", text: $p12Password)
+                            SecureField(L10n.t("settings.ios_p12_password_placeholder"), text: $p12Password)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .font(.system(size: 11))
                                 .frame(maxWidth: 180)
                             
-                            Button(isImportingCert ? "Importing..." : "Import to Keychain") {
+                            Button(isImportingCert ? L10n.t("settings.ios_importing") : L10n.t("settings.ios_import_keychain")) {
                                 isImportingCert = true
                                 deviceService.importP12Certificate(fileURL: URL(fileURLWithPath: p12Path), password: p12Password) { success, msg in
                                     isImportingCert = false
@@ -248,7 +248,7 @@ public struct GameSettingsIosDeploymentView: View {
                     }
                     
                     HStack(spacing: 8) {
-                        Button("Select .mobileprovision") {
+                        Button(L10n.t("settings.ios_select_profile")) {
                             let panel = NSOpenPanel()
                             panel.canChooseFiles = true
                             panel.canChooseDirectories = false
@@ -291,7 +291,7 @@ public struct GameSettingsIosDeploymentView: View {
                 }
                 .padding(.top, 4)
             } label: {
-                Label("Custom Signing Certificate & Profile (.p12 / .mobileprovision)", systemImage: "signature")
+                Label(L10n.t("settings.ios_custom_cert_title"), systemImage: "signature")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(NXTheme.textSecondary)
             }
@@ -379,11 +379,11 @@ public struct GameSettingsIosDeploymentView: View {
                         .font(.system(size: 14))
 
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Sideloading & Direct Installation Guide")
+                        Text(L10n.t("settings.ios_sideload_guide_title"))
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(NXTheme.textPrimary)
 
-                        Text("• Unsigned / AirDrop: Stock iOS cannot install raw IPAs directly. Open the IPA via AltStore, SideStore, Sideloadly, or TrollStore.\n• Direct Cable Install: Select your Apple Developer / Personal Team above. NxNative will automatically provision and sign it via Xcode for your device.")
+                        Text(L10n.t("settings.ios_sideload_guide_desc"))
                             .font(.system(size: 10.5))
                             .foregroundColor(NXTheme.textSecondary)
                             .lineSpacing(2)
@@ -400,7 +400,7 @@ public struct GameSettingsIosDeploymentView: View {
             }
 
             // Row 4: Action Button
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Spacer()
 
                 if hasExternalRomfs {
@@ -413,8 +413,8 @@ public struct GameSettingsIosDeploymentView: View {
                             Image(systemName: "arrow.up.doc.fill")
                             Text(L10n.t("settings.ios_push_romfs_only"))
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
                     .disabled(deviceService.selectedDevice == nil || deviceService.isDetecting)
@@ -434,32 +434,34 @@ public struct GameSettingsIosDeploymentView: View {
                         }
                     }
                 }) {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 7) {
                         Image(systemName: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.down.to.line.circle.fill")
+                            .font(.system(size: 13, weight: .bold))
                         Text(
                             isDeployed
                                 ? L10n.t("settings_modal.renew_button", deviceService.selectedDevice?.name ?? "iOS")
                                 : L10n.t("settings_modal.install_button", deviceService.selectedDevice?.name ?? "iOS")
                         )
-                        .fontWeight(.bold)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .lineLimit(1)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 5)
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 8)
                 }
                 .buttonStyle(NXPrimaryButtonStyle())
                 .disabled(deviceService.selectedDevice == nil || deviceService.isDetecting)
 
                 Spacer()
             }
-            .padding(.top, 4)
+            .padding(.top, 6)
         }
         .padding(12)
         .nxGlassCard(cornerRadius: 10, isNested: true)
     }
 
     private func renewalStatusCard(record: IosDeploymentRecord) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center) {
                 HStack(spacing: 6) {
                     Image(systemName: record.isExpired ? "exclamationmark.triangle.fill" : "clock.arrow.circlepath")
                         .foregroundColor(record.tier.tintColor)
@@ -472,10 +474,25 @@ public struct GameSettingsIosDeploymentView: View {
                 
                 Spacer()
                 
-                IosRenewalBadgeView(record: record)
+                HStack(spacing: 8) {
+                    IosRenewalBadgeView(record: record)
+                    
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        deploymentTracker.clearDeployment(for: game)
+                    }) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(NXTheme.textSecondary)
+                            .frame(width: 16, height: 16)
+                    }
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.mini)
+                    .help(L10n.t("settings.ios_clear_deployment"))
+                }
             }
             
-            HStack(spacing: 16) {
+            HStack(alignment: .center, spacing: 24) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L10n.t("settings.ios_first_deployed"))
                         .font(.system(size: 10))
@@ -506,35 +523,9 @@ public struct GameSettingsIosDeploymentView: View {
                 }
                 
                 Spacer()
-                
-                HStack(spacing: 6) {
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        deploymentTracker.markAsDeployedToday(for: game, deviceName: deviceService.selectedDevice?.name ?? record.targetDeviceName)
-                    }) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "arrow.clockwise")
-                            Text(L10n.t("settings.ios_mark_renewed_today"))
-                        }
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.mini)
-                    .help("Reset the 7-day countdown starting from now")
-                    
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        deploymentTracker.clearDeployment(for: game)
-                    }) {
-                        Image(systemName: "trash")
-                            .foregroundColor(NXTheme.textSecondary)
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.mini)
-                    .help(L10n.t("settings.ios_clear_deployment"))
-                }
             }
         }
-        .padding(10)
+        .padding(12)
         .background(record.tier.tintColor.opacity(0.08))
         .overlay(
             RoundedRectangle(cornerRadius: 10)

@@ -83,6 +83,6 @@ extension Translations {
         "system.ryujinx_not_found_desc": "Não foi possível localizar o Ryujinx ou Ryubing instalado neste Mac. Insira o seu prod.keys ou selecione a pasta manualmente.",
         "system.ryujinx_not_found_title": "Ryujinx / Ryubing Não Encontrado",
         "system.select_folder": "Selecionar Pasta",
-        "system.select_prod_keys": "Selecionar prod.keys"
+        "system.select_prod_keys": "Selecionar prod.keys",
     ]
 }
