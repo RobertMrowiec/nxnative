@@ -20,6 +20,69 @@ public final class PatchService {
         }
     }
     
+    /// Restores files left in an unmerged conflict state (e.g., interrupted stash pop or git pull)
+    /// back to clean HEAD so compatibility patches can be reliably reapplied without syntax errors.
+    @discardableResult
+    public func repairUnmergedFiles(nxnativePath: String) -> [String] {
+        let fm = FileManager.default
+        let repoURL = URL(fileURLWithPath: nxnativePath)
+        guard fm.fileExists(atPath: repoURL.appendingPathComponent(".git").path) else {
+            return []
+        }
+        
+        let gitPath = ["/opt/homebrew/bin/git", "/usr/local/bin/git", "/usr/bin/git"].first(where: { fm.fileExists(atPath: $0) }) ?? "/usr/bin/git"
+        
+        func runGit(_ args: [String], timeoutSeconds: Double = 2.0) -> String? {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: gitPath)
+            p.arguments = ["-C", nxnativePath] + args
+            p.environment = ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"]
+            let pipe = Pipe()
+            p.standardOutput = pipe
+            p.standardError = Pipe()
+            
+            do {
+                try p.run()
+            } catch {
+                return nil
+            }
+            
+            let deadline = DispatchTime.now() + timeoutSeconds
+            let sema = DispatchSemaphore(value: 0)
+            var outputData = Data()
+            
+            DispatchQueue.global(qos: .utility).async {
+                outputData = pipe.fileHandleForReading.readDataToEndOfFile()
+                p.waitUntilExit()
+                sema.signal()
+            }
+            
+            if sema.wait(timeout: deadline) == .timedOut {
+                p.terminate()
+                return nil
+            }
+            
+            return String(data: outputData, encoding: .utf8)
+        }
+        
+        guard let output = runGit(["diff", "--name-only", "--diff-filter=U"]) else {
+            return []
+        }
+        
+        let files = output
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        
+        guard !files.isEmpty else { return [] }
+        
+        // Batch restoration of conflicted files in two bounded commands
+        _ = runGit(["checkout", "HEAD", "--"] + files)
+        _ = runGit(["reset", "-q", "HEAD", "--"] + files)
+        
+        return files
+    }
+    
     @discardableResult
     public func applyPatchesIfNeeded(
         nxnativePath: String,
@@ -31,6 +94,11 @@ public final class PatchService {
         var appliedCount = 0
         var skippedCount = 0
         var errorMessages: [String] = []
+        
+        let repaired = repairUnmergedFiles(nxnativePath: nxnativePath)
+        for f in repaired {
+            logger?("[Repo] Restored \(f) from upstream (resolved merge conflict)", true)
+        }
         
         for def in EnginePatchRegistry.patches {
             let fileURL = root.appendingPathComponent(def.relativePath)
