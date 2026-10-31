@@ -151,12 +151,13 @@ public struct CompactConsoleActionSheetView: View {
                                 }
                             }
                         } else {
-                            // Option 0: Send to iPhone / iPad
+                            // Option 0: Send or Renew on iPhone / iPad
+                            let isDeployed = IosDeploymentTracker.shared.isGameDeployed(game)
                             menuActionRow(
                                 index: 0,
-                                title: viewModel.tr("actions.send_ios"),
-                                subtitle: viewModel.tr("actions.send_ios_subtitle"),
-                                icon: "arrow.up.forward.app",
+                                title: isDeployed ? viewModel.tr("actions.renew_ios") : viewModel.tr("actions.send_ios"),
+                                subtitle: isDeployed ? viewModel.tr("actions.renew_ios_subtitle") : viewModel.tr("actions.send_ios_subtitle"),
+                                icon: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.up.forward.app",
                                 isPrimary: true
                             ) {
                                 onDismiss()

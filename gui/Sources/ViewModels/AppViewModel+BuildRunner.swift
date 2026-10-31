@@ -89,6 +89,9 @@ extension AppViewModel {
                 if let dev = DeviceDeploymentService.shared.selectedDevice ?? DeviceDeploymentService.shared.connectedDevices.first {
                     let team = DeviceDeploymentService.shared.selectedSigningTeam ?? DeviceDeploymentService.shared.signingTeams.first
                     DeviceDeploymentService.shared.installApp(appBundleURL: ipaURL, on: dev, team: team) { [weak self] ok, msg in
+                        if ok {
+                            IosDeploymentTracker.shared.recordDeployment(forGameUrl: ipaURL, deviceName: dev.name, deviceId: dev.id)
+                        }
                         self?.logs.append(LogEntry(level: ok ? .success : .error, message: "[Auto-Deploy] \(msg)"))
                     }
                 }

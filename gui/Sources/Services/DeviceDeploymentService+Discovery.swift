@@ -255,4 +255,57 @@ extension DeviceDeploymentService {
 
         return teams
     }
+
+    // MARK: - Installed Apps Discovery & Auto-Sync
+    public func syncInstalledApps(with games: [PortedGame], on device: ConnectedAppleDevice? = nil) {
+        guard let dev = device ?? selectedDevice ?? connectedDevices.first else { return }
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let self = self else { return }
+            let apps = self.fetchInstalledAppsList(on: dev)
+            if !apps.isEmpty {
+                IosDeploymentTracker.shared.syncFromDeviceApps(
+                    apps: apps,
+                    libraryGames: games,
+                    deviceName: dev.name,
+                    deviceId: dev.id
+                )
+            }
+        }
+    }
+
+    internal func fetchInstalledAppsList(on device: ConnectedAppleDevice) -> [[String: Any]] {
+        let process = Process()
+        let pipe = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
+        process.arguments = ["devicectl", "device", "info", "apps", "--device", device.id, "--json-output", "-"]
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+        } catch {
+            return []
+        }
+
+        let sema = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .utility).async {
+            process.waitUntilExit()
+            sema.signal()
+        }
+        if sema.wait(timeout: .now() + 2.0) == .timedOut {
+            process.terminate()
+            return []
+        }
+
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let out = String(decoding: data, as: UTF8.self)
+        if let jsonStart = out.firstIndex(of: "{"),
+           let jsonData = String(out[jsonStart...]).data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any],
+           let res = json["result"] as? [String: Any],
+           let apps = res["apps"] as? [[String: Any]] {
+            return apps
+        }
+        return []
+    }
 }

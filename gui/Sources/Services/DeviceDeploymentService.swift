@@ -97,6 +97,8 @@ public final class DeviceDeploymentService: ObservableObject {
     @Published public var activeDeployment: DeploymentProgressInfo = DeploymentProgressInfo()
 
     internal var currentRunningProcess: Process? = nil
+    internal var currentDeployingAppURL: URL? = nil
+    internal var currentDeployingGame: PortedGame? = nil
     internal var completionCallback: ((Bool, String) -> Void)? = nil
     internal var elapsedTimer: Timer? = nil
 
@@ -176,6 +178,7 @@ public final class DeviceDeploymentService: ObservableObject {
         appBundleURL: URL,
         on device: ConnectedAppleDevice,
         team: DeveloperSigningTeam? = nil,
+        game: PortedGame? = nil,
         completion: @escaping (Bool, String) -> Void
     ) {
         // Prevent concurrent deployments
@@ -185,6 +188,8 @@ public final class DeviceDeploymentService: ObservableObject {
         }
 
         self.completionCallback = completion
+        self.currentDeployingAppURL = appBundleURL
+        self.currentDeployingGame = game
 
         // Initialize active deployment state
         activeDeployment = DeploymentProgressInfo(

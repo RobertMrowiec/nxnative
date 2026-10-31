@@ -48,7 +48,7 @@ public struct SwitchConsoleLibraryView: View {
                 ScrollViewReader { verticalProxy in
                     ScrollView(.vertical, showsIndicators: true) {
                         catalogContent
-                            .padding(.bottom, 28)
+                            .padding(.bottom, 36)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .nxScrollEdgeEffect(edges: [.top, .bottom])
@@ -59,12 +59,43 @@ public struct SwitchConsoleLibraryView: View {
                             case .mac:
                                 verticalProxy.scrollTo("shelf_mac", anchor: .top)
                             case .ios:
-                                verticalProxy.scrollTo("shelf_ios", anchor: .top)
+                                verticalProxy.scrollTo("shelf_ios", anchor: .center)
                             case .nonSwitch:
-                                verticalProxy.scrollTo("shelf_non_switch", anchor: .top)
+                                verticalProxy.scrollTo("shelf_non_switch", anchor: .center)
                             case .unportedSwitch:
                                 verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
                             }
+                        }
+                    }
+                    .onChange(of: viewModel.focusedUnifiedIndex) { newIdx in
+                        guard viewModel.activeGroupFilter == .all else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            let isFirstRow = newIdx < max(1, viewModel.unifiedGridColumnsCount)
+                            verticalProxy.scrollTo("unified_card_\(newIdx)", anchor: isFirstRow ? .top : .center)
+                        }
+                    }
+                    .onChange(of: viewModel.focusedMacIndex) { _ in
+                        guard viewModel.activeLibraryShelf == .mac else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            verticalProxy.scrollTo("shelf_mac", anchor: .top)
+                        }
+                    }
+                    .onChange(of: viewModel.focusedIosIndex) { _ in
+                        guard viewModel.activeLibraryShelf == .ios else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            verticalProxy.scrollTo("shelf_ios", anchor: .center)
+                        }
+                    }
+                    .onChange(of: viewModel.focusedNonSwitchIndex) { _ in
+                        guard viewModel.activeLibraryShelf == .nonSwitch else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            verticalProxy.scrollTo("shelf_non_switch", anchor: .center)
+                        }
+                    }
+                    .onChange(of: viewModel.focusedUnportedGameIndex) { _ in
+                        guard viewModel.activeLibraryShelf == .unportedSwitch else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
                         }
                     }
                 }
@@ -216,7 +247,8 @@ public struct SwitchConsoleLibraryView: View {
                 .onChange(of: viewModel.focusedUnportedGameIndex) { newIdx in
                     guard viewModel.activeLibraryShelf == .unportedSwitch else { return }
                     withAnimation(.easeOut(duration: 0.16)) {
-                        horizontalProxy.scrollTo("card_unported_\(newIdx)", anchor: .center)
+                        let anchor: UnitPoint = newIdx == 0 ? .leading : (newIdx >= items.count - 1 ? .trailing : .center)
+                        horizontalProxy.scrollTo("card_unported_\(newIdx)", anchor: anchor)
                     }
                 }
             }

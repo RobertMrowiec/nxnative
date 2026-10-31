@@ -138,6 +138,12 @@ extension DeviceDeploymentService {
             activeDeployment.detailMessage = L10n.t("settings_modal.developer_mode_tip")
             activeDeployment.logLines.append("[SUCCESS] Installation completed successfully!")
 
+            if let g = self.currentDeployingGame {
+                IosDeploymentTracker.shared.recordDeployment(for: g, deviceName: device.name, deviceId: device.id)
+            } else if let appURL = self.currentDeployingAppURL ?? Optional(targetAppURL) {
+                IosDeploymentTracker.shared.recordDeployment(forGameUrl: appURL, deviceName: device.name, deviceId: device.id)
+            }
+
             let cb = completionCallback
             completionCallback = nil
             cb?(true, activeDeployment.statusMessage)
@@ -151,7 +157,7 @@ extension DeviceDeploymentService {
             failDeployment(
                 category: .signatureVerificationFailed,
                 title: "iOS Signature Verification Failed",
-                detail: "iOS rejected the app because it requires a valid Apple Developer certificate or must be installed via AirDrop, AltStore, or Sideloadly.",
+                detail: "iOS rejected the app because it requires a valid Apple Developer certificate or must be sideloaded via AltStore, SideStore, Sideloadly, or TrollStore. On stock iOS, ensure your Apple ID is logged into Xcode.",
                 raw: output
             )
         } else if output.contains("passcodeRequired") || output.contains("locked") {
@@ -175,11 +181,11 @@ extension DeviceDeploymentService {
                 detail: "Not enough free storage space on \(device.name) to install this game.",
                 raw: output
             )
-        } else if output.contains("tunnel") || output.contains("disconnected") || output.contains("offline") {
+        } else if output.contains("tunnel") || output.contains("disconnected") || output.contains("offline") || output.contains("connection issue") || output.contains("not available") || output.contains("paired with another") {
             failDeployment(
                 category: .deviceDisconnected,
-                title: "Connection Lost",
-                detail: "Check the USB cable or ensure both devices are connected to the same Wi-Fi network.",
+                title: "Device Connection Issue",
+                detail: "1. Unlock \(device.name) and tap 'Trust This Computer'.\n2. Verify Developer Mode is ON in Settings > Privacy & Security > Developer Mode.\n3. Reconnect the USB cable or open Xcode > Window > Devices & Simulators to renew pairing.",
                 raw: output
             )
         } else {
@@ -268,6 +274,12 @@ extension DeviceDeploymentService {
                     self.activeDeployment.statusMessage = "Port installed successfully on \(device.name)!"
                     self.activeDeployment.detailMessage = L10n.t("settings_modal.developer_mode_tip")
                     self.activeDeployment.logLines.append("[SUCCESS] Game data (romfs.img) copied successfully to Documents on \(device.name)!")
+
+                    if let g = self.currentDeployingGame {
+                        IosDeploymentTracker.shared.recordDeployment(for: g, deviceName: device.name, deviceId: device.id)
+                    } else if let appURL = self.currentDeployingAppURL {
+                        IosDeploymentTracker.shared.recordDeployment(forGameUrl: appURL, deviceName: device.name, deviceId: device.id)
+                    }
 
                     let cb = self.completionCallback
                     self.completionCallback = nil

@@ -89,30 +89,38 @@ public struct GameDetailDeckView: View {
                             .disabled(isLaunching || viewModel.launchingGameId != nil)
                             .shadow(color: isDeckFocused ? NXTheme.primary.opacity(0.6) : Color.clear, radius: 8)
                         } else {
+                            let isDeployed = IosDeploymentTracker.shared.isGameDeployed(game)
+                            let record = IosDeploymentTracker.shared.deploymentRecord(for: game)
+                            let isExpired = record?.isExpired ?? false
+
                             Button(action: {
                                 SoundEffectService.shared.play(.click)
                                 viewModel.gameForSettingsSheet = game
                             }) {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "arrow.up.forward.app")
+                                    Image(systemName: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.up.forward.app")
                                         .font(.system(size: 13))
-                                    Text(viewModel.tr("console.send_ios"))
-                                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                                    Text(
+                                        isDeployed
+                                            ? (isExpired ? viewModel.tr("console.renew_ios_expired") : viewModel.tr("console.renew_ios"))
+                                            : viewModel.tr("console.send_ios")
+                                    )
+                                    .font(.system(size: 13, weight: .bold, design: .rounded))
                                 }
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
                             }
                             .buttonStyle(NXPrimaryButtonStyle())
-                            .shadow(color: isDeckFocused ? NXTheme.secondary.opacity(0.6) : Color.clear, radius: 8)
+                            .shadow(color: isDeckFocused ? (isDeployed && isExpired ? Color.red.opacity(0.6) : NXTheme.secondary.opacity(0.6)) : Color.clear, radius: 8)
                         }
                         
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Button(action: {
                                 SoundEffectService.shared.play(.click)
                                 viewModel.gameForSettingsSheet = game
                             }) {
-                                HStack(spacing: 6) {
+                                HStack(spacing: 4) {
                                     Image(systemName: "slider.horizontal.3")
                                     Text(viewModel.tr("deck.settings"))
                                 }
@@ -124,9 +132,24 @@ public struct GameDetailDeckView: View {
                             
                             Button(action: {
                                 SoundEffectService.shared.play(.click)
+                                viewModel.showControlsGuideSheet = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "gamecontroller.fill")
+                                    Text(viewModel.tr("controls.guide_title"))
+                                }
+                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                            .controlSize(.regular)
+                            .help(viewModel.tr("controls.guide_subtitle"))
+                            
+                            Button(action: {
+                                SoundEffectService.shared.play(.click)
                                 viewModel.revealInFinder(url: game.url)
                             }) {
-                                HStack(spacing: 6) {
+                                HStack(spacing: 4) {
                                     Image(systemName: "folder")
                                     Text(viewModel.tr("deck.app_files"))
                                 }

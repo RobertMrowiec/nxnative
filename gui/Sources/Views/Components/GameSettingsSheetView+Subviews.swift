@@ -221,16 +221,6 @@ extension GameSettingsSheetView {
                     .foregroundColor(NXTheme.textPrimary)
                 
                 Spacer()
-                
-                if isFocused {
-                    Text(viewModel.tr("settings_modal.focused"))
-                        .font(.system(size: 9, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(NXTheme.primary.opacity(0.3))
-                        .clipShape(Capsule())
-                }
             }
             
             content()

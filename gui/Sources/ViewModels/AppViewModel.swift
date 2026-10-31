@@ -272,6 +272,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     // MARK: - Update Checker & About Sheet
     @Published public var showAboutSheet: Bool = false
     @Published public var showUpdateSheet: Bool = false
+    @Published public var showControlsGuideSheet: Bool = false
     @Published public var isCheckingUpdate: Bool = false
     @Published public var updateInfo: UpdateInfo? = nil
     @Published public var isApplyingUpdate: Bool = false

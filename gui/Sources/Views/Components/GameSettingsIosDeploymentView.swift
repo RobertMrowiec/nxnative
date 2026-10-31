@@ -4,6 +4,7 @@ import AppKit
 public struct GameSettingsIosDeploymentView: View {
     public let game: PortedGame
     @ObservedObject internal var deviceService = DeviceDeploymentService.shared
+    @ObservedObject private var deploymentTracker = IosDeploymentTracker.shared
     @State internal var showDeployLogs: Bool = false
     @State private var showCustomSigning: Bool = false
     @State private var p12Path: String = ""
@@ -37,6 +38,11 @@ public struct GameSettingsIosDeploymentView: View {
             }
 
             if !deployment.isRunning {
+                if let record = deploymentTracker.deploymentRecord(for: game) {
+                    renewalStatusCard(record: record)
+                } else {
+                    untrackedSideloadCard
+                }
                 installSetupCard
             }
         }
@@ -46,6 +52,7 @@ public struct GameSettingsIosDeploymentView: View {
             if deviceService.connectedDevices.isEmpty || deviceService.signingTeams.isEmpty {
                 deviceService.refreshDevicesAndTeams()
             }
+            deviceService.syncInstalledApps(with: [game])
             if mobileprovisionPath.isEmpty, let saved = UserDefaults.standard.string(forKey: "NXNative_SavedCustomProvisioningProfilePath") {
                 mobileprovisionPath = saved
             }
@@ -365,6 +372,31 @@ public struct GameSettingsIosDeploymentView: View {
                     )
                     .cornerRadius(8)
                 }
+            } else {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundColor(NXTheme.secondary)
+                        .font(.system(size: 14))
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sideloading & Direct Installation Guide")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(NXTheme.textPrimary)
+
+                        Text("• Unsigned / AirDrop: Stock iOS cannot install raw IPAs directly. Open the IPA via AltStore, SideStore, Sideloadly, or TrollStore.\n• Direct Cable Install: Select your Apple Developer / Personal Team above. NxNative will automatically provision and sign it via Xcode for your device.")
+                            .font(.system(size: 10.5))
+                            .foregroundColor(NXTheme.textSecondary)
+                            .lineSpacing(2)
+                    }
+                    Spacer()
+                }
+                .padding(9)
+                .background(NXTheme.secondary.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(NXTheme.secondary.opacity(0.25), lineWidth: 1)
+                )
+                .cornerRadius(8)
             }
 
             // Row 4: Action Button
@@ -389,10 +421,12 @@ public struct GameSettingsIosDeploymentView: View {
                     .help("Transfers RomFS.img directly to the app's Documents folder on the connected device.")
                 }
 
+                let isDeployed = deploymentTracker.isGameDeployed(game)
+
                 Button(action: {
                     guard let dev = deviceService.selectedDevice else { return }
                     SoundEffectService.shared.play(.click)
-                    deviceService.installApp(appBundleURL: game.url, on: dev, team: deviceService.selectedSigningTeam) { success, _ in
+                    deviceService.installApp(appBundleURL: game.url, on: dev, team: deviceService.selectedSigningTeam, game: game) { success, _ in
                         if success {
                             SoundEffectService.shared.play(.click)
                         } else {
@@ -401,9 +435,13 @@ public struct GameSettingsIosDeploymentView: View {
                     }
                 }) {
                     HStack(spacing: 6) {
-                        Image(systemName: "arrow.down.to.line.circle.fill")
-                        Text(L10n.t("settings_modal.install_button", deviceService.selectedDevice?.name ?? "iOS"))
-                            .fontWeight(.bold)
+                        Image(systemName: isDeployed ? "arrow.triangle.2.circlepath" : "arrow.down.to.line.circle.fill")
+                        Text(
+                            isDeployed
+                                ? L10n.t("settings_modal.renew_button", deviceService.selectedDevice?.name ?? "iOS")
+                                : L10n.t("settings_modal.install_button", deviceService.selectedDevice?.name ?? "iOS")
+                        )
+                        .fontWeight(.bold)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 5)
@@ -417,5 +455,124 @@ public struct GameSettingsIosDeploymentView: View {
         }
         .padding(12)
         .nxGlassCard(cornerRadius: 10, isNested: true)
+    }
+
+    private func renewalStatusCard(record: IosDeploymentRecord) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: record.isExpired ? "exclamationmark.triangle.fill" : "clock.arrow.circlepath")
+                        .foregroundColor(record.tier.tintColor)
+                        .font(.system(size: 13, weight: .bold))
+                    
+                    Text(L10n.t("settings.ios_sideload_status"))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                
+                Spacer()
+                
+                IosRenewalBadgeView(record: record)
+            }
+            
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("settings.ios_first_deployed"))
+                        .font(.system(size: 10))
+                        .foregroundColor(NXTheme.textSecondary)
+                    Text(record.formattedFirstDeployed)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L10n.t("settings.ios_last_renewed"))
+                        .font(.system(size: 10))
+                        .foregroundColor(NXTheme.textSecondary)
+                    Text(record.formattedLastDeployed)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                
+                if let dev = record.targetDeviceName {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(L10n.t("settings.ios_target_device"))
+                            .font(.system(size: 10))
+                            .foregroundColor(NXTheme.textSecondary)
+                        Text(dev)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .foregroundColor(NXTheme.textPrimary)
+                    }
+                }
+                
+                Spacer()
+                
+                HStack(spacing: 6) {
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        deploymentTracker.markAsDeployedToday(for: game, deviceName: deviceService.selectedDevice?.name ?? record.targetDeviceName)
+                    }) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "arrow.clockwise")
+                            Text(L10n.t("settings.ios_mark_renewed_today"))
+                        }
+                    }
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.mini)
+                    .help("Reset the 7-day countdown starting from now")
+                    
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        deploymentTracker.clearDeployment(for: game)
+                    }) {
+                        Image(systemName: "trash")
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.mini)
+                    .help(L10n.t("settings.ios_clear_deployment"))
+                }
+            }
+        }
+        .padding(10)
+        .background(record.tier.tintColor.opacity(0.08))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(record.tier.tintColor.opacity(0.3), lineWidth: 1)
+        )
+        .cornerRadius(10)
+    }
+
+    private var untrackedSideloadCard: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "iphone.badge.play")
+                .foregroundColor(NXTheme.secondary)
+                .font(.system(size: 13))
+            
+            Text(L10n.t("settings.ios_already_installed_prompt"))
+                .font(.system(size: 11))
+                .foregroundColor(NXTheme.textSecondary)
+            
+            Spacer()
+            
+            Button(action: {
+                SoundEffectService.shared.play(.click)
+                deploymentTracker.markAsDeployedToday(for: game, deviceName: deviceService.selectedDevice?.name)
+            }) {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark.circle.fill")
+                    Text(L10n.t("settings.ios_mark_deployed_today"))
+                }
+            }
+            .buttonStyle(NXSecondaryButtonStyle())
+            .controlSize(.mini)
+        }
+        .padding(8)
+        .background(NXTheme.glassSurface)
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(NXTheme.borderSubtle, lineWidth: 1)
+        )
+        .cornerRadius(8)
     }
 }

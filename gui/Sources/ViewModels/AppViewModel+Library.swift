@@ -43,6 +43,7 @@ extension AppViewModel {
                     for game in visible {
                         GameCoverService.shared.ensureCover(for: game)
                     }
+                    DeviceDeploymentService.shared.syncInstalledApps(with: visible)
                 }
             }
         }
@@ -201,11 +202,6 @@ extension AppViewModel {
                 a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
             detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        case .ported:
-            libraryGames.sort { a, b in
-                a.modificationDate > b.modificationDate
-            }
-            detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         }
         LibraryOrder.save(libraryGames)
     }
@@ -224,10 +220,6 @@ extension AppViewModel {
         case .name:
             return games.sorted { a, b in
                 a.name.localizedStandardCompare(b.name) == .orderedAscending
-            }
-        case .ported:
-            return games.sorted { a, b in
-                a.modificationDate > b.modificationDate
             }
         }
     }
@@ -248,7 +240,7 @@ extension AppViewModel {
             combined.sort { a, b in
                 a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
-        case .lastPlayed, .ported:
+        case .lastPlayed:
             combined = LibraryOrder.applyUnified(to: combined)
         }
         return combined

@@ -233,6 +233,7 @@ static uint64_t parse_switch_btn(NSString *s) {
     if ([s isEqualToString:@"D-Pad Up"]) return DM_BTN_UP;
     if ([s isEqualToString:@"D-Pad Right"]) return DM_BTN_RIGHT;
     if ([s isEqualToString:@"D-Pad Down"]) return DM_BTN_DOWN;
+    if ([s isEqualToString:@"Capture"]) return DM_BTN_MINUS;
     return 0;
 }
 
@@ -367,7 +368,7 @@ static void on_mouse_button(int buttonCode, int down) {
 }
 
 static void on_key(NSEvent *e, int down) {
-    if (!g_input_on) return;
+    if (!g_input_on && g_win && !g_win.isKeyWindow) return;
     load_custom_input_mapping();
     if (e.keyCode == 53 && down && g_cursor_locked) {
         set_cursor_locked(0);
@@ -417,7 +418,7 @@ static void check_xbox_home_button(GCExtendedGamepad *g) {
 }
 
 static void pad_read(GCExtendedGamepad *g) {
-    if (!g_input_on) return;
+    if (g_win && g_win.miniaturized) return;
     load_custom_input_mapping();
     check_xbox_home_button(g);
     int p = g_merge ? 0 : pad_slot_of(&g_slots, (__bridge const void *)g.controller); if (p < 0) return;
@@ -455,7 +456,16 @@ static void pads_changed(GCController *gone) {
     if (g_merge) {
         int any = 0;
         for (GCController *c in GCController.controllers) if (c.extendedGamepad && c != gone) {
-            any = 1; pad_keep_system_buttons(c); c.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *g, GCControllerElement *el) { (void)el; pad_read(g); };
+            any = 1; pad_keep_system_buttons(c);
+            __weak GCController *weakC = c;
+            c.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *g, GCControllerElement *el) { (void)el; pad_read(g); };
+            if (@available(macOS 11.0, *)) {
+                c.physicalInputProfile.valueDidChangeHandler = ^(GCPhysicalInputProfile *profile, GCControllerElement *element) {
+                    (void)profile; (void)element;
+                    GCController *sc = weakC;
+                    if (sc && sc.extendedGamepad) pad_read(sc.extendedGamepad);
+                };
+            }
             dm_motion_attach(c, 0);   // every controller is player 1: the last one moved drives its six-axis sensor
             pad_read(c.extendedGamepad);
         }
@@ -468,6 +478,9 @@ static void pads_changed(GCController *gone) {
     for (int p = 0; p < DM_PLAYERS; p++) if (g_held[p] && (g_held[p] == gone || ![now containsObject:g_held[p]])) {
         npad_name(p, nb, sizeof nb); LOG("controller '%s' disconnected: player %d (npad %s) is free", pad_name(g_held[p]), p + 1, nb);
         g_held[p].extendedGamepad.valueChangedHandler = nil;
+        if (@available(macOS 11.0, *)) {
+            g_held[p].physicalInputProfile.valueDidChangeHandler = nil;
+        }
         dm_motion_detach(g_held[p], p);
         dm_haptics_apple_controller(p, nil);
         pad_slot_free(&g_slots, (__bridge const void *)g_held[p]); g_held[p] = nil;
@@ -477,7 +490,15 @@ static void pads_changed(GCController *gone) {
         int p = pad_slot_take(&g_slots, (__bridge const void *)c, pad_name(c));
         if (p < 0) { LOG("controller '%s' connected: all %d players are taken, not used", pad_name(c), DM_PLAYERS); continue; }
         g_held[p] = c; pad_keep_system_buttons(c);
+        __weak GCController *weakC = c;
         c.extendedGamepad.valueChangedHandler = ^(GCExtendedGamepad *g, GCControllerElement *el) { (void)el; pad_read(g); };
+        if (@available(macOS 11.0, *)) {
+            c.physicalInputProfile.valueDidChangeHandler = ^(GCPhysicalInputProfile *profile, GCControllerElement *element) {
+                (void)profile; (void)element;
+                GCController *sc = weakC;
+                if (sc && sc.extendedGamepad) pad_read(sc.extendedGamepad);
+            };
+        }
         dm_motion_attach(c, p);
         npad_name(p, nb, sizeof nb); LOG("controller '%s' connected: player %d (npad %s)%s", pad_name(c), p + 1, nb, c.motion.hasRotationRate ? ", with motion (gyro)" : "");
         pad_read(c.extendedGamepad);
@@ -515,6 +536,12 @@ static void pads_start(void) {
                                                                            : "each controller is a player of its own, the keyboard plays with player 1");
     pads_changed(nil);
     dm_motion_pro_start(pro_devices_changed);
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(500 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+        pads_changed(nil);
+    });
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1500 * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+        pads_changed(nil);
+    });
 }
 
 // Mouse as a single-point touchscreen (front.h dm_touch_set): left button down / drag = finger 0, release = lifted. The content view takes the clicks,
@@ -1514,10 +1541,19 @@ void front_run(void (*guest)(void)) {
         if (getenv("DM_METAL_HUD") && atoi(getenv("DM_METAL_HUD"))) { g_layer.developerHUDProperties = @{@"mode": @"default"}; LOG("front end: Metal performance HUD on (DM_METAL_HUD)"); }   // Apple's HUD over the game: frame rate, frame and GPU time, memory
         v.layer = g_layer; [(DmGameView *)v fitDrawable];
         [win center];
-        [win makeKeyAndOrderFront:nil];
-        [win makeFirstResponder:v];
         g_screen_fps = (int)(win.screen ?: NSScreen.mainScreen).maximumFramesPerSecond;
         g_win = win;
+
+        // Register window key observers BEFORE makeKeyAndOrderFront to guarantee initial key/focus acquisition
+        NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
+        [nc addObserverForName:NSWindowDidResignKeyNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_release(); if (!win.miniaturized) dm_focus_set(2); }];
+        [nc addObserverForName:NSWindowDidBecomeKeyNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_resume(); dm_focus_set(1); }];
+        [nc addObserverForName:NSWindowDidMiniaturizeNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_release(); dm_focus_set(3); dm_audio_suspend(1); dm_gfx_suspend(1); }];
+        [nc addObserverForName:NSWindowDidDeminiaturizeNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; dm_gfx_suspend(0); dm_audio_suspend(0); dm_focus_set(2); }];
+
+        [win makeKeyAndOrderFront:nil];
+        [win makeFirstResponder:v];
+        input_resume();
         [NSApp activateIgnoringOtherApps:YES];
         // A host another process starts (scripts/regress.py) is not activated (its focus state stays 2), so its window opened wherever it landed in the window order, and behind
         // another app's window macOS fires its display link about once a second: Breath of the Wild stepped up to 3 vsyncs at boot and never came back (20 fps runs).
@@ -1633,16 +1669,11 @@ void front_run(void (*guest)(void)) {
                                                       usingBlock:^(NSNotification *n) { (void)n; exit(0); }];
         // Lifecycle (hle.h / dm.h): focus lost → 2, focus regained → 1; minimized → 3 + audio paused + GPU suspended, restored → resume (followed by focus regained → 1).
         // Input is released when the window stops being key (and when it is minimized) and taken up again when it is key again
-        NSNotificationCenter *nc = NSNotificationCenter.defaultCenter;
         [nc addObserverForName:NSWindowDidChangeScreenNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; if (win.screen) { g_screen_fps = (int)win.screen.maximumFramesPerSecond; g_layer.contentsScale = win.backingScaleFactor; } screen_match_apply(); }];
         // Entering and leaving fullscreen: the layer is layer-backed, so its frame (and with it the drawable) follows the
         // content view by itself; only the scale factor has to be carried over to the screen the window ended up on. The screen's rate is matched in fullscreen only (screen_match_apply)
         [nc addObserverForName:NSWindowDidEnterFullScreenNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; g_fullscreen = 1; g_layer.contentsScale = win.backingScaleFactor; screen_match_apply(); }];
         [nc addObserverForName:NSWindowDidExitFullScreenNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; g_fullscreen = 0; g_layer.contentsScale = win.backingScaleFactor; screen_match_apply(); }];
-        [nc addObserverForName:NSWindowDidResignKeyNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_release(); if (!win.miniaturized) dm_focus_set(2); }];
-        [nc addObserverForName:NSWindowDidBecomeKeyNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_resume(); dm_focus_set(1); }];
-        [nc addObserverForName:NSWindowDidMiniaturizeNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; input_release(); dm_focus_set(3); dm_audio_suspend(1); dm_gfx_suspend(1); }];
-        [nc addObserverForName:NSWindowDidDeminiaturizeNotification object:win queue:nil usingBlock:^(NSNotification *n) { (void)n; dm_gfx_suspend(0); dm_audio_suspend(0); dm_focus_set(2); }];
         // Guest thread: 64 MiB stack (the Switch main thread stack is specified by npdm; the host gives plenty)
         static guest_arg ga; ga.fn = guest;
         pthread_attr_t a; pthread_attr_init(&a); pthread_attr_setstacksize(&a, 64u << 20);
