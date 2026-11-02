@@ -3,6 +3,7 @@
 .iosdd_mac/
 .iosdd_*/
 .DS_Store
+*.DS_Store
 __pycache__/
 # Made from each shader build's Mac outputs (c1_guard.py, cb_extent.py; the NSP script makes them), not committed
 dm/games/*/c1_full.tsv
@@ -15,6 +16,8 @@ gui/Resources/tools/
 .coverage
 .coverage.*
 /coverage.json
+dm/gfx/tests/t_nvn*
+dm/host/tests/build/
 
 # Clean-Room & Legal Compliance: No copyrighted box art, covers, heroes, icons or scraped store databases in repo
 docs/images/covers/
@@ -30,4 +33,16 @@ docs/images/*.png
 !docs/images/screenshots/*
 !docs/images/gifs/
 !docs/images/gifs/*
+
+# Strict Clean-Room & Anti-Piracy Protection: Never commit keys, dumps or game files
+*.keys
+*prod.keys*
+*title.keys*
+*.nsp
+*.nsz
+*.xci
+*.xcz
+Staging/
+Screenshots/
+
 

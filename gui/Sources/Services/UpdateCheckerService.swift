@@ -3,7 +3,7 @@ import AppKit
 
 public final class UpdateCheckerService {
     public static let shared = UpdateCheckerService()
-    public static let launcherRepoURL = "https://github.com/rennan101/nxnative_Launcher.git"
+    public static let launcherRepoURL = "https://gitlab.com/rennan-group2/nxnative_Launcher.git"
     public static let upstreamRepoURL = "https://github.com/seedds/nxnative.git"
     
     public weak var delegate: UpdateCheckerDelegate?

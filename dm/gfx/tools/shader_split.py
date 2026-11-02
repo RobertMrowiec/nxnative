@@ -326,8 +326,21 @@ def glslc_shaders(d, label, need=True, skip=()):
         if any(a <= m.start() < b for a, b in skip): continue
         if m.start() + 0x48 > len(d): continue
         h = m.start(); size = struct.unpack_from('<I', d, h + 0x44)[0]
-        c = d.find(CTL_MAGIC, h, h + size) if 0x760 < size <= len(d) - h else -1
+        if not size and h + 0x60 <= len(d):
+            size = struct.unpack_from('<I', d, h + 0x5c)[0]
+        min_sz = 0x400 if not struct.unpack_from('<I', d, h + 0x44)[0] else 0x760
+        c = d.find(CTL_MAGIC, h, h + size) if min_sz < size <= len(d) - h else -1
         if c < 0: continue
+        if nvn2_ctl(d[c:c + 0x48]):
+            while c >= 0:
+                nctl = struct.unpack_from('<I', d, c + 0x30)[0]
+                ncode = struct.unpack_from('<I', d, c + 0x44)[0]
+                ctl, code = d[c:c + nctl], d[c + nctl:c + nctl + ncode]
+                st = nvn2_stage(ctl, code) if c + nctl + ncode <= h + size else None
+                if st and not check(label, st, ctl, code):
+                    out.append((f'{label}#GLSLC@{h:#x}', st, ctl, code))
+                c = d.find(CTL_MAGIC, c + nctl + ncode, h + size)
+            continue
         if d.find(CTL_MAGIC, c + 4, h + size) >= 0:
             out += glslc_program(d, h, size, label); continue
         nctl, ncode = (struct.unpack_from('<I', d, c + 0x20)[0], struct.unpack_from('<I', d, c + 0x704)[0]) if c + 0x708 <= h + size else (0, 0)   # 0: a control section the output does not hold

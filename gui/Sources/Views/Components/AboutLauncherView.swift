@@ -104,14 +104,14 @@ public struct AboutLauncherView: View {
                 Spacer()
                 
                 Button(action: {
-                    if let url = URL(string: "https://github.com/rennan101/nxnative_Launcher") {
+                    if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher") {
                         NSWorkspace.shared.open(url)
                     }
                 }) {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 10, weight: .bold))
-                        Text("GitHub")
+                        Text("GitLab")
                             .font(.system(size: 11, weight: .bold))
                     }
                     .foregroundColor(.white)

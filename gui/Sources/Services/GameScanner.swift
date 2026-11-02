@@ -10,8 +10,9 @@ public final class GameScanner {
         let allowedExtensions = Set(["nsp", "nsz", "xci", "xcz"])
         
         // Check if directory itself is a game dump folder
-        if let dumpItem = inspectDumpFolder(url: directory) {
-            return [dumpItem]
+        let rootDumpItems = inspectDumpItems(url: directory)
+        if !rootDumpItems.isEmpty {
+            return rootDumpItems
         }
         
         guard let enumerator = fm.enumerator(
@@ -31,9 +32,10 @@ public final class GameScanner {
             
             // Check for game dumps (folders containing base/exefs/main.npdm)
             if resourceValues?.isDirectory == true {
-                if let dumpItem = inspectDumpFolder(url: fileURL) {
+                let dumpItems = inspectDumpItems(url: fileURL)
+                if !dumpItems.isEmpty {
                     enumerator.skipDescendants()
-                    results.append(dumpItem)
+                    results.append(contentsOf: dumpItems)
                     continue
                 }
             }
@@ -195,6 +197,39 @@ public final class GameScanner {
             return String(rawStrings[range]).uppercased()
         }
         return nil
+    }
+    
+    /// Inspeciona pasta de dump e seus updates embutidos (updates/<version>), retornando o item base e os updates
+    public func inspectDumpItems(url: URL) -> [GameFileItem] {
+        guard let baseItem = inspectDumpFolder(url: url) else { return [] }
+        var items = [baseItem]
+        let fm = FileManager.default
+        let updatesURL = url.appendingPathComponent("updates")
+        if let updateFolders = try? fm.contentsOfDirectory(at: updatesURL, includingPropertiesForKeys: [.isDirectoryKey]) {
+            for u in updateFolders {
+                guard (try? u.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
+                let verName = u.lastPathComponent
+                if fm.fileExists(atPath: u.appendingPathComponent("exefs").path) || fm.fileExists(atPath: u.appendingPathComponent("romfs").path) {
+                    var uSize: Int64 = 0
+                    if let en = fm.enumerator(at: u, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles]) {
+                        for case let file as URL in en {
+                            if let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
+                                uSize += Int64(vals.fileSize ?? 0)
+                            }
+                        }
+                    }
+                    items.append(GameFileItem(
+                        url: u,
+                        name: "\(url.lastPathComponent) (Update v\(verName))",
+                        sizeBytes: uSize,
+                        type: .update,
+                        titleId: baseItem.titleId,
+                        versionString: "v\(verName)"
+                    ))
+                }
+            }
+        }
+        return items
     }
     
     /// Detecta se uma pasta é um dump de Nintendo Switch (Switch 1 ou Switch 2: base/exefs/main.npdm).

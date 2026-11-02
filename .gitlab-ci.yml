@@ -1,0 +1,107 @@
+# ==============================================================================
+# NxNative Launcher - GitLab CI/CD Pipeline
+# ==============================================================================
+# Automatically manages releases, maintains latest release permalinks, and tests
+# clean-room compliance and anti-injection security on tag, push, or merge request.
+# ==============================================================================
+
+stages:
+  - lint
+  - security
+  - release
+
+lint_clean_room:
+  stage: lint
+  image: python:3.11-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "==> Verifying Clean-Room compliance (No proprietary keys or ROM dumps in repo)..."
+    - python3 -c '
+import os, sys
+banned_exts = [".keys", ".nsp", ".nsz", ".xci", ".xcz"]
+found = []
+for root, dirs, files in os.walk("."):
+    for f in files:
+        if any(f.endswith(ext) for ext in banned_exts) or f in ["prod.keys", "title.keys"]:
+            found.append(os.path.join(root, f))
+if found:
+    print("❌ Violation: Found proprietary files:", found)
+    sys.exit(1)
+print("✅ Clean-Room check passed: No keys or ROM dumps found.")
+'
+
+security_scan:
+  stage: security
+  image: python:3.11-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+  script:
+    - echo "==> Running security audit for code injection and secret leaks..."
+    - python3 -c '
+import os, re, sys
+
+SECRET_PATTERNS = [
+    r"glpat-[a-zA-Z0-9_\-]{20,}",
+    r"ghp_[a-zA-Z0-9]{36}",
+    r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----",
+]
+
+SUSPICIOUS_PATTERNS = [
+    r"base64\s+-d\s*\|\s*(ba|z)?sh",
+    r"nc\s+-e\s+/bin/",
+    r"/dev/tcp/[0-9]+\.[0-9]+",
+]
+
+violations = []
+
+for root, dirs, files in os.walk("."):
+    if ".git" in root or ".build" in root or "tools" in root or "python" in root:
+        continue
+    for f in files:
+        if f.endswith((".swift", ".py", ".sh", ".command", ".md", ".yml", ".json")):
+            path = os.path.join(root, f)
+            try:
+                with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                    content = fh.read()
+                    for sp in SECRET_PATTERNS:
+                        if re.search(sp, content):
+                            violations.append(f"Secret leak pattern matched in {path}")
+                    for susp in SUSPICIOUS_PATTERNS:
+                        if re.search(susp, content):
+                            violations.append(f"Suspicious shell injection pattern matched in {path}")
+            except Exception as e:
+                pass
+
+if violations:
+    print("❌ Security audit failed:")
+    for v in violations:
+        print("  -", v)
+    sys.exit(1)
+
+print("✅ Security audit passed: No token leaks or malicious injection patterns detected.")
+'
+
+release_job:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - echo "==> Generating GitLab Release for tag $CI_COMMIT_TAG"
+  release:
+    name: "NxNative Launcher $CI_COMMIT_TAG"
+    description: |
+      ### 🚀 NxNative Launcher $CI_COMMIT_TAG - Latest Release
+      
+      Official native Apple Silicon build for macOS 13+ (Ventura, Sonoma, Sequoia).
+      
+      #### ⚖️ Game Preservation Notice ("for those who come after")
+      This project is strictly for software preservation, technical interoperability under DMCA 17 U.S.C. § 1201(f), and educational research.
+      
+      **NxNative Launcher does NOT distribute, host, or link to copies of games, ROMs, cryptographic keys, or proprietary system firmwares.**
+    tag_name: "$CI_COMMIT_TAG"
+    ref: "$CI_COMMIT_TAG"

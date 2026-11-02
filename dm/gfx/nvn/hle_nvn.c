@@ -1757,6 +1757,8 @@ static void present_cfg(const win_t *o) {
     LOG("[nvn] present tick %d Hz, interval mode %s (%s; present interval set by the game %d; %s)", g_hz, g_display_mode ? "display (one frame per tick, a cut)" : "game (original semantics)",
         m ? "DM_PRESENT_INTERVAL" : "game profile present_interval", o->interval, scr > 0 ? "window, fixed 60 Hz" : "no window, fixed 60 Hz");
 }
+__attribute__((weak)) int dm_fps_has_engine_lock(void) { return 0; }
+
 static int speed_sync_on(void) {
     static int s = -1;
     if (s < 0) {

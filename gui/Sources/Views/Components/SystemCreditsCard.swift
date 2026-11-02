@@ -15,9 +15,9 @@ public struct SystemCreditsCard: View {
                     Spacer()
                     
                     HStack(spacing: 12) {
-                        Link(destination: URL(string: "https://github.com/rennan101/nxnative_Launcher")!) {
+                        Link(destination: URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher")!) {
                             HStack(spacing: 4) {
-                                Text("rennan101/nxnative_Launcher")
+                                Text("rennan-group2/nxnative_Launcher")
                                 Image(systemName: "arrow.up.right")
                             }
                             .font(.system(size: 10, weight: .semibold))
@@ -37,7 +37,7 @@ public struct SystemCreditsCard: View {
                 
                 // Highlight Card for Launcher Developer (Rennan)
                 Button(action: {
-                    if let url = URL(string: "https://github.com/rennan101/nxnative_Launcher") {
+                    if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher") {
                         NSWorkspace.shared.open(url)
                     }
                 }) {

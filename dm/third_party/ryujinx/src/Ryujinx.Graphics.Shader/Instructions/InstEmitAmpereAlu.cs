@@ -347,19 +347,33 @@ namespace Ryujinx.Graphics.Shader.Instructions
             EmitF2F(context, (DstFmt)srcSize, (DstFmt)dstSize, IntegerRound.Pass, src, x.Rd, s.Abs, s.Neg, false);
         }
 
-        // F2FP.F16.F32.PACK_AB Rd, a, b: a to the high half, b to the low one
+        // F2FP.F16.F32: pack two floats into Rd, or merge a float into one half of Rc
         public static void AF2fp(EmitterContext context)
         {
             AmpereOp x = new(context.CurrOp);
 
-            if (x.Bit(78) || x.Bit(72))
+            if (x.Bit(78))
+            {
+                (_, ASrc b, ASrc c) = AAluSrcs(context, x, abs: false);
+                Operand cVal = AGet(context, c);
+                Operand fVal = AFloat(context, b);
+
+                Operand res = x.Bit(80)
+                    ? context.PackHalf2x16(fVal, context.UnpackHalf2x16High(cVal))
+                    : context.PackHalf2x16(context.UnpackHalf2x16Low(cVal), fVal);
+
+                ASet(context, x, res, AUniform(context));
+                return;
+            }
+
+            if (x.Bit(72))
             {
                 throw AFail(context, "F2FP.MERGE_C");
             }
 
-            (ASrc a, ASrc b) = ASecond(context, x, abs: false);
+            (ASrc a, ASrc b2) = ASecond(context, x, abs: false);
 
-            ASet(context, x, context.PackHalf2x16(AFloat(context, b), AFloat(context, a)), AUniform(context));
+            ASet(context, x, context.PackHalf2x16(AFloat(context, b2), AFloat(context, a)), AUniform(context));
         }
 
         // ---- packed halves ----

@@ -21,6 +21,9 @@ public struct PortGameModalView: View {
                     // Game Identity Card
                     gameIdentityCard
                     
+                    // Hardware-Based Porting Time Estimate Card
+                    hardwareEstimateCard
+                    
                     // Updates & DLCs Card
                     updatesAndDlcsCard
                     
@@ -143,6 +146,85 @@ public struct PortGameModalView: View {
                         .foregroundColor(NXTheme.secondary)
                 }
                 Spacer()
+            }
+        }
+    }
+    
+    // MARK: - Hardware Estimate Card
+    private var hardwareEstimateCard: some View {
+        let estimate = BuildEstimationService.shared.estimate(for: game, nxnativePath: viewModel.nxnativePath)
+        
+        return GlassCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Header with gauge icon & hardware badge
+                HStack(spacing: 8) {
+                    Label(viewModel.tr("port_modal.estimate_title"), systemImage: "speedometer")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                    
+                    Spacer()
+                    
+                    // Mac Hardware Pill (e.g.  Apple M4 (10 cores))
+                    HStack(spacing: 4) {
+                        Image(systemName: "apple.logo")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(String(format: viewModel.tr("port_modal.estimate_chip_cores"), estimate.chipName, estimate.coreCount))
+                            .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    }
+                    .foregroundColor(NXTheme.secondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(NXTheme.glassSurfaceElevated.opacity(0.8))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(NXTheme.specularRim.opacity(0.5), lineWidth: 0.8)
+                    )
+                }
+                
+                // Big Estimated Time Range & Category Badge
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Text(estimate.formattedRange)
+                        .font(.system(size: 18, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    // Badge: e.g. ⚡ Rebuild Instantâneo, 🟣 Extenso, 🟢 Rápido
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(estimate.speedCategory.color)
+                            .frame(width: 6, height: 6)
+                        Text(estimate.speedCategory.badgeTitle(viewModel: viewModel))
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(estimate.speedCategory.color.opacity(0.25))
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(estimate.speedCategory.color.opacity(0.6), lineWidth: 0.8)
+                    )
+                    
+                    if estimate.shaderCount > 0 {
+                        Spacer()
+                        Text("\(estimate.shaderCount.formatted()) shaders")
+                            .font(.system(size: 10, weight: .medium, design: .monospaced))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                }
+                
+                // Explanatory Note
+                HStack(spacing: 6) {
+                    Image(systemName: estimate.isCached ? "bolt.shield.fill" : "info.circle")
+                        .font(.system(size: 10))
+                        .foregroundColor(estimate.isCached ? Color(red: 0.15, green: 0.85, blue: 0.50) : NXTheme.textSecondary)
+                    
+                    Text(estimate.isCached ? viewModel.tr("port_modal.estimate_cached_note") : viewModel.tr("port_modal.estimate_cold_build_note"))
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundColor(NXTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
     }

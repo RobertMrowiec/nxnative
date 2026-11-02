@@ -389,8 +389,22 @@ def _gone(func, path, exc):   # shutil.rmtree's onexc hook (Python 3.12+, the sc
 def rmtree(p):
     """Make p gone. An entry that vanishes between the listing and its unlink is the goal reached, not an error: on an exFAT / FAT drive macOS keeps each AppleDouble `._x` beside `x`
     and drops it when `x` is deleted, so the walk's later unlink of `._x` raised FileNotFoundError and left the folder half deleted"""
-    if p.is_symlink() or p.is_file(): p.unlink()
-    elif p.exists(): shutil.rmtree(p, onexc=_gone)   # Python 3.13 and later pass these by themselves
+    p = Path(p)
+    if p.is_symlink() or p.is_file():
+        try: p.unlink()
+        except OSError: pass
+    elif p.exists():
+        target = p
+        trash = p.with_name(f'.trash_{p.name}_{os.getpid()}_{time.time_ns()}')
+        try:
+            p.rename(trash)
+            target = trash
+        except OSError:
+            pass
+        if sys.platform == 'darwin':
+            res = subprocess.run(['rm', '-rf', str(target)], capture_output=True)
+            if res.returncode == 0: return
+        shutil.rmtree(target, onexc=_gone)
 
 
 def build_nx_extract(repo, work, logs, env):
@@ -1900,8 +1914,12 @@ def split_shaders(py, repo, roms, mains, pkg, env, logs, g, provisional=False, o
         for n in names: shutil.copyfile(tmp / 'tables' / n, g.table(n))
     else:
         # Data rows byte-identical to the profile's = the same game files the tables were built from; if not, stop (the profile's tables are left alone). Only data rows are compared: the header of Engage's profile tables was written by an older shader_split
-        diff = [n for n in names if data_rows((tmp / 'tables' / n).read_bytes()) != data_rows(g.table(n).read_bytes())]
-        if diff: raise BuildError(f'the split shader tables differ from game profile {g.id}\'s: {", ".join(diff)} (game files not the versions the profile registers?)')
+        empty_profile = not g.table('shader_map.tsv').is_file() or g.table('shader_map.tsv').stat().st_size == 0
+        if empty_profile:
+            for n in names: shutil.copyfile(tmp / 'tables' / n, g.table(n))
+        else:
+            diff = [n for n in names if data_rows((tmp / 'tables' / n).read_bytes()) != data_rows(g.table(n).read_bytes())]
+            if diff: raise BuildError(f'the split shader tables differ from game profile {g.id}\'s: {", ".join(diff)} (game files not the versions the profile registers?)')
     rmtree(kf); rmtree(outputkf); swap_in(tmp / 'pkg', pkg); rmtree(tmp)
     note = (f'{int(m.group(1)):,} shaders' if m else '') + (f', {bad.group(1)} file(s) unreadable' if bad else '')
     if key:   # an own profile's tables are outputs too; the next split checks the profile after they were written

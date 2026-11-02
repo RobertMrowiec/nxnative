@@ -22,7 +22,7 @@ public struct PythonRuntimeInfo {
 
 public final class SystemDetector {
     public static let shared = SystemDetector()
-    public static let officialRepoURL = "https://github.com/rennan101/nxnative_Launcher.git"
+    public static let officialRepoURL = "https://gitlab.com/rennan-group2/nxnative_Launcher.git"
     public static let upstreamRepoURL = "https://github.com/seedds/nxnative.git"
     
     private init() {}
