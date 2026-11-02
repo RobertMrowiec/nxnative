@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Titelbildschirm-Aktivierung (L + R drücken)",
         "controls.title_screen_tip_desc": "Fast alle Switch-Spiele erfordern das gleichzeitige Drücken von L + R auf dem Titelbildschirm, um den Controller zu erkennen.",
         "controls.customize_keybindings": "Steuerung anpassen...",
+        "system.nonswitch_games_folder": "Native Mac-Spieleordner (.app)",
+        "system.no_nonswitch_folder_selected": "Noch keine Mac-Spieleordner ausgewählt. Fügen Sie Ordner mit Ihren macOS-Spielen hinzu.",
+        "system.add_nonswitch_folder": "Spieleordner hinzufügen",
+        "system.add_nonswitch_single_app": "Spiel hinzufügen (.app)",
+        "system.select_nonswitch_folder_message": "Wählen Sie Ordner mit nativen macOS-Spieleanwendungen (.app) aus.",
+        "system.select_nonswitch_app_message": "Wählen Sie native macOS-Spieleanwendungen (.app) für Ihre Bibliothek aus.",
+        "system.nonswitch_dirs_help": "Ordner, die rekursiv nach nativen Mac-Spielen (.app) für Ihre einheitliche Bibliothek durchsucht werden."
     ]
 }

@@ -20,6 +20,13 @@ extension Translations {
         "settings.icloud_sync_ios_title": "Sincronização com iPhone (iCloud Cross-Save)",
         "settings.ios_custom_cert_desc": "Importe Certificado de Desenvolvedor externo (.p12) e Perfil de Provisionamento (.mobileprovision) para sideloading ou contas de terceiros.",
         "settings.ios_push_romfs_only": "Apenas Enviar RomFS",
-        "settings.ios_unsigned_sideloading": "Nenhum (Não assinado / Sideloading)"
+        "settings.ios_unsigned_sideloading": "Nenhum (Não assinado / Sideloading)",
+        "system.nonswitch_games_folder": "Pastas de Jogos Nativos Mac (.app)",
+        "system.no_nonswitch_folder_selected": "Nenhuma pasta de jogos Mac selecionada. Adicione pastas contendo seus jogos do macOS.",
+        "system.add_nonswitch_folder": "Adicionar Pasta de Jogos",
+        "system.add_nonswitch_single_app": "Adicionar Jogo (.app)",
+        "system.select_nonswitch_folder_message": "Selecione pastas contendo seus aplicativos de jogos nativos do macOS (.app).",
+        "system.select_nonswitch_app_message": "Escolha pacotes de jogos nativos do macOS (.app) para adicionar à sua biblioteca.",
+        "system.nonswitch_dirs_help": "Diretórios escaneados recursivamente por jogos nativos de Mac (.app) para organizar sua biblioteca unificada."
     ]
 }

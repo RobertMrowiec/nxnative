@@ -48,6 +48,32 @@ struct SettingRow: View {
                     Slider(value: rangeValue, in: (s.min ?? 0)...(s.max ?? 1), step: s.step ?? 0.05)
                         .accessibilityLabel(s.label)
                         .accessibilityValue(percentage)
+                    
+                    if s.env == "DM_RENDER_SCALE" {
+                        HStack(spacing: 8) {
+                            Button("50% Performance") {
+                                rangeValue.wrappedValue = 0.50
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                            .tint(abs(rangeValue.wrappedValue - 0.50) < 0.01 ? .blue : .secondary)
+
+                            Button("75% Balanced") {
+                                rangeValue.wrappedValue = 0.75
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                            .tint(abs(rangeValue.wrappedValue - 0.75) < 0.01 ? .blue : .secondary)
+
+                            Button("100% Native") {
+                                rangeValue.wrappedValue = 1.00
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.mini)
+                            .tint(abs(rangeValue.wrappedValue - 1.00) < 0.01 ? .blue : .secondary)
+                        }
+                        .padding(.top, 2)
+                    }
                 }
             default:
                 Toggle(isOn: Binding(get: { (m.values[s.env] ?? s.def) == s.onValue }, set: { m.values[s.env] = $0 ? s.onValue : s.offValue })) {

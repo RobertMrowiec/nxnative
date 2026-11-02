@@ -215,6 +215,14 @@ static uint64_t g_elem_ddown = DM_BTN_DOWN;
 static uint64_t g_elem_dleft = DM_BTN_LEFT;
 static uint64_t g_elem_dright = DM_BTN_RIGHT;
 
+// Multi-player profile mappings (players 0..DM_PLAYERS-1)
+typedef struct {
+    int has_custom;
+    float deadzone;
+    uint64_t a, b, x, y, l, r, zl, zr, plus, minus, ls, rs, dup, ddown, dleft, dright;
+} player_gamepad_map;
+static player_gamepad_map g_player_maps[DM_PLAYERS];
+
 static uint64_t parse_switch_btn(NSString *s) {
     if (!s) return 0;
     if ([s isEqualToString:@"A"]) return DM_BTN_A;
@@ -348,6 +356,50 @@ static void load_custom_input_mapping(void) {
         if (gp[@"dpad.left"]) g_elem_dleft = parse_switch_btn(gp[@"dpad.left"]);
         if (gp[@"dpad.right"]) g_elem_dright = parse_switch_btn(gp[@"dpad.right"]);
     }
+    // Initialize default player fallback maps
+    for (int p = 0; p < DM_PLAYERS; p++) {
+        g_player_maps[p].has_custom = g_has_custom_gamepad_map;
+        g_player_maps[p].deadzone = g_deadzone;
+        g_player_maps[p].a = g_elem_a; g_player_maps[p].b = g_elem_b;
+        g_player_maps[p].x = g_elem_x; g_player_maps[p].y = g_elem_y;
+        g_player_maps[p].l = g_elem_l; g_player_maps[p].r = g_elem_r;
+        g_player_maps[p].zl = g_elem_zl; g_player_maps[p].zr = g_elem_zr;
+        g_player_maps[p].plus = g_elem_plus; g_player_maps[p].minus = g_elem_minus;
+        g_player_maps[p].ls = g_elem_ls; g_player_maps[p].rs = g_elem_rs;
+        g_player_maps[p].dup = g_elem_dup; g_player_maps[p].ddown = g_elem_ddown;
+        g_player_maps[p].dleft = g_elem_dleft; g_player_maps[p].dright = g_elem_dright;
+    }
+    NSDictionary *players = dict[@"players"];
+    if ([players isKindOfClass:[NSDictionary class]]) {
+        for (int p = 0; p < DM_PLAYERS; p++) {
+            NSString *pKey = [NSString stringWithFormat:@"%d", p];
+            NSDictionary *pDict = players[pKey];
+            if (![pDict isKindOfClass:[NSDictionary class]]) continue;
+            if (pDict[@"analogDeadzone"]) {
+                g_player_maps[p].deadzone = [pDict[@"analogDeadzone"] floatValue];
+            }
+            NSDictionary *pGp = pDict[@"gamepad"];
+            if ([pGp isKindOfClass:[NSDictionary class]] && [pGp count] > 0) {
+                g_player_maps[p].has_custom = 1;
+                if (pGp[@"buttonA"]) g_player_maps[p].a = parse_switch_btn(pGp[@"buttonA"]);
+                if (pGp[@"buttonB"]) g_player_maps[p].b = parse_switch_btn(pGp[@"buttonB"]);
+                if (pGp[@"buttonX"]) g_player_maps[p].x = parse_switch_btn(pGp[@"buttonX"]);
+                if (pGp[@"buttonY"]) g_player_maps[p].y = parse_switch_btn(pGp[@"buttonY"]);
+                if (pGp[@"leftShoulder"]) g_player_maps[p].l = parse_switch_btn(pGp[@"leftShoulder"]);
+                if (pGp[@"rightShoulder"]) g_player_maps[p].r = parse_switch_btn(pGp[@"rightShoulder"]);
+                if (pGp[@"leftTrigger"]) g_player_maps[p].zl = parse_switch_btn(pGp[@"leftTrigger"]);
+                if (pGp[@"rightTrigger"]) g_player_maps[p].zr = parse_switch_btn(pGp[@"rightTrigger"]);
+                if (pGp[@"leftThumbstickButton"]) g_player_maps[p].ls = parse_switch_btn(pGp[@"leftThumbstickButton"]);
+                if (pGp[@"rightThumbstickButton"]) g_player_maps[p].rs = parse_switch_btn(pGp[@"rightThumbstickButton"]);
+                if (pGp[@"buttonMenu"]) g_player_maps[p].plus = parse_switch_btn(pGp[@"buttonMenu"]);
+                if (pGp[@"buttonOptions"]) g_player_maps[p].minus = parse_switch_btn(pGp[@"buttonOptions"]);
+                if (pGp[@"dpad.up"]) g_player_maps[p].dup = parse_switch_btn(pGp[@"dpad.up"]);
+                if (pGp[@"dpad.down"]) g_player_maps[p].ddown = parse_switch_btn(pGp[@"dpad.down"]);
+                if (pGp[@"dpad.left"]) g_player_maps[p].dleft = parse_switch_btn(pGp[@"dpad.left"]);
+                if (pGp[@"dpad.right"]) g_player_maps[p].dright = parse_switch_btn(pGp[@"dpad.right"]);
+            }
+        }
+    }
     LOG("custom input mapping loaded from %s (profile: %s, deadzone: %.2f)", [targetPath UTF8String], [dict[@"name"] UTF8String] ?: "default", g_deadzone);
 }
 
@@ -401,35 +453,57 @@ static int32_t pad_axis(float v) {
 }
 
 static uint64_t g_home_held_t0 = 0;
-static void check_xbox_home_button(GCExtendedGamepad *g) {
+static void check_gamepad_system_exit(GCExtendedGamepad *g) {
+    // 1. Home button held for 3 seconds
     if (g.buttonHome && g.buttonHome.isPressed) {
         if (!g_home_held_t0) {
             g_home_held_t0 = now_ns();
         } else if (now_ns() - g_home_held_t0 >= 3000000000ull) { // 3 seconds held!
-            LOG("Xbox Logo / Home button held for 3 seconds: bringing NxNative to front and quitting game");
+            LOG("Home button held for 3 seconds: bringing NxNative to front and quitting game");
             g_home_held_t0 = 0;
-            // Activate NxNative in front of other screens and quit
             system("open -a NxNative_Launcher 2>/dev/null || osascript -e 'tell application \"NxNative_Launcher\" to activate' 2>/dev/null &");
             exit(0);
         }
     } else {
         g_home_held_t0 = 0;
     }
+
+    // 2. Dedicated Share / Capture button (Xbox Share, Switch Capture, DualSense Create/Share)
+    // Instantly quits the game and brings NxNative_Launcher to the front.
+    if (@available(macOS 11.0, *)) {
+        GCController *c = g.controller;
+        if (c && c.physicalInputProfile.buttons[GCInputButtonShare] && c.physicalInputProfile.buttons[GCInputButtonShare].isPressed) {
+            LOG("Share / Capture button pressed: bringing NxNative to front and quitting game");
+            system("open -a NxNative_Launcher 2>/dev/null || osascript -e 'tell application \"NxNative_Launcher\" to activate' 2>/dev/null &");
+            exit(0);
+        }
+    }
 }
 
 static void pad_read(GCExtendedGamepad *g) {
     if (g_win && g_win.miniaturized) return;
     load_custom_input_mapping();
-    check_xbox_home_button(g);
+    check_gamepad_system_exit(g);
     int p = g_merge ? 0 : pad_slot_of(&g_slots, (__bridge const void *)g.controller); if (p < 0) return;
     dm_haptics_apple_controller(p, g.controller);
     uint64_t m = 0;
     #define K(btn, bit) if (btn.isPressed) m |= bit
-    if (g_has_custom_gamepad_map) {
-        K(g.buttonA, g_elem_a); K(g.buttonB, g_elem_b); K(g.buttonX, g_elem_x); K(g.buttonY, g_elem_y);
-        K(g.leftShoulder, g_elem_l); K(g.rightShoulder, g_elem_r); K(g.leftTrigger, g_elem_zl); K(g.rightTrigger, g_elem_zr);
-        K(g.buttonMenu, g_elem_plus); K(g.buttonOptions, g_elem_minus); K(g.leftThumbstickButton, g_elem_ls); K(g.rightThumbstickButton, g_elem_rs);
-        K(g.dpad.left, g_elem_dleft); K(g.dpad.up, g_elem_dup); K(g.dpad.right, g_elem_dright); K(g.dpad.down, g_elem_ddown);
+    int has_custom = (p >= 0 && p < DM_PLAYERS) ? g_player_maps[p].has_custom : g_has_custom_gamepad_map;
+    if (has_custom) {
+        player_gamepad_map *pm = (p >= 0 && p < DM_PLAYERS) ? &g_player_maps[p] : NULL;
+        uint64_t ea = pm ? pm->a : g_elem_a, eb = pm ? pm->b : g_elem_b;
+        uint64_t ex = pm ? pm->x : g_elem_x, ey = pm ? pm->y : g_elem_y;
+        uint64_t el = pm ? pm->l : g_elem_l, er = pm ? pm->r : g_elem_r;
+        uint64_t ezl = pm ? pm->zl : g_elem_zl, ezr = pm ? pm->zr : g_elem_zr;
+        uint64_t eplus = pm ? pm->plus : g_elem_plus, eminus = pm ? pm->minus : g_elem_minus;
+        uint64_t els = pm ? pm->ls : g_elem_ls, ers = pm ? pm->rs : g_elem_rs;
+        uint64_t edup = pm ? pm->dup : g_elem_dup, eddown = pm ? pm->ddown : g_elem_ddown;
+        uint64_t edleft = pm ? pm->dleft : g_elem_dleft, edright = pm ? pm->dright : g_elem_dright;
+
+        K(g.buttonA, ea); K(g.buttonB, eb); K(g.buttonX, ex); K(g.buttonY, ey);
+        K(g.leftShoulder, el); K(g.rightShoulder, er); K(g.leftTrigger, ezl); K(g.rightTrigger, ezr);
+        K(g.buttonMenu, eplus); K(g.buttonOptions, eminus); K(g.leftThumbstickButton, els); K(g.rightThumbstickButton, ers);
+        K(g.dpad.left, edleft); K(g.dpad.up, edup); K(g.dpad.right, edright); K(g.dpad.down, eddown);
     } else {
         m = dm_pad_face(g);   // by position, a Nintendo pad by its labels
         K(g.leftShoulder, DM_BTN_L); K(g.rightShoulder, DM_BTN_R); K(g.leftTrigger, DM_BTN_ZL); K(g.rightTrigger, DM_BTN_ZR);
@@ -437,7 +511,10 @@ static void pad_read(GCExtendedGamepad *g) {
         K(g.dpad.left, DM_BTN_LEFT); K(g.dpad.up, DM_BTN_UP); K(g.dpad.right, DM_BTN_RIGHT); K(g.dpad.down, DM_BTN_DOWN);
     }
     #undef K
-    dm_pad_set_player(p, m, pad_axis(g.leftThumbstick.xAxis.value), pad_axis(g.leftThumbstick.yAxis.value), pad_axis(g.rightThumbstick.xAxis.value), pad_axis(g.rightThumbstick.yAxis.value));
+    float dz = (p >= 0 && p < DM_PLAYERS) ? g_player_maps[p].deadzone : g_deadzone;
+    #define PAD_AXIS_DZ(v, d) (fabsf(v) < (d) ? 0 : (int32_t)(fmaxf(-1.f, fminf(1.f, (v))) * DM_STICK_MAX))
+    dm_pad_set_player(p, m, PAD_AXIS_DZ(g.leftThumbstick.xAxis.value, dz), PAD_AXIS_DZ(g.leftThumbstick.yAxis.value, dz), PAD_AXIS_DZ(g.rightThumbstick.xAxis.value, dz), PAD_AXIS_DZ(g.rightThumbstick.yAxis.value, dz));
+    #undef PAD_AXIS_DZ
 }
 // Home and Capture: without this macOS takes them as system gestures (Home opens the Games app); the host gives them no function
 static void pad_keep_system_buttons(GCController *c) { for (NSString *b in @[GCInputButtonHome, GCInputButtonShare]) c.physicalInputProfile.buttons[b].preferredSystemGestureState = GCSystemGestureStateDisabled; }

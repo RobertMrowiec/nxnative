@@ -3,14 +3,16 @@ import GameController
 
 public struct AnalogDeadzoneTestView: View {
     @Binding public var deadzone: Double
+    public var isFocused: Bool = false
     @State private var leftX: Float = 0
     @State private var leftY: Float = 0
     @State private var rightX: Float = 0
     @State private var rightY: Float = 0
     @State private var timer: Timer? = nil
 
-    public init(deadzone: Binding<Double>) {
+    public init(deadzone: Binding<Double>, isFocused: Bool = false) {
         self._deadzone = deadzone
+        self.isFocused = isFocused
     }
 
     public var body: some View {
@@ -31,9 +33,16 @@ public struct AnalogDeadzoneTestView: View {
                         value: $deadzone,
                         in: 0.05...0.30,
                         step: 0.01,
-                        accentColor: NXTheme.primary
+                        accentColor: isFocused ? NXTheme.secondary : NXTheme.primary
                     )
                     .frame(width: 140)
+                    .padding(4)
+                    .background(isFocused ? NXTheme.primary.opacity(0.12) : Color.clear)
+                    .cornerRadius(8)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                    )
                 }
             }
 

@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "タイトル画面での認識 (L + R を同時押し)",
         "controls.title_screen_tip_desc": "ほとんどすべてのSwitchタイトルは、タイトル画面でコントローラーを認識させるために L + R の同時押しが必要です。",
         "controls.customize_keybindings": "操作設定をカスタマイズ...",
+        "system.nonswitch_games_folder": "Mac ネイティブゲームフォルダ (.app)",
+        "system.no_nonswitch_folder_selected": "Mac ゲームフォルダがまだ選択されていません。macOS ゲームを含むフォルダを追加してください。",
+        "system.add_nonswitch_folder": "ゲームフォルダを追加",
+        "system.add_nonswitch_single_app": "ゲームを追加 (.app)",
+        "system.select_nonswitch_folder_message": "ネイティブ macOS ゲームアプリケーション (.app) を含むフォルダを選択してください。",
+        "system.select_nonswitch_app_message": "ライブラリに追加するネイティブ macOS ゲーム (.app) を選択してください。",
+        "system.nonswitch_dirs_help": "統合ライブラリに表示するため、ネイティブ Mac ゲーム (.app) を再帰的にスキャンするフォルダです。"
     ]
 }

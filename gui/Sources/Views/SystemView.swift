@@ -8,31 +8,78 @@ public struct SystemView: View {
     }
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                // Header & Action Bar
-                headerView
-                
-                // Developer Mode Switch Card (strictly in Settings)
-                developerModeCard
-                
-                VStack(spacing: 12) {
-                    SystemKeysCard(viewModel: viewModel)
-                    SystemToolsCard(viewModel: viewModel)
-                }
-                
-                if viewModel.isDeveloperMode {
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    // Header & Action Bar
+                    headerView
+                        .id("settings_card_1")
+
+                    // Developer Mode Switch Card (strictly in Settings)
+                    developerModeCard
+                        .id("settings_card_0")
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
+                                .stroke(viewModel.settingsFocusIndex == 0 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                        )
+
                     VStack(spacing: 12) {
-                        SystemRepoCard(viewModel: viewModel)
                         SystemDirectoriesCard(viewModel: viewModel)
-                        SystemStorageAndDiagnosticsCard(viewModel: viewModel)
-                        SystemPatchesCard(viewModel: viewModel)
+                            .id("settings_card_2")
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(viewModel.settingsFocusIndex == 2 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                            )
+
+                        SystemKeysCard(viewModel: viewModel)
+                            .id("settings_card_3")
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(viewModel.settingsFocusIndex == 3 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                            )
+
+                        SystemToolsCard(viewModel: viewModel)
+                            .id("settings_card_4")
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(viewModel.settingsFocusIndex == 4 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                            )
+                    }
+
+                    if viewModel.isDeveloperMode {
+                        VStack(spacing: 12) {
+                            SystemRepoCard(viewModel: viewModel)
+                                .id("settings_card_5")
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(viewModel.settingsFocusIndex == 5 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                                )
+
+                            SystemStorageAndDiagnosticsCard(viewModel: viewModel)
+                                .id("settings_card_6")
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(viewModel.settingsFocusIndex == 6 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                                )
+
+                            SystemPatchesCard(viewModel: viewModel)
+                                .id("settings_card_7")
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .stroke(viewModel.settingsFocusIndex == 7 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                                )
+                        }
                     }
                 }
+                .padding(20)
             }
-            .padding(20)
+            .nxScrollEdgeEffect(edges: [.top, .bottom])
+            .onChange(of: viewModel.settingsFocusIndex) { newIdx in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo("settings_card_\(newIdx)", anchor: .center)
+                }
+            }
         }
-        .nxScrollEdgeEffect(edges: [.top, .bottom])
         .sheet(isPresented: $viewModel.showRyujinxNotFoundSheet) {
             RyujinxKeyMissingSheet(viewModel: viewModel)
                 .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)

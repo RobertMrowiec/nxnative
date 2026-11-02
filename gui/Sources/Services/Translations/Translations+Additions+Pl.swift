@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Aktywacja na ekranie tytułowym (Naciśnij L + R)",
         "controls.title_screen_tip_desc": "Prawie wszystkie gry Switch wymagają jednoczesnego naciśnięcia L + R na ekranie tytułowym, aby wykryć kontroler.",
         "controls.customize_keybindings": "Dostosuj sterowanie...",
+        "system.nonswitch_games_folder": "Foldery natywnych gier Mac (.app)",
+        "system.no_nonswitch_folder_selected": "Nie wybrano jeszcze folderów z grami Mac. Dodaj foldery zawierające Twoje gry macOS.",
+        "system.add_nonswitch_folder": "Dodaj folder gier",
+        "system.add_nonswitch_single_app": "Dodaj grę (.app)",
+        "system.select_nonswitch_folder_message": "Wybierz foldery zawierające Twoje natywne gry macOS (.app).",
+        "system.select_nonswitch_app_message": "Wybierz aplikacje natywnych gier macOS (.app), aby dodać je do biblioteki.",
+        "system.nonswitch_dirs_help": "Foldery przeszukiwane rekurencyjnie w poszukiwaniu natywnych gier Mac (.app) do zunifikowanej biblioteki."
     ]
 }

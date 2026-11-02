@@ -77,11 +77,11 @@ public struct CompactConsoleActionSheetView: View {
                                     .foregroundColor(NXTheme.textPrimary)
                                     .lineLimit(1)
                                 
-                                Text(game.platform == .macApp ? "Mac Native" : "iOS IPA")
+                                Text(game.platform == .macApp ? "Mac Port" : (game.platform == .nonSwitch ? "Mac Native" : "iOS IPA"))
                                     .font(.system(size: 9, weight: .bold, design: .rounded))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
-                                    .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : NXTheme.secondary.opacity(0.35))
+                                    .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : (game.platform == .nonSwitch ? Color(red: 0.20, green: 0.82, blue: 0.60).opacity(0.35) : NXTheme.secondary.opacity(0.35)))
                                     .foregroundColor(.white)
                                     .clipShape(Capsule())
                             }
@@ -135,7 +135,7 @@ public struct CompactConsoleActionSheetView: View {
                     
                     // Action Menu Items (Compact Console List)
                     VStack(spacing: 6) {
-                        if game.platform == .macApp {
+                        if game.isPlayableLocally {
                             // Option 0: Play
                             menuActionRow(
                                 index: 0,
@@ -169,7 +169,7 @@ public struct CompactConsoleActionSheetView: View {
                         menuActionRow(
                             index: 1,
                             title: viewModel.tr("actions.game_settings"),
-                            subtitle: game.platform == .macApp ? viewModel.tr("actions.settings_mac_subtitle") : viewModel.tr("actions.settings_ios_subtitle"),
+                            subtitle: game.isPlayableLocally ? viewModel.tr("actions.settings_mac_subtitle") : viewModel.tr("actions.settings_ios_subtitle"),
                             icon: "slider.horizontal.3",
                             isPrimary: false
                         ) {

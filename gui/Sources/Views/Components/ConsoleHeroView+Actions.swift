@@ -4,8 +4,8 @@ import AppKit
 extension ConsoleHeroView {
     @ViewBuilder
     internal func portedActionBar(for g: PortedGame) -> some View {
-        if g.platform == .macApp {
-            // Play Button Pill for Mac Apps
+        if g.isPlayableLocally {
+            // Play Button Pill for Mac Apps & Mac Native Games
             Button(action: {
                 viewModel.launchGame(g)
             }) {
@@ -38,6 +38,17 @@ extension ConsoleHeroView {
             .buttonStyle(NXPressableButtonStyle())
             .disabled(isLaunching)
             .nxNoFocusRing()
+            
+            // Controls Guide Button (only for Mac ports)
+            if g.platform == .macApp {
+                heroSecondaryButton(
+                    icon: "gamecontroller.fill",
+                    title: viewModel.tr("controls.guide_title")
+                ) {
+                    SoundEffectService.shared.play(.click)
+                    viewModel.showControlsGuideSheet = true
+                }
+            }
         } else {
             // Send to Device Button for iOS IPAs
             Button(action: {
@@ -98,15 +109,6 @@ extension ConsoleHeroView {
                 SoundEffectService.shared.play(.click)
                 NSWorkspace.shared.activateFileViewerSelecting([g.url])
             }
-        }
-
-        // Controls Guide Button
-        heroSecondaryButton(
-            icon: "gamecontroller.fill",
-            title: viewModel.tr("controls.guide_title")
-        ) {
-            SoundEffectService.shared.play(.click)
-            viewModel.showControlsGuideSheet = true
         }
 
         // Options Button

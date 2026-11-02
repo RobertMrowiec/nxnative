@@ -107,6 +107,7 @@ public final class ArtworkStore: ObservableObject {
 
         // 4. Authentic box art cover from GameCoverService (cropped 1:1 in UI until square icon is ready)
         if let cover = GameCoverService.shared.coverImage(for: game) {
+            cacheImage(cover, forKey: cacheKey)
             return cover
         }
 
@@ -116,6 +117,7 @@ public final class ArtworkStore: ObservableObject {
         // 6. Temporary fallback system workspace icon
         let wsIcon = NSWorkspace.shared.icon(forFile: game.url.path)
         wsIcon.size = NSSize(width: 256, height: 256)
+        cacheImage(wsIcon, forKey: cacheKey)
         return wsIcon
     }
 
@@ -145,6 +147,7 @@ public final class ArtworkStore: ObservableObject {
 
         // 2. Authentic box art cover from GameCoverService
         if let cover = GameCoverService.shared.coverImage(titleId: tid, gameName: gameName) {
+            cacheImage(cover, forKey: cacheKey)
             return cover
         }
 
@@ -191,6 +194,7 @@ public final class ArtworkStore: ObservableObject {
 
         // 4. Immediate fallback: return cover art so screen is never dark/blank
         if let cover = GameCoverService.shared.coverImage(titleId: tid, gameName: gameName) {
+            cacheImage(cover, forKey: cacheKey)
             return cover
         }
 

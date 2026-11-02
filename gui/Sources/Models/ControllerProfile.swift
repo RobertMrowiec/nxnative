@@ -14,6 +14,9 @@ public struct ControllerProfile: Codable, Identifiable, Equatable {
     public var mouseInvertX: Bool
     public var mouseInvertY: Bool
     public var mouseRightStickMode: String
+    public var enableRumble: Bool
+    public var rumbleStrength: Double
+    public var rumbleFloorBoost: Bool
 
     public init(
         id: UUID = UUID(),
@@ -28,7 +31,10 @@ public struct ControllerProfile: Codable, Identifiable, Equatable {
         mouseSensitivity: Double = 5.0,
         mouseInvertX: Bool = false,
         mouseInvertY: Bool = false,
-        mouseRightStickMode: String = "cursorLock"
+        mouseRightStickMode: String = "cursorLock",
+        enableRumble: Bool = true,
+        rumbleStrength: Double = 1.0,
+        rumbleFloorBoost: Bool = true
     ) {
         self.id = id
         self.name = name
@@ -43,11 +49,15 @@ public struct ControllerProfile: Codable, Identifiable, Equatable {
         self.mouseInvertX = mouseInvertX
         self.mouseInvertY = mouseInvertY
         self.mouseRightStickMode = mouseRightStickMode
+        self.enableRumble = enableRumble
+        self.rumbleStrength = rumbleStrength
+        self.rumbleFloorBoost = rumbleFloorBoost
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, name, isDefault, targetDeviceName, gamepadBindings, keyboardBindings, keyboardMovement, analogDeadzone
         case mouseAsRightStick, mouseSensitivity, mouseInvertX, mouseInvertY, mouseRightStickMode
+        case enableRumble, rumbleStrength, rumbleFloorBoost
     }
 
     public init(from decoder: Decoder) throws {
@@ -65,6 +75,9 @@ public struct ControllerProfile: Codable, Identifiable, Equatable {
         self.mouseInvertX = try container.decodeIfPresent(Bool.self, forKey: .mouseInvertX) ?? false
         self.mouseInvertY = try container.decodeIfPresent(Bool.self, forKey: .mouseInvertY) ?? false
         self.mouseRightStickMode = try container.decodeIfPresent(String.self, forKey: .mouseRightStickMode) ?? "cursorLock"
+        self.enableRumble = try container.decodeIfPresent(Bool.self, forKey: .enableRumble) ?? true
+        self.rumbleStrength = try container.decodeIfPresent(Double.self, forKey: .rumbleStrength) ?? 1.0
+        self.rumbleFloorBoost = try container.decodeIfPresent(Bool.self, forKey: .rumbleFloorBoost) ?? true
     }
 
     // MARK: - Factory Presets
@@ -157,6 +170,9 @@ public struct ControllerProfile: Codable, Identifiable, Equatable {
             "mouseInvertX": mouseInvertX,
             "mouseInvertY": mouseInvertY,
             "mouseRightStickMode": mouseRightStickMode,
+            "enableRumble": enableRumble,
+            "rumbleStrength": rumbleStrength,
+            "rumbleFloorBoost": rumbleFloorBoost,
             "gamepad": gpExport,
             "keyboard": kbExport,
             "keyboardMovement": movExport

@@ -58,6 +58,8 @@ extension AppViewModel {
 
     // MARK: - Modal Presentation & Navigation Guard
     public var isAnyModalPresented: Bool {
+        showControlsPlayerModal ||
+        showControlsProfileModal ||
         gameForPortModal != nil ||
         gameForSettingsSheet != nil ||
         isGameActionMenuPresented ||

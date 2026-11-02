@@ -24,11 +24,11 @@ extension GameSettingsSheetView {
                     .lineLimit(1)
                 
                 HStack(spacing: 6) {
-                    Text(game.platform == .macApp ? "Mac App" : "iOS IPA")
+                    Text(game.platform == .macApp ? "Mac Port" : (game.platform == .nonSwitch ? "Mac Native" : "iOS IPA"))
                         .font(.system(size: 10, weight: .bold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(NXTheme.primary.opacity(0.25))
+                        .background(game.platform == .nonSwitch ? Color(red: 0.20, green: 0.82, blue: 0.60).opacity(0.25) : (game.platform == .macApp ? NXTheme.primary.opacity(0.25) : NXTheme.secondary.opacity(0.25)))
                         .foregroundColor(.white)
                         .clipShape(Capsule())
                     

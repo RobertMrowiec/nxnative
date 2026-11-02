@@ -8,6 +8,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
     public var enableMetalFXUpscale: Bool // true = MetalFX, false = off
     public var enableGameMode: Bool // true = Full Screen (macOS Game Mode ON), false = Windowed
     public var controllerProfileId: String? // nil = Global Active Profile; UUID string = Pinned Profile
+    public var playerProfileIds: [String: String]? // [PlayerSlot: ProfileUUID] (ex: "0": "...", "1": "...")
     
     public init(
         enable60FPS: Bool = true,
@@ -16,7 +17,8 @@ public struct GameRuntimeConfig: Codable, Equatable {
         renderScale: Double = 1.0,
         enableMetalFXUpscale: Bool = false,
         enableGameMode: Bool = true,
-        controllerProfileId: String? = nil
+        controllerProfileId: String? = nil,
+        playerProfileIds: [String: String]? = nil
     ) {
         self.enable60FPS = enable60FPS
         self.enableMetalHUD = enableMetalHUD
@@ -25,6 +27,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
         self.enableMetalFXUpscale = enableMetalFXUpscale
         self.enableGameMode = enableGameMode
         self.controllerProfileId = controllerProfileId
+        self.playerProfileIds = playerProfileIds
     }
     
     public func toEnvironmentDict(savePath: String? = nil) -> [String: String] {

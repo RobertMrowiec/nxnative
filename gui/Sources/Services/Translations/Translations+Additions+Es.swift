@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Activación en pantalla inicial (Presiona L + R)",
         "controls.title_screen_tip_desc": "Casi todos los juegos de Switch requieren presionar L + R simultáneamente en la pantalla inicial para detectar el mando.",
         "controls.customize_keybindings": "Personalizar controles...",
+        "system.nonswitch_games_folder": "Carpetas de Juegos Nativos de Mac (.app)",
+        "system.no_nonswitch_folder_selected": "No hay carpetas de juegos de Mac seleccionadas. Añade carpetas con tus juegos de macOS.",
+        "system.add_nonswitch_folder": "Añadir carpeta de juegos",
+        "system.add_nonswitch_single_app": "Añadir juego (.app)",
+        "system.select_nonswitch_folder_message": "Selecciona carpetas que contengan tus aplicaciones de juegos nativos de macOS (.app).",
+        "system.select_nonswitch_app_message": "Selecciona aplicaciones de juegos nativos de macOS (.app) para añadir a tu biblioteca.",
+        "system.nonswitch_dirs_help": "Carpetas analizadas de forma recursiva en busca de juegos nativos de Mac (.app) para organizar tu biblioteca unificada."
     ]
 }

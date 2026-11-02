@@ -281,6 +281,12 @@ int main(void) { @autoreleasepool {
     assert(!(dm_haptics_available() & 1) && unsupported.haptics.attempts == 0);
     // DM_RUMBLE_MIN: controller levels below it are silent, the rest stretched over the full range; the phone keeps its levels
     assert(controller_level(0) == 0 && controller_level(0.3f) == 0.3f && controller_level(1) == 1 && controller_level(NAN) == 0);
+    // DM_RUMBLE_FLOOR: lifts low non-zero signals above physical motor inertia threshold
+    rumble_floor = 0.20f;
+    assert(controller_level(0) == 0);
+    assert(fabsf(controller_level(0.1f) - (0.20f + 0.80f * 0.1f)) < 1e-5f);
+    assert(fabsf(controller_level(1.0f) - 1.0f) < 1e-5f);
+    rumble_floor = 0;
     rumble_min = 0.45f;
     assert(controller_level(0.4f) == 0 && controller_level(0.45f) == 0 && fabsf(controller_level(0.725f) - 0.5f) < 1e-6f && controller_level(1) == 1);
     TestController *cut = [TestController new]; cut.haptics = [TestHaptics new];

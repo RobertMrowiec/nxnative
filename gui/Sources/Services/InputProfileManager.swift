@@ -2,50 +2,31 @@ import Foundation
 import Combine
 import AppKit
 
-public enum MouseKeyCode {
-    public static let left: UInt16 = 1001
-    public static let right: UInt16 = 1002
-    public static let middle: UInt16 = 1003
-    public static let button4: UInt16 = 1004
-    public static let button5: UInt16 = 1005
-
-    public static func fromButtonNumber(_ num: Int) -> UInt16 {
-        let code = 1001 + num
-        return (code >= 1001 && code <= 1099) ? UInt16(code) : 0
-    }
-
-    public static func isMouse(_ code: UInt16) -> Bool {
-        return code >= 1001 && code <= 1099
-    }
-
-    public static func name(for code: UInt16) -> String? {
-        switch code {
-        case left: return L10n.t("controls.mouse_button_left")
-        case right: return L10n.t("controls.mouse_button_right")
-        case middle: return L10n.t("controls.mouse_button_middle")
-        case button4: return L10n.t("controls.mouse_button_4")
-        case button5: return L10n.t("controls.mouse_button_5")
-        default: return (code >= 1001 && code <= 1099) ? "Mouse \(code - 1000)" : nil
-        }
-    }
-}
-
-public enum KeyBindingTarget: Equatable {
-    case switchButton(SwitchButton)
-    case movement(String) // "up", "left", "down", "right"
-}
-
 public final class InputProfileManager: ObservableObject {
     public static let shared = InputProfileManager()
 
     private enum StorageKeys {
         static let activeProfileId = "NXNative_ActiveControllerProfileId"
+        static let playerProfileIds = "NXNative_PlayerProfileIds"
+        static let activePlayerIndex = "NXNative_ActivePlayerIndex"
     }
 
     @Published public var profiles: [ControllerProfile] = []
+    @Published public var activePlayerIndex: Int = 0 {
+        didSet {
+            UserDefaults.standard.set(activePlayerIndex, forKey: StorageKeys.activePlayerIndex)
+        }
+    }
+    @Published public var playerProfileIds: [Int: UUID] = [:] {
+        didSet {
+            persistPlayerProfileIds()
+            exportActiveMappingToDisk()
+        }
+    }
     @Published public var activeProfileId: UUID = UUID() {
         didSet {
             UserDefaults.standard.set(activeProfileId.uuidString, forKey: StorageKeys.activeProfileId)
+            playerProfileIds[activePlayerIndex] = activeProfileId
             exportActiveMappingToDisk()
         }
     }
@@ -113,6 +94,42 @@ public final class InputProfileManager: ObservableObject {
         return profiles.first ?? ControllerProfile.nintendoDefault
     }
 
+    public func profile(forPlayer playerIndex: Int) -> ControllerProfile {
+        if let pid = playerProfileIds[playerIndex],
+           let found = profiles.first(where: { $0.id == pid }) {
+            return found
+        }
+        return activeProfile
+    }
+
+    public func setProfile(_ profile: ControllerProfile, forPlayer playerIndex: Int) {
+        playerProfileIds[playerIndex] = profile.id
+        if activePlayerIndex == playerIndex {
+            activeProfileId = profile.id
+        } else {
+            exportActiveMappingToDisk()
+        }
+    }
+
+    private func persistPlayerProfileIds() {
+        let strDict = playerProfileIds.reduce(into: [String: String]()) { $0[String($1.key)] = $1.value.uuidString }
+        UserDefaults.standard.set(strDict, forKey: StorageKeys.playerProfileIds)
+    }
+
+    private func restorePlayerProfileIds() {
+        if let strDict = UserDefaults.standard.dictionary(forKey: StorageKeys.playerProfileIds) as? [String: String] {
+            let restored = strDict.compactMap { (k, v) -> (Int, UUID)? in
+                guard let pIdx = Int(k), let uuid = UUID(uuidString: v), profiles.contains(where: { $0.id == uuid }) else { return nil }
+                return (pIdx, uuid)
+            }
+            self.playerProfileIds = Dictionary(uniqueKeysWithValues: restored)
+        }
+        let savedPIdx = UserDefaults.standard.integer(forKey: StorageKeys.activePlayerIndex)
+        if savedPIdx >= 0 && savedPIdx < 8 {
+            self.activePlayerIndex = savedPIdx
+        }
+    }
+
     public func loadProfiles() {
         let dir = profilesDirectory
         var loaded: [ControllerProfile] = []
@@ -151,6 +168,13 @@ public final class InputProfileManager: ObservableObject {
             self.activeProfileId = uuid
         } else {
             self.activeProfileId = loaded.first?.id ?? UUID()
+        }
+
+        restorePlayerProfileIds()
+        if let currentPId = playerProfileIds[activePlayerIndex], loaded.contains(where: { $0.id == currentPId }) {
+            self.activeProfileId = currentPId
+        } else {
+            self.playerProfileIds[activePlayerIndex] = self.activeProfileId
         }
 
         // Unify custom keyboard/mouse bindings across all profiles so Shift, Space, and Mouse 1 work everywhere by default

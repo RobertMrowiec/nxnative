@@ -52,15 +52,50 @@ public struct ControllerPromptBar: View {
     
     // MARK: - Status Badge
     private var statusBadge: some View {
-        HStack(spacing: 6) {
-            Image(systemName: controllerService.isGamepadConnected ? "gamecontroller.fill" : "keyboard.fill")
-                .font(.system(size: 11))
-                .foregroundColor(controllerService.isGamepadConnected ? Color(red: 0.13, green: 0.77, blue: 0.37) : NXTheme.secondary)
-            
-            Text(controllerService.isGamepadConnected ? controllerService.activeControllerName : viewModel.tr("controls.keyboard_controls"))
-                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                .foregroundColor(controllerService.isGamepadConnected ? NXTheme.textPrimary : NXTheme.textSecondary)
-                .lineLimit(1)
+        HStack(spacing: 8) {
+            if controllerService.isGamepadConnected {
+                let controllers = controllerService.connectedControllers
+                if controllers.count > 1 {
+                    HStack(spacing: 8) {
+                        ForEach(controllers, id: \.playerIndex) { ctrl in
+                            HStack(spacing: 4) {
+                                Image(systemName: "gamecontroller.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                                Text("P\(ctrl.playerIndex + 1): \(compactPadName(ctrl.name))")
+                                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                    .foregroundColor(NXTheme.textPrimary)
+                                    .lineLimit(1)
+                            }
+                            if ctrl.playerIndex < controllers.count - 1 {
+                                Text("•")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(.white.opacity(0.3))
+                            }
+                        }
+                    }
+                } else {
+                    HStack(spacing: 5) {
+                        Image(systemName: "gamecontroller.fill")
+                            .font(.system(size: 11))
+                            .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                        Text("P1: \(compactPadName(controllerService.activeControllerName))")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .foregroundColor(NXTheme.textPrimary)
+                            .lineLimit(1)
+                    }
+                }
+            } else {
+                HStack(spacing: 5) {
+                    Image(systemName: "keyboard.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(NXTheme.secondary)
+                    Text(viewModel.tr("controls.keyboard_controls"))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(NXTheme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
         }
         .padding(.horizontal, 9)
         .padding(.vertical, 4)
@@ -82,6 +117,13 @@ public struct ControllerPromptBar: View {
                 )
         )
     }
+
+    private func compactPadName(_ raw: String) -> String {
+        let trimmed = raw.replacingOccurrences(of: "Wireless Controller", with: "")
+            .replacingOccurrences(of: "Controller", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? "Pad" : trimmed
+    }
     
     // MARK: - Controller Prompts
     @ViewBuilder
@@ -93,8 +135,14 @@ public struct ControllerPromptBar: View {
         let yBtn = isPS ? "△" : "Y"
         let optionsBtn = controllerService.activeBrand == .xbox ? "⧉" : (isPS ? "OPT" : "−")
         
-        switch viewModel.selectedTab {
-        case 0: // My Games
+        if viewModel.gameForSettingsSheet != nil {
+            controllerPill(glyph: confirmBtn, action: "Adjust", color: brandAColor)
+            controllerPill(glyph: cancelBtn, action: "Done", color: brandBColor)
+            dpadPill(glyph: "↑/↓", action: "Navigate")
+            dpadPill(glyph: "←/→", action: "Change")
+        } else {
+            switch viewModel.selectedTab {
+            case 0: // My Games
             if viewModel.isGameActionMenuPresented {
                 controllerPill(glyph: confirmBtn, action: "Execute", color: brandAColor)
                 controllerPill(glyph: cancelBtn, action: "Close", color: brandBColor)
@@ -126,24 +174,37 @@ public struct ControllerPromptBar: View {
             }
             
         case 2: // Controls
-            controllerPill(glyph: confirmBtn, action: "Calibrate", color: brandAColor)
+            if viewModel.isInsideControlsCard {
+                controllerPill(glyph: confirmBtn, action: "Select / Rebind", color: brandAColor)
+                controllerPill(glyph: cancelBtn, action: "Back to Cards", color: brandBColor)
+                dpadPill(glyph: "↑/↓/←/→", action: "Navigate")
+                controllerPill(glyph: yBtn, action: "Test Rumble", color: brandYColor)
+            } else {
+                controllerPill(glyph: confirmBtn, action: "Enter Card", color: brandAColor)
+                dpadPill(glyph: "↑/↓", action: "Select Card")
+                controllerPill(glyph: yBtn, action: "Test Rumble", color: brandYColor)
+            }
             
         case 3: // Personalize
-            dpadPill(glyph: "←/→", action: "Highlight Color")
-            controllerPill(
-                glyph: xBtn,
-                action: viewModel.tr(viewModel.isLiquidGlassEnabled ? "personalization.liquid_glass_on" : "personalization.liquid_glass_off"),
-                color: brandXColor
-            )
-            controllerPill(
-                glyph: yBtn,
-                action: viewModel.tr(viewModel.liquidGlassAppearance.titleLocalizationKey),
-                color: brandYColor
-            )
+            if viewModel.isInsidePersonalizeCard {
+                controllerPill(glyph: confirmBtn, action: "Apply / Toggle", color: brandAColor)
+                controllerPill(glyph: cancelBtn, action: "Back to Cards", color: brandBColor)
+                dpadPill(glyph: "↑/↓/←/→", action: "Adjust")
+            } else {
+                controllerPill(glyph: confirmBtn, action: "Enter Card", color: brandAColor)
+                dpadPill(glyph: "↑/↓", action: "Select Card")
+                controllerPill(
+                    glyph: xBtn,
+                    action: viewModel.tr(viewModel.isLiquidGlassEnabled ? "personalization.liquid_glass_on" : "personalization.liquid_glass_off"),
+                    color: brandXColor
+                )
+            }
             
         case 4: // Settings
-            controllerPill(glyph: confirmBtn, action: "Install Tools", color: brandAColor)
+            controllerPill(glyph: confirmBtn, action: "Select / Open", color: brandAColor)
+            dpadPill(glyph: "↑/↓", action: "Navigate")
             controllerPill(glyph: xBtn, action: "Check Updates", color: brandXColor)
+            controllerPill(glyph: yBtn, action: "Repair Tools", color: brandYColor)
             
         case 5: // Console / Logs
             controllerPill(glyph: xBtn, action: "Copy", color: brandXColor)
@@ -152,13 +213,20 @@ public struct ControllerPromptBar: View {
         default:
             EmptyView()
         }
+        }
     }
     
     // MARK: - Keyboard Prompts (When no controller is connected)
     @ViewBuilder
     private var keyboardPromptsForCurrentContext: some View {
-        switch viewModel.selectedTab {
-        case 0: // My Games
+        if viewModel.gameForSettingsSheet != nil {
+            keyboardKeyBadge(glyph: "↑/↓", action: "Navigate")
+            keyboardKeyBadge(glyph: "←/→", action: "Change")
+            keyboardKeyBadge(glyph: "↵ Enter", action: "Adjust")
+            keyboardKeyBadge(glyph: "⎋ Esc", action: "Done")
+        } else {
+            switch viewModel.selectedTab {
+            case 0: // My Games
             if viewModel.isGameActionMenuPresented {
                 keyboardKeyBadge(glyph: "↑/↓", action: "Navigate")
                 keyboardKeyBadge(glyph: "↵ Enter", action: "Execute")
@@ -210,29 +278,6 @@ public struct ControllerPromptBar: View {
         default:
             EmptyView()
         }
-    }
-}
-
-private struct PromptBarDockModifier: ViewModifier {
-    let useFloatingGlassDock: Bool
-    
-    func body(content: Content) -> some View {
-        if useFloatingGlassDock {
-            content.nxGlassBar(in: Capsule())
-        } else {
-            content
-                .background(
-                    ZStack {
-                        NXTheme.canvasObsidian.opacity(0.85)
-                        Rectangle().fill(.ultraThinMaterial)
-                    }
-                )
-                .overlay(
-                    Rectangle()
-                        .frame(height: 1)
-                        .foregroundColor(NXTheme.borderSubtle),
-                    alignment: .top
-                )
         }
     }
 }

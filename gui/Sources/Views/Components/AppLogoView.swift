@@ -11,16 +11,7 @@ public struct AppLogoView: View {
     }
     
     private var currentImageName: String {
-        switch viewModel.iconAppearanceMode {
-        case .light:
-            return "AppIcon-Light"
-        case .dark:
-            return "AppIcon-Dark"
-        case .mono:
-            return "AppIcon-Mono"
-        case .auto:
-            return colorScheme == .dark ? "AppIcon-Dark" : "AppIcon-Light"
-        }
+        viewModel.iconAppearanceMode.resourceName
     }
     
     private var currentNSImage: NSImage? {
@@ -89,6 +80,7 @@ public struct AppLogoView: View {
         .onChange(of: colorScheme) { _ in
             if viewModel.iconAppearanceMode == .auto {
                 viewModel.updateDockIcon()
+                MenuBarManager.shared.updateMenuBarIcon()
             }
         }
     }

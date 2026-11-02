@@ -28,11 +28,11 @@ public struct GameDetailDeckView: View {
                                 .font(.system(size: 20, weight: .bold, design: .rounded))
                                 .foregroundColor(NXTheme.textPrimary)
                             
-                            Text(game.platform == .macApp ? "Mac Native" : "iOS IPA")
+                            Text(game.platform == .macApp ? "Mac Port" : (game.platform == .nonSwitch ? "Mac Native" : "iOS IPA"))
                                 .font(.system(size: 10, weight: .bold, design: .rounded))
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 3)
-                                .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : NXTheme.secondary.opacity(0.35))
+                                .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : (game.platform == .nonSwitch ? Color(red: 0.20, green: 0.82, blue: 0.60).opacity(0.35) : NXTheme.secondary.opacity(0.35)))
                                 .foregroundColor(.white)
                                 .clipShape(Capsule())
                         }
@@ -130,20 +130,22 @@ public struct GameDetailDeckView: View {
                             .buttonStyle(NXSecondaryButtonStyle())
                             .controlSize(.regular)
                             
-                            Button(action: {
-                                SoundEffectService.shared.play(.click)
-                                viewModel.showControlsGuideSheet = true
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "gamecontroller.fill")
-                                    Text(viewModel.tr("controls.guide_title"))
+                            if game.platform == .macApp {
+                                Button(action: {
+                                    SoundEffectService.shared.play(.click)
+                                    viewModel.showControlsGuideSheet = true
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "gamecontroller.fill")
+                                        Text(viewModel.tr("controls.guide_title"))
+                                    }
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .frame(maxWidth: .infinity)
                                 }
-                                .font(.system(size: 11, weight: .semibold, design: .rounded))
-                                .frame(maxWidth: .infinity)
+                                .buttonStyle(NXSecondaryButtonStyle())
+                                .controlSize(.regular)
+                                .help(viewModel.tr("controls.guide_subtitle"))
                             }
-                            .buttonStyle(NXSecondaryButtonStyle())
-                            .controlSize(.regular)
-                            .help(viewModel.tr("controls.guide_subtitle"))
                             
                             Button(action: {
                                 SoundEffectService.shared.play(.click)

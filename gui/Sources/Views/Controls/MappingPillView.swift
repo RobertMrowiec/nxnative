@@ -5,6 +5,7 @@ public struct MappingPillView: View {
     public let mappedLabel: String
     public let isListening: Bool
     public let isLeftSide: Bool
+    public let isFocused: Bool
     public let onStartListening: () -> Void
     public let onSelectMapping: (String) -> Void
     public let onReset: () -> Void
@@ -14,6 +15,7 @@ public struct MappingPillView: View {
         mappedLabel: String,
         isListening: Bool,
         isLeftSide: Bool = true,
+        isFocused: Bool = false,
         onStartListening: @escaping () -> Void,
         onSelectMapping: @escaping (String) -> Void,
         onReset: @escaping () -> Void
@@ -22,6 +24,7 @@ public struct MappingPillView: View {
         self.mappedLabel = mappedLabel
         self.isListening = isListening
         self.isLeftSide = isLeftSide
+        self.isFocused = isFocused
         self.onStartListening = onStartListening
         self.onSelectMapping = onSelectMapping
         self.onReset = onReset
@@ -91,10 +94,14 @@ public struct MappingPillView: View {
                 .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .nxGlassInteractive(
                     in: RoundedRectangle(cornerRadius: 8, style: .continuous),
-                    tint: isListening ? NXTheme.primary.opacity(0.68) : nil,
-                    isSelected: isListening,
+                    tint: isListening ? NXTheme.primary.opacity(0.68) : (isFocused ? NXTheme.primary.opacity(0.35) : nil),
+                    isSelected: isListening || isFocused,
                     fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.85),
                     fallbackSelectedFill: NXTheme.primary.opacity(0.35)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
                 )
             }
             .buttonStyle(NXPressableButtonStyle())

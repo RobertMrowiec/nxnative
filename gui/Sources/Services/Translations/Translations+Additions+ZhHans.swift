@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "标题画面激活 (同时按下 L + R)",
         "controls.title_screen_tip_desc": "几乎所有 Switch 游戏都要求在标题画面上同时按下 L + R 键以识别并配对手柄。",
         "controls.customize_keybindings": "自定义控制...",
+        "system.nonswitch_games_folder": "Mac 原生游戏文件夹 (.app)",
+        "system.no_nonswitch_folder_selected": "尚未选择 Mac 游戏文件夹。请添加包含 macOS 游戏的文件夹。",
+        "system.add_nonswitch_folder": "添加游戏文件夹",
+        "system.add_nonswitch_single_app": "添加游戏 (.app)",
+        "system.select_nonswitch_folder_message": "选择包含原生 macOS 游戏应用程序 (.app) 的文件夹。",
+        "system.select_nonswitch_app_message": "选择要添加到游戏库的原生 macOS 游戏应用程序 (.app)。",
+        "system.nonswitch_dirs_help": "递归扫描原生 Mac 游戏 (.app) 以组织您统一游戏库的文件夹。"
     ]
 }

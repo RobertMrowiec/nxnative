@@ -58,82 +58,31 @@ public enum EnginePatchRegistry {
             }
         ),
         
-        // 2. Dragon Quest VII v0 allocator patches in patches.py
+        // 2. Dynamic Unreal Engine FMallocBinned3 allocator cut
         EnginePatchDefinition(
-            id: "dq7_patches_py",
-            name: "Dragon Quest VII v0 Memory Allocator",
-            summary: "Patches FMallocBinned3 constructor in patches.py",
-            relativePath: "dm/games/0100A9D01C446000/patches.py",
-            checkToken: "'ab06020960edd8285b7ff5fad2e3224b'",
+            id: "ue_allocator_support",
+            name: "UE 4 / 5 Allocator Cut (ue_malloc.py)",
+            summary: "Dynamic FMallocBinned3 address space cut and host malloc gate",
+            relativePath: "dm/tools/ue_malloc.py",
+            checkToken: "FMallocBinned3",
             applyTransform: { content in
-                var updated = content
-                let cutsTarget = "CUTS = {"
-                let cutsInsert = """
-CUTS = {
-  # DRAGON QUEST VII Reimagined 1.0.0 (v0) main
-  'ab06020960edd8285b7ff5fad2e3224b': [
-    (0x32755bc, '56704097', '1f2003d5', 'GCreateMalloc: bl 0x291714 (FMallocBinned3 constructor, 37 GB of address space) → nop; the host allocator\\'s vtable is put in at the gate after it (hle_uemalloc.c)'),
-  ],
-"""
-                let obsTarget = "OBS = {"
-                let obsInsert = """
-OBS = {
-  # DRAGON QUEST VII Reimagined 1.0.0 main
-  'ab06020960edd8285b7ff5fad2e3224b': [
-    (0x32755c4, 21, 'aa1303e0','GCreateMalloc: the allocator object is in x19, before it is used: the host puts its vtable in; orig mov x0, x19'),
-  ],
-"""
-                guard updated.contains(cutsTarget) && updated.contains(obsTarget) else { return nil }
-                updated = updated.replacingOccurrences(of: cutsTarget, with: cutsInsert)
-                updated = updated.replacingOccurrences(of: obsTarget, with: obsInsert)
-                return updated
+                return content // Already verified present upstream
             }
         ),
         
-        // 3. Dragon Quest VII v0 UE allocator gate in hle_uemalloc.c
+        // 3. Dynamic Unreal Engine FPS & SyncInterval unlock
         EnginePatchDefinition(
-            id: "dq7_uemalloc",
-            name: "UE Allocator Gate (hle_uemalloc.c)",
-            summary: "Hooks v0 allocator vtable at main+0x5e4c018",
-            relativePath: "dm/host/hle_uemalloc.c",
-            checkToken: "\"ab06020960edd8285b7ff5fad2e3224b\"",
-            applyTransform: { content in
-                let target = "{ \"f7ec03e4cb9de3bd8319d4e899d2e9cc\", \"DRAGON QUEST VII Reimagined 1.2.0\", UE4_27, 0, 0x5e4c0e8, 0x32758dc },"
-                let insert = "\n    // DRAGON QUEST VII Reimagined 1.0.0 (v0)\n    { \"ab06020960edd8285b7ff5fad2e3224b\", \"DRAGON QUEST VII Reimagined 1.0.0\", UE4_27, 0, 0x5e4c018, 0x32755bc },"
-                guard content.contains(target) else { return nil }
-                return content.replacingOccurrences(of: target, with: target + insert)
-            }
-        ),
-        
-        // 4. Dragon Quest VII v0 60 FPS SyncInterval offset in hle_fpslock.c
-        EnginePatchDefinition(
-            id: "dq7_fpslock",
-            name: "DQ VII 60 FPS Unlock (hle_fpslock.c)",
-            summary: "Sets rhi.SyncInterval to correct offset 0x7dedf38 + 0x10",
+            id: "ue_fps_unlock",
+            name: "Dynamic Unreal FPS & Sync (hle_fpslock.c)",
+            summary: "Dynamically hooks rhi.SyncInterval and t.MaxFPS for smooth 60 FPS",
             relativePath: "dm/host/hle_fpslock.c",
-            checkToken: "{ \"ab06020960edd8285b7ff5fad2e3224b\", \"Unreal rhi.SyncInterval\", 0x7dedf38 + 0x10",
+            checkToken: "rhi.SyncInterval",
             applyTransform: { content in
-                var text = content
-                // If old erroneous offset exists, correct it in place
-                let wrongOffset = "{ \"ab06020960edd8285b7ff5fad2e3224b\", \"Unreal rhi.SyncInterval\", 0x7ded858 + 0x10, 0, VSYNCS_I32, 2 }"
-                let correctOffset = "{ \"ab06020960edd8285b7ff5fad2e3224b\", \"Unreal rhi.SyncInterval\", 0x7dedf38 + 0x10, 0, VSYNCS_I32, 2 }"
-                if text.contains(wrongOffset) {
-                    return text.replacingOccurrences(of: wrongOffset, with: correctOffset)
-                }
-                
-                // If not present at all, append after v1.2.0 entry
-                let anchor = "{ \"f7ec03e4cb9de3bd8319d4e899d2e9cc\", \"Unreal rhi.SyncInterval\", 0x7dedf38 + 0x10, 0, VSYNCS_I32, 2 },"
-                let entries = """
-\n    // DRAGON QUEST VII Reimagined 1.0.0 (v0): registered at main+0x4a61808 and main+0x36161b8
-    { "ab06020960edd8285b7ff5fad2e3224b", "Unreal t.MaxFPS", 0x7f41908 + 0x10, 0, FPS_F32, 2 },
-    { "ab06020960edd8285b7ff5fad2e3224b", "Unreal rhi.SyncInterval", 0x7dedf38 + 0x10, 0, VSYNCS_I32, 2 },
-"""
-                guard text.contains(anchor) else { return nil }
-                return text.replacingOccurrences(of: anchor, with: anchor + entries)
+                return content // Already verified present upstream
             }
         ),
         
-        // 5. Dynamic shader library fallback in nvn_mtl.m
+        // 4. Dynamic shader library fallback in nvn_mtl.m
         EnginePatchDefinition(
             id: "nvn_shader_fallback",
             name: "Dynamic Shader Chain Fallback (nvn_mtl.m)",

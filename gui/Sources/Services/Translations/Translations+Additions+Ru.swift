@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Активация на титульном экране (Нажмите L + R)",
         "controls.title_screen_tip_desc": "Почти все игры Switch требуют одновременного нажатия L + R на титульном экране для определения и подключения контроллера.",
         "controls.customize_keybindings": "Настроить управление...",
+        "system.nonswitch_games_folder": "Папки с нативными играми Mac (.app)",
+        "system.no_nonswitch_folder_selected": "Папки с играми Mac не выбраны. Добавьте папки с вашими играми macOS.",
+        "system.add_nonswitch_folder": "Добавить папку с играми",
+        "system.add_nonswitch_single_app": "Добавить игру (.app)",
+        "system.select_nonswitch_folder_message": "Выберите папки, содержащие нативные игры macOS (.app).",
+        "system.select_nonswitch_app_message": "Выберите приложения нативных игр macOS (.app) для добавления в библиотеку.",
+        "system.nonswitch_dirs_help": "Папки для рекурсивного поиска нативных игр Mac (.app) в вашей единой библиотеке."
     ]
 }

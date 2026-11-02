@@ -6,83 +6,13 @@ import UniformTypeIdentifiers
 extension GameSettingsSheetView {
     
     func controllerProfileSection(rowIndex: Int) -> some View {
-        let isRowFocused = viewModel.settingsModalFocusIndex == rowIndex
-        let selectedId = viewModel.activeSettingsConfig.controllerProfileId
-        let selectedProfile = selectedId.flatMap { idStr in
-            UUID(uuidString: idStr).flatMap { uuid in
-                profileManager.profiles.first(where: { $0.id == uuid })
-            }
-        }
-        let globalLabel = String(format: viewModel.tr("settings_modal.controller_profile_global"), profileManager.activeProfile.name)
-        let currentLabel = selectedProfile?.name ?? globalLabel
-
-        return settingCard(
+        settingCard(
             rowIndex: rowIndex,
             title: viewModel.tr("settings_modal.controller_profile_title"),
             icon: "gamecontroller.fill",
             iconColor: Color(red: 0.58, green: 0.42, blue: 1.0)
         ) {
-            HStack(alignment: .center, spacing: 12) {
-                Text(viewModel.tr("settings_modal.controller_profile_desc"))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
-                    .fixedSize(horizontal: false, vertical: true)
-                
-                Spacer(minLength: 12)
-                
-                Menu {
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        viewModel.activeSettingsConfig.controllerProfileId = nil
-                    }) {
-                        if selectedProfile == nil {
-                            Label(globalLabel, systemImage: "checkmark")
-                        } else {
-                            Text(globalLabel)
-                        }
-                    }
-                    Divider()
-                    ForEach(profileManager.profiles) { prof in
-                        Button(action: {
-                            SoundEffectService.shared.play(.click)
-                            viewModel.activeSettingsConfig.controllerProfileId = prof.id.uuidString
-                        }) {
-                            if selectedProfile?.id == prof.id {
-                                Label(prof.name, systemImage: "checkmark")
-                            } else {
-                                Text(prof.name)
-                            }
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: "gamecontroller.fill")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        Text(currentLabel)
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-
-                        Image(systemName: "chevron.up.chevron.down")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white.opacity(0.85))
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .contentShape(Capsule())
-                    .nxGlassInteractive(
-                        in: Capsule(),
-                        fallbackFill: NXTheme.glassSurfaceElevated
-                    )
-                }
-                .menuStyle(.button)
-                .buttonStyle(NXPressableButtonStyle())
-                .menuIndicator(.hidden)
-                .fixedSize()
-                .nxNoFocusRing()
-            }
+            GameSettingsControllerSection(viewModel: viewModel, rowIndex: rowIndex)
         }
     }
     

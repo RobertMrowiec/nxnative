@@ -7,6 +7,7 @@ public final class GameControllerService: ObservableObject {
     @Published public var isGamepadConnected: Bool = false
     @Published public var activeControllerName: String = "No Gamepad Connected"
     @Published public var activeBrand: GamepadBrand = .generic
+    @Published public var connectedControllers: [(playerIndex: Int, name: String, brand: GamepadBrand)] = []
     @Published public var activeRunningGameApp: NSRunningApplication? = nil
     
     public var onAction: ((GamepadAction) -> Void)?
@@ -43,18 +44,26 @@ public final class GameControllerService: ObservableObject {
     
     public func refreshControllers() {
         let controllers = GCController.controllers()
-        guard let controller = controllers.first else {
+        guard let first = controllers.first else {
             isGamepadConnected = false
             activeControllerName = "No Gamepad Connected"
             activeBrand = .generic
+            connectedControllers = []
             return
         }
         
         isGamepadConnected = true
-        activeControllerName = controller.vendorName ?? "Gamepad"
+        activeControllerName = first.vendorName ?? "Gamepad"
         activeBrand = detectBrand(from: activeControllerName)
         
-        bindController(controller)
+        var list: [(playerIndex: Int, name: String, brand: GamepadBrand)] = []
+        for (idx, c) in controllers.prefix(8).enumerated() {
+            let name = c.vendorName ?? "Gamepad"
+            let brand = detectBrand(from: name)
+            list.append((playerIndex: idx, name: name, brand: brand))
+            bindController(c)
+        }
+        connectedControllers = list
     }
     
     private func detectBrand(from vendor: String) -> GamepadBrand {
@@ -191,11 +200,21 @@ public final class GameControllerService: ObservableObject {
             }
         }
         
-        // Options / Minus / Share / View
+        // Options / Minus / Share / View (Select Button)
         gamepad.buttonOptions?.pressedChangedHandler = { [weak self] _, _, pressed in
             if pressed {
                 self?.triggerRawElement("buttonOptions")
                 self?.triggerAction(.options)
+            }
+        }
+
+        // Dedicated Share / Capture Button (on Xbox Series, Switch Pro, DualSense)
+        if let share = controller.physicalInputProfile.buttons[GCInputButtonShare] {
+            share.pressedChangedHandler = { [weak self] _, _, pressed in
+                if pressed {
+                    self?.triggerRawElement("buttonShare")
+                    self?.quitGameAndFocusLauncher()
+                }
             }
         }
         
@@ -229,15 +248,13 @@ public final class GameControllerService: ObservableObject {
         homeButtonHoldTimer = nil
     }
     
-    private func handleHomeHold3Seconds() {
+    public func quitGameAndFocusLauncher() {
         DispatchQueue.main.async {
-            // 1. Terminate tracked running game app
             if let app = self.activeRunningGameApp, !app.isTerminated {
                 app.terminate()
             }
             self.activeRunningGameApp = nil
             
-            // 2. Terminate running game instances (nxnative / dmhost)
             for proc in ["nxnative", "dmhost"] {
                 let killProc = Process()
                 killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
@@ -245,10 +262,13 @@ public final class GameControllerService: ObservableObject {
                 try? killProc.run()
             }
             
-            // 3. Bring NxNative Launcher to front of other screens (and restore from Menu Bar if minimized)
             MenuBarManager.shared.restoreMainWindow()
             SoundEffectService.shared.play(.error)
         }
+    }
+
+    private func handleHomeHold3Seconds() {
+        quitGameAndFocusLauncher()
     }
     
     private func triggerAction(_ action: GamepadAction) {

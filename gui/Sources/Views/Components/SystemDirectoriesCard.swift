@@ -118,6 +118,109 @@ public struct SystemDirectoriesCard: View {
                 
                 Divider().opacity(0.2)
                 
+                // Native Mac Games Directories (.app non-switch games)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Label(viewModel.tr("system.nonswitch_games_folder"), systemImage: "gamecontroller.fill")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(NXTheme.textPrimary)
+                        
+                        Spacer()
+                        
+                        Text("\(viewModel.nonSwitchGameFolders.count) \(viewModel.tr("system.folders_count"))")
+                            .font(.system(size: 11))
+                            .foregroundColor(NXTheme.textSecondary)
+                    }
+                    
+                    if viewModel.nonSwitchGameFolders.isEmpty {
+                        HStack {
+                            Text(viewModel.tr("system.no_nonswitch_folder_selected"))
+                                .font(.system(size: 12))
+                                .foregroundColor(NXTheme.textSecondary)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(NXTheme.glassSurfaceElevated)
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(NXTheme.specularRim, lineWidth: 0.8)
+                        )
+                    } else {
+                        VStack(spacing: 6) {
+                            ForEach(viewModel.nonSwitchGameFolders, id: \.self) { folder in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "folder.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(Color(red: 0.20, green: 0.82, blue: 0.60))
+                                    
+                                    Text(folder.path)
+                                        .font(.system(size: 11, design: .monospaced))
+                                        .foregroundColor(NXTheme.textPrimary)
+                                        .lineLimit(1)
+                                        .truncationMode(.middle)
+                                    
+                                    Spacer()
+                                    
+                                    Button {
+                                        SoundEffectService.shared.play(.click)
+                                        viewModel.removeNonSwitchGameFolder(folder)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.red.opacity(0.85))
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                    .help(viewModel.tr("common.remove"))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(NXTheme.glassSurfaceElevated)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(NXTheme.specularRim, lineWidth: 0.8)
+                                )
+                            }
+                        }
+                    }
+                    
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            viewModel.selectAdditionalNonSwitchGameFolder()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "folder.badge.plus")
+                                Text(viewModel.tr("system.add_nonswitch_folder"))
+                            }
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            viewModel.selectSingleNonSwitchGameFile()
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.app")
+                                Text(viewModel.tr("system.add_nonswitch_single_app"))
+                            }
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        
+                        if !viewModel.nonSwitchGameFolders.isEmpty {
+                            Button(viewModel.tr("common.clear_all")) {
+                                SoundEffectService.shared.play(.click)
+                                viewModel.clearAllNonSwitchGameFolders()
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                        }
+                    }
+                }
+                
+                Divider().opacity(0.2)
+                
                 // Ported Games Library Directory
                 VStack(alignment: .leading, spacing: 6) {
                     Text(viewModel.tr("system.ported_library_folder"))

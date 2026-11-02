@@ -1,16 +1,23 @@
 import SwiftUI
 
 public struct ControllerMappingCalloutOverlay: View {
+    @ObservedObject public var viewModel: AppViewModel
     @Binding public var profile: ControllerProfile
     public let pressedButtons: Set<SwitchButton>
     @State private var listeningButton: SwitchButton? = nil
 
     public init(
+        viewModel: AppViewModel,
         profile: Binding<ControllerProfile>,
         pressedButtons: Set<SwitchButton> = []
     ) {
+        self.viewModel = viewModel
         self._profile = profile
         self.pressedButtons = pressedButtons
+    }
+
+    private var isMappingCardActive: Bool {
+        viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 1
     }
 
     private let leftButtons: [SwitchButton] = [
@@ -26,13 +33,16 @@ public struct ControllerMappingCalloutOverlay: View {
             HStack(alignment: .center, spacing: 18) {
                 // MARK: - Left Callout Column
                 VStack(alignment: .trailing, spacing: 10) {
-                    ForEach(leftButtons) { btn in
+                    ForEach(Array(leftButtons.enumerated()), id: \.element) { idx, btn in
                         let mapped = profile.gamepadBindings.first(where: { $0.value == btn })?.key ?? "None"
+                        let isListening = (listeningButton == btn) || (viewModel.controlsListeningButton == btn)
+                        let isFocused = isMappingCardActive && viewModel.controlsMappingFocus == idx
                         MappingPillView(
                             button: btn,
                             mappedLabel: formatElementName(mapped),
-                            isListening: listeningButton == btn,
+                            isListening: isListening,
                             isLeftSide: true,
+                            isFocused: isFocused,
                             onStartListening: {
                                 startListening(for: btn)
                             },
@@ -70,7 +80,11 @@ public struct ControllerMappingCalloutOverlay: View {
                             .contentShape(Capsule())
                             .nxGlassInteractive(
                                 in: Capsule(),
-                                fallbackFill: NXTheme.glassSurfaceElevated
+                                fallbackFill: (isMappingCardActive && viewModel.controlsMappingFocus == 9) ? NXTheme.primary.opacity(0.35) : NXTheme.glassSurfaceElevated
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke((isMappingCardActive && viewModel.controlsMappingFocus == 9) ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
                             )
                         }
                         .buttonStyle(NXPressableButtonStyle())
@@ -81,7 +95,7 @@ public struct ControllerMappingCalloutOverlay: View {
                     // Vector Controller View
                     SwitchProControllerVectorView(
                         pressedButtons: pressedButtons,
-                        selectedButton: listeningButton,
+                        selectedButton: listeningButton ?? viewModel.controlsListeningButton,
                         onSelectButton: { btn in
                             startListening(for: btn)
                         }
@@ -92,13 +106,16 @@ public struct ControllerMappingCalloutOverlay: View {
 
                 // MARK: - Right Callout Column
                 VStack(alignment: .leading, spacing: 10) {
-                    ForEach(rightButtons) { btn in
+                    ForEach(Array(rightButtons.enumerated()), id: \.element) { idx, btn in
                         let mapped = profile.gamepadBindings.first(where: { $0.value == btn })?.key ?? "None"
+                        let isListening = (listeningButton == btn) || (viewModel.controlsListeningButton == btn)
+                        let isFocused = isMappingCardActive && viewModel.controlsMappingFocus == (idx + 10)
                         MappingPillView(
                             button: btn,
                             mappedLabel: formatElementName(mapped),
-                            isListening: listeningButton == btn,
+                            isListening: isListening,
                             isLeftSide: false,
+                            isFocused: isFocused,
                             onStartListening: {
                                 startListening(for: btn)
                             },
@@ -120,13 +137,15 @@ public struct ControllerMappingCalloutOverlay: View {
     private func startListening(for btn: SwitchButton) {
         SoundEffectService.shared.play(.focus)
         listeningButton = btn
+        viewModel.controlsListeningButton = btn
 
         // Raw element listener (covers all buttons, triggers, stick clicks, D-Pad, menu)
         GameControllerService.shared.onRawElementPressed = { [self] elem in
-            if let targetBtn = self.listeningButton {
+            if let targetBtn = self.listeningButton ?? self.viewModel.controlsListeningButton {
                 DispatchQueue.main.async {
                     self.assignMapping(element: elem, to: targetBtn)
                     self.listeningButton = nil
+                    self.viewModel.controlsListeningButton = nil
                     GameControllerService.shared.onRawElementPressed = nil
                     GameControllerService.shared.onAction = nil
                     SoundEffectService.shared.play(.click)
@@ -136,11 +155,12 @@ public struct ControllerMappingCalloutOverlay: View {
 
         // Action fallback listener on GameController
         GameControllerService.shared.onAction = { [self] action in
-            if let targetBtn = self.listeningButton {
+            if let targetBtn = self.listeningButton ?? self.viewModel.controlsListeningButton {
                 let mappedElem = self.elementName(for: action)
                 DispatchQueue.main.async {
                     self.assignMapping(element: mappedElem, to: targetBtn)
                     self.listeningButton = nil
+                    self.viewModel.controlsListeningButton = nil
                     GameControllerService.shared.onRawElementPressed = nil
                     GameControllerService.shared.onAction = nil
                     SoundEffectService.shared.play(.click)

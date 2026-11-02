@@ -20,6 +20,13 @@ extension AppViewModel {
             searchDirs.append(custom)
         }
         
+        for folder in nonSwitchGameFolders {
+            let std = folder.standardizedFileURL
+            if !searchDirs.contains(where: { $0.standardizedFileURL.path == std.path }) {
+                searchDirs.append(std)
+            }
+        }
+        
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             let extraURLs = self.savedNonSwitchAppPaths.map { URL(fileURLWithPath: $0) }
@@ -178,6 +185,54 @@ extension AppViewModel {
         }
     }
     
+    // MARK: - Native Mac Game Folders (Non-Switch Games)
+    public func addNonSwitchGameFolder(_ url: URL) {
+        let standardized = url.standardizedFileURL
+        if !nonSwitchGameFolders.contains(where: { $0.standardizedFileURL.path == standardized.path }) {
+            nonSwitchGameFolders.append(standardized)
+        }
+    }
+
+    public func removeNonSwitchGameFolder(_ url: URL) {
+        let path = url.standardizedFileURL.path
+        nonSwitchGameFolders.removeAll { $0.standardizedFileURL.path == path }
+    }
+
+    public func clearAllNonSwitchGameFolders() {
+        nonSwitchGameFolders.removeAll()
+    }
+
+    public func selectAdditionalNonSwitchGameFolder() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = true
+        panel.prompt = tr("system.add_folder")
+        panel.message = tr("system.select_nonswitch_folder_message")
+        
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                addNonSwitchGameFolder(url)
+            }
+        }
+    }
+
+    public func selectSingleNonSwitchGameFile() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.allowedContentTypes = [.application]
+        panel.prompt = tr("system.add_nonswitch_single_app")
+        panel.message = tr("system.select_nonswitch_app_message")
+        
+        if panel.runModal() == .OK {
+            for url in panel.urls {
+                addNonSwitchGame(url: url)
+            }
+        }
+    }
+    
     // MARK: - Sorting Helpers & Unified Items
     public func resetLibraryOrganization() {
         activeGroupFilter = .categories
@@ -251,19 +306,64 @@ extension AppViewModel {
         dropErrorMessage = nil
         for url in urls {
             var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) {
-                if isDir.boolValue {
-                    addGameFolder(url)
-                } else if url.pathExtension.lowercased() == "app" {
-                    addNonSwitchGame(url: url)
-                } else if url.pathExtension.lowercased() == "zip" {
-                    extractDroppedZip(zipURL: url)
-                } else {
-                    let parent = url.deletingLastPathComponent()
-                    addGameFolder(parent)
+            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
+            
+            let ext = url.pathExtension.lowercased()
+            if ext == "app" {
+                addNonSwitchGame(url: url)
+            } else if ext == "zip" {
+                extractDroppedZip(zipURL: url)
+            } else if isDir.boolValue {
+                let hasApps = containsMacApps(in: url)
+                let hasRoms = containsSwitchRoms(in: url)
+                if hasApps {
+                    addNonSwitchGameFolder(url)
                 }
+                if hasRoms || !hasApps {
+                    addGameFolder(url)
+                }
+            } else {
+                let parent = url.deletingLastPathComponent()
+                addGameFolder(parent)
             }
         }
+    }
+    
+    private func containsMacApps(in directory: URL) -> Bool {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else { return false }
+        
+        var count = 0
+        for case let fileURL as URL in enumerator {
+            count += 1
+            if count > 50 { break }
+            if fileURL.pathExtension.lowercased() == "app" {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func containsSwitchRoms(in directory: URL) -> Bool {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else { return false }
+        
+        let romExts: Set<String> = ["nsp", "nsz", "xci", "xcz"]
+        var count = 0
+        for case let fileURL as URL in enumerator {
+            count += 1
+            if count > 50 { break }
+            if romExts.contains(fileURL.pathExtension.lowercased()) {
+                return true
+            }
+        }
+        return false
     }
     
     private func extractDroppedZip(zipURL: URL) {

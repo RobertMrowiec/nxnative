@@ -74,30 +74,6 @@ public struct SwitchConsoleLibraryView: View {
                             verticalProxy.scrollTo("unified_card_\(newIdx)", anchor: isFirstRow ? .top : .center)
                         }
                     }
-                    .onChange(of: viewModel.focusedMacIndex) { _ in
-                        guard viewModel.activeLibraryShelf == .mac else { return }
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            verticalProxy.scrollTo("shelf_mac", anchor: .top)
-                        }
-                    }
-                    .onChange(of: viewModel.focusedIosIndex) { _ in
-                        guard viewModel.activeLibraryShelf == .ios else { return }
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            verticalProxy.scrollTo("shelf_ios", anchor: .center)
-                        }
-                    }
-                    .onChange(of: viewModel.focusedNonSwitchIndex) { _ in
-                        guard viewModel.activeLibraryShelf == .nonSwitch else { return }
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            verticalProxy.scrollTo("shelf_non_switch", anchor: .center)
-                        }
-                    }
-                    .onChange(of: viewModel.focusedUnportedGameIndex) { _ in
-                        guard viewModel.activeLibraryShelf == .unportedSwitch else { return }
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
-                        }
-                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -211,7 +187,7 @@ public struct SwitchConsoleLibraryView: View {
 
             ScrollViewReader { horizontalProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .center, spacing: cardSpacing) {
+                    LazyHStack(alignment: .center, spacing: cardSpacing) {
                         ForEach(items.indices, id: \.self) { idx in
                             let game = items[idx]
                             let isFocused = (viewModel.activeLibraryShelf == .unportedSwitch) &&

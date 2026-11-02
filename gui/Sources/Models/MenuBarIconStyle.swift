@@ -2,9 +2,10 @@ import Foundation
 import AppKit
 
 public enum MenuBarIconStyle: String, CaseIterable, Identifiable, Hashable, Codable {
-    case symbol = "symbol"         // Default: official white Joy-Con symbol without background
-    case dark = "dark"             // Official dark squircle app icon
-    case lightColor = "lightColor" // Official light with vibrant gradient color squircle app icon
+    case matchAppIcon = "matchAppIcon" // Dynamically matches selected app icon (Default, Dark, Clear, Tinted)
+    case symbol = "symbol"             // Minimalist white logo symbol without background
+    case dark = "dark"                 // Dark squircle app icon
+    case lightColor = "lightColor"     // Default light squircle app icon
     
     public var id: String { rawValue }
     
@@ -12,7 +13,7 @@ public enum MenuBarIconStyle: String, CaseIterable, Identifiable, Hashable, Coda
         switch self {
         case .symbol:
             return true
-        case .dark, .lightColor:
+        case .matchAppIcon, .dark, .lightColor:
             return false
         }
     }

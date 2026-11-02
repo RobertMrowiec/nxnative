@@ -21,7 +21,7 @@ public struct AboutLauncherView: View {
     }
     
     private var appIconImage: NSImage? {
-        AppIconCache.image(named: "AppIcon-Light") ?? NSApp?.applicationIconImage
+        AppIconCache.image(named: viewModel.iconAppearanceMode.resourceName) ?? NSApp?.applicationIconImage
     }
     
     public var body: some View {

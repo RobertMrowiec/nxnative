@@ -12,25 +12,60 @@ public struct PersonalizationView: View {
     
     private var hasNonDefaultSettings: Bool {
         viewModel.highlightTheme != .electricPurple
-            || viewModel.iconAppearanceMode != .light
+            || viewModel.iconAppearanceMode != .default
             || !soundService.isSoundEnabled
             || viewModel.launcherLanguage != .system
             || !viewModel.isLiquidGlassEnabled
             || abs(viewModel.liquidGlassIntensity - 1.0) > 0.01
     }
     
+    private func cardStroke(for index: Int, cornerRadius: CGFloat = 16) -> some View {
+        let isSelected = viewModel.personalizeCardIndex == index
+        let isInside = viewModel.isInsidePersonalizeCard
+        return RoundedRectangle(cornerRadius: cornerRadius)
+            .stroke(
+                isSelected ? (isInside ? NXTheme.secondary.opacity(0.85) : NXTheme.primary) : Color.clear,
+                lineWidth: isSelected ? (isInside ? 1.5 : 2.5) : 0
+            )
+            .shadow(
+                color: (isSelected && !isInside) ? NXTheme.primary.opacity(0.45) : Color.clear,
+                radius: 8
+            )
+    }
+
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                headerView
-                launcherLanguageCard
-                highlightColorCard
-                SystemAppearanceCard(viewModel: viewModel)
-                soundEffectsCard
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    headerView
+                        .id("personalize_card_0")
+                        .overlay(cardStroke(for: 0, cornerRadius: 16))
+
+                    launcherLanguageCard
+                        .id("personalize_card_1")
+                        .overlay(cardStroke(for: 1, cornerRadius: 16))
+
+                    highlightColorCard
+                        .id("personalize_card_2")
+                        .overlay(cardStroke(for: 2, cornerRadius: 18))
+
+                    SystemAppearanceCard(viewModel: viewModel)
+                        .id("personalize_card_3")
+                        .overlay(cardStroke(for: 3, cornerRadius: 16))
+
+                    soundEffectsCard
+                        .id("personalize_card_4")
+                        .overlay(cardStroke(for: 4, cornerRadius: 16))
+                }
+                .padding(20)
             }
-            .padding(20)
+            .nxScrollEdgeEffect(edges: [.top, .bottom])
+            .onChange(of: viewModel.personalizeCardIndex) { newIdx in
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo("personalize_card_\(newIdx)", anchor: .center)
+                }
+            }
         }
-        .nxScrollEdgeEffect(edges: [.top, .bottom])
     }
     
     private var headerView: some View {
@@ -47,7 +82,7 @@ public struct PersonalizationView: View {
                         SoundEffectService.shared.play(.click)
                         withAnimation(.spring(response: 0.30, dampingFraction: 0.80)) {
                             viewModel.highlightTheme = .electricPurple
-                            viewModel.iconAppearanceMode = .light
+                            viewModel.iconAppearanceMode = .default
                             soundService.isSoundEnabled = true
                             viewModel.launcherLanguage = .system
                             viewModel.isLiquidGlassEnabled = true
@@ -90,9 +125,10 @@ public struct PersonalizationView: View {
                 
                 NXGlassContainer(spacing: 10) {
                     LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(AppLanguage.sortedForDisplay) { lang in
+                        ForEach(Array(AppLanguage.sortedForDisplay.enumerated()), id: \.element.id) { idx, lang in
                             let isSelected = viewModel.launcherLanguage == lang
-                            languagePill(lang: lang, isSelected: isSelected)
+                            let isFocused = viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 1 && viewModel.personalizeLangFocus == idx
+                            languagePill(lang: lang, isSelected: isSelected, isFocused: isFocused)
                         }
                     }
                 }
@@ -100,7 +136,7 @@ public struct PersonalizationView: View {
         }
     }
     
-    private func languagePill(lang: AppLanguage, isSelected: Bool) -> some View {
+    private func languagePill(lang: AppLanguage, isSelected: Bool, isFocused: Bool = false) -> some View {
         Button(action: {
             SoundEffectService.shared.play(.click)
             withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
@@ -129,9 +165,13 @@ public struct PersonalizationView: View {
             .contentShape(Rectangle())
             .nxGlassInteractive(
                 in: RoundedRectangle(cornerRadius: 10, style: .continuous),
-                isSelected: isSelected,
+                isSelected: isSelected || isFocused,
                 fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.5),
                 fallbackSelectedFill: viewModel.highlightTheme.primaryColor.opacity(0.24)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
             )
         }
         .buttonStyle(NXPressableButtonStyle())
@@ -166,8 +206,9 @@ public struct PersonalizationView: View {
                 
                 NXGlassContainer(spacing: 12) {
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(LauncherHighlightTheme.allCases) { theme in
-                            colorSwatchButton(theme: theme)
+                        ForEach(Array(LauncherHighlightTheme.allCases.enumerated()), id: \.element.id) { idx, theme in
+                            let isFocused = viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 2 && viewModel.personalizeColorFocus == idx
+                            colorSwatchButton(theme: theme, isFocused: isFocused)
                         }
                     }
                 }
@@ -239,7 +280,7 @@ public struct PersonalizationView: View {
         }
     }
     
-    private func colorSwatchButton(theme: LauncherHighlightTheme) -> some View {
+    private func colorSwatchButton(theme: LauncherHighlightTheme, isFocused: Bool = false) -> some View {
         let isSelected = viewModel.highlightTheme == theme
         return Button(action: {
             SoundEffectService.shared.play(.click)
@@ -291,9 +332,13 @@ public struct PersonalizationView: View {
             .nxGlassInteractive(
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous),
                 tint: isSelected ? theme.primaryColor.opacity(0.55) : nil,
-                isSelected: isSelected,
+                isSelected: isSelected || isFocused,
                 fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.5),
                 fallbackSelectedFill: theme.primaryColor.opacity(0.24)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
             )
             .nxGlassID(isSelected ? "selectedHighlightSwatch" : nil, in: colorSelectionNamespace)
         }
@@ -386,6 +431,10 @@ public struct PersonalizationView: View {
                             accentColor: viewModel.highlightTheme.primaryColor
                         )
                         .frame(width: 165)
+                        .overlay(
+                            Capsule()
+                                .stroke((viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 2 && viewModel.personalizeColorFocus == 8) ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                        )
                         
                         Button(action: {
                             SoundEffectService.shared.play(.click)
@@ -406,6 +455,10 @@ public struct PersonalizationView: View {
                 Toggle("", isOn: $viewModel.isLiquidGlassEnabled.animation(.spring(response: 0.34, dampingFraction: 0.76)))
                     .toggleStyle(.switch)
                     .labelsHidden()
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke((viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 2 && viewModel.personalizeColorFocus == 9) ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                    )
                     .onChange(of: viewModel.isLiquidGlassEnabled) { _ in
                         SoundEffectService.shared.play(.click)
                     }

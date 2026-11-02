@@ -38,7 +38,7 @@ public struct PortedCategoryShelfView: View {
 
             ScrollViewReader { horizontalProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .center, spacing: cardSpacing) {
+                    LazyHStack(alignment: .center, spacing: cardSpacing) {
                         ForEach(items.indices, id: \.self) { idx in
                             let game = items[idx]
                             let isFocused = (viewModel.activeLibraryShelf == shelf) &&

@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Aktivering på titelskärmen (Tryck L + R)",
         "controls.title_screen_tip_desc": "Nästan alla Switch-spel kräver att du trycker på L + R samtidigt på titelskärmen för att identifiera handkontrollen.",
         "controls.customize_keybindings": "Anpassa kontroller...",
+        "system.nonswitch_games_folder": "Mappar för inbyggda Mac-spel (.app)",
+        "system.no_nonswitch_folder_selected": "Inga Mac-spelmappar har valts än. Lägg till mappar med dina macOS-spel.",
+        "system.add_nonswitch_folder": "Lägg till spelmapp",
+        "system.add_nonswitch_single_app": "Lägg till spel (.app)",
+        "system.select_nonswitch_folder_message": "Välj mappar som innehåller dina inbyggda macOS-spel (.app).",
+        "system.select_nonswitch_app_message": "Välj inbyggda macOS-spelapplikationer (.app) att lägga till i biblioteket.",
+        "system.nonswitch_dirs_help": "Mappar som söks igenom rekursivt efter inbyggda Mac-spel (.app) för ditt enhetliga bibliotek."
     ]
 }

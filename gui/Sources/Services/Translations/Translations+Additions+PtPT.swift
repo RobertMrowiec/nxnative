@@ -84,5 +84,12 @@ extension Translations {
         "system.ryujinx_not_found_title": "Ryujinx / Ryubing Não Encontrado",
         "system.select_folder": "Selecionar Pasta",
         "system.select_prod_keys": "Selecionar prod.keys",
+        "system.nonswitch_games_folder": "Pastas de Jogos Nativos Mac (.app)",
+        "system.no_nonswitch_folder_selected": "Nenhuma pasta de jogos Mac selecionada. Adicione pastas com os seus jogos do macOS.",
+        "system.add_nonswitch_folder": "Adicionar Pasta de Jogos",
+        "system.add_nonswitch_single_app": "Adicionar Jogo (.app)",
+        "system.select_nonswitch_folder_message": "Selecione pastas contendo as suas aplicações de jogos nativos do macOS (.app).",
+        "system.select_nonswitch_app_message": "Escolha pacotes de jogos nativos do macOS (.app) para adicionar à sua biblioteca.",
+        "system.nonswitch_dirs_help": "Diretórios analisados recursivamente para jogos nativos de Mac (.app) para organizar a sua biblioteca unificada."
     ]
 }

@@ -20,11 +20,11 @@ public struct PortedGameCard: View {
             VStack(spacing: 12) {
                 // Top Platform Pill & Format
                 HStack {
-                    Text(game.platform == .macApp ? "Mac App" : "iOS IPA")
+                    Text(game.platform == .macApp ? "Mac Port" : (game.platform == .nonSwitch ? "Mac Native" : "iOS IPA"))
                         .font(.system(size: 10, weight: .bold, design: .rounded))
                         .padding(.horizontal, 7)
                         .padding(.vertical, 3)
-                        .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : NXTheme.secondary.opacity(0.35))
+                        .background(game.platform == .macApp ? NXTheme.primary.opacity(0.35) : (game.platform == .nonSwitch ? Color(red: 0.20, green: 0.82, blue: 0.60).opacity(0.35) : NXTheme.secondary.opacity(0.35)))
                         .foregroundColor(.white)
                         .clipShape(Capsule())
                     

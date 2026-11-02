@@ -77,6 +77,9 @@ extension AppViewModel {
             env["DM_MOUSE_SENSITIVITY"] = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), prof.mouseSensitivity)
             env["DM_MOUSE_INVERT_X"] = prof.mouseInvertX ? "1" : "0"
             env["DM_MOUSE_INVERT_Y"] = prof.mouseInvertY ? "1" : "0"
+            env["DM_RUMBLE"] = prof.enableRumble ? "1" : "0"
+            env["DM_RUMBLE_GAIN"] = String(format: "%.2f", locale: Locale(identifier: "en_US_POSIX"), prof.rumbleStrength)
+            env["DM_RUMBLE_FLOOR"] = prof.rumbleFloorBoost ? "0.22" : "0.0"
             LibraryScanner.shared.launchGame(at: game.url, env: env) { [weak self] success, error in
                 DispatchQueue.main.async {
                     if success {

@@ -21,32 +21,34 @@ public struct GameSettingsSheetView: View {
     }
     
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                if game.platform == .macApp {
-                    // Section 0: Framerate (60 FPS)
-                    settingCard(
-                        rowIndex: 0,
-                        title: viewModel.tr("settings_modal.framerate_title"),
-                        icon: "speedometer",
-                        iconColor: Color(red: 0.13, green: 0.77, blue: 0.37)
-                    ) {
-                        let isRowFocused = viewModel.settingsModalFocusIndex == 0
-                        HStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(viewModel.activeSettingsConfig.enable60FPS ? viewModel.tr("settings_modal.fps_60") : viewModel.tr("settings_modal.fps_30"))
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white)
-                                Text(viewModel.tr("settings_modal.fps_desc"))
-                                    .font(.system(size: 11, weight: .medium))
-                                    .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if game.platform == .macApp {
+                        // Section 0: Framerate (60 FPS)
+                        settingCard(
+                            rowIndex: 0,
+                            title: viewModel.tr("settings_modal.framerate_title"),
+                            icon: "speedometer",
+                            iconColor: Color(red: 0.13, green: 0.77, blue: 0.37)
+                        ) {
+                            let isRowFocused = viewModel.settingsModalFocusIndex == 0
+                            HStack(alignment: .center, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(viewModel.activeSettingsConfig.enable60FPS ? viewModel.tr("settings_modal.fps_60") : viewModel.tr("settings_modal.fps_30"))
+                                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text(viewModel.tr("settings_modal.fps_desc"))
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
+                                }
+                                Spacer(minLength: 12)
+                                Toggle("", isOn: $viewModel.activeSettingsConfig.enable60FPS)
+                                    .labelsHidden()
+                                    .toggleStyle(.switch)
                             }
-                            Spacer(minLength: 12)
-                            Toggle("", isOn: $viewModel.activeSettingsConfig.enable60FPS)
-                                .labelsHidden()
-                                .toggleStyle(.switch)
                         }
-                    }
+                        .id("setting_row_0")
                     
                     // Section 1: macOS Game Mode (Modo Jogo & Fullscreen)
                     settingCard(
@@ -71,6 +73,7 @@ public struct GameSettingsSheetView: View {
                                 .toggleStyle(.switch)
                         }
                     }
+                    .id("setting_row_1")
                     
                     // Section 2: Metal HUD
                     settingCard(
@@ -95,6 +98,7 @@ public struct GameSettingsSheetView: View {
                                 .toggleStyle(.switch)
                         }
                     }
+                    .id("setting_row_2")
                     
                     // Section 3: Console Mode (Sliding Liquid Glass Segmented Picker)
                     settingCard(
@@ -120,6 +124,7 @@ public struct GameSettingsSheetView: View {
                                 .foregroundColor(isRowFocused ? .white : .white.opacity(0.88))
                         }
                     }
+                    .id("setting_row_3")
                     
                     // Section 4: 3D Render Scale (Liquid Glass Slider)
                     settingCard(
@@ -170,6 +175,7 @@ public struct GameSettingsSheetView: View {
                             }
                         }
                     }
+                    .id("setting_row_4")
                     
                     // Section 5: MetalFX Upscaling
                     settingCard(
@@ -194,27 +200,40 @@ public struct GameSettingsSheetView: View {
                                 .toggleStyle(.switch)
                         }
                     }
+                    .id("setting_row_5")
                     
                     // Section 6: Controller Profile Override (Liquid Glass Dropdown)
                     controllerProfileSection(rowIndex: 6)
+                        .id("setting_row_6")
                     
                     // Section 7: Cover Artwork Customization
                     coverArtworkSection()
+                        .id("setting_row_7")
                     
                     // Section 8: Mods Management & Save Sync
                     GameSettingsModsAndSavesView(game: game)
+                        .id("setting_row_8")
                 } else {
                     // iOS Port: Installation, AirDrop, Sideload & Saves
                     GameSettingsModsAndSavesView(game: game)
+                        .id("setting_row_ios_mods")
                     
                     // Cover Artwork Customization
                     coverArtworkSection()
+                        .id("setting_row_ios_cover")
                 }
                 
                 // Section: Game Management (Remove / Trash)
                 gameManagementSection()
+                    .id("setting_row_9")
             }
             .padding(20)
+            .onChange(of: viewModel.settingsModalFocusIndex) { newIndex in
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    scrollProxy.scrollTo("setting_row_\(newIndex)", anchor: .center)
+                }
+            }
+        }
         }
         .nxScrollEdgeEffect(edges: [.top, .bottom])
         .safeAreaInset(edge: .top, spacing: 0) {

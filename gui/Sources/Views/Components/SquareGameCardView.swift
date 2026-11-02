@@ -8,9 +8,8 @@ public struct SquareGameCardView: View {
     public let isDropTarget: Bool
     public let baseSize: CGFloat
     public let onSelect: () -> Void
-    @ObservedObject private var artworkStore = ArtworkStore.shared
-    @ObservedObject private var coverService = GameCoverService.shared
     @ObservedObject private var deploymentTracker = IosDeploymentTracker.shared
+    @State private var cachedIcon: NSImage? = nil
 
     public init(
         game: PortedGame,
@@ -29,7 +28,8 @@ public struct SquareGameCardView: View {
     }
 
     private var iconImage: NSImage {
-        ArtworkStore.shared.loadSquareIcon(for: game)
+        if let cached = cachedIcon { return cached }
+        return ArtworkStore.shared.loadSquareIcon(for: game)
     }
 
     private var isBeingDragged: Bool {
@@ -60,15 +60,18 @@ public struct SquareGameCardView: View {
         .overlay(alignment: .bottomTrailing) {
             NXGlassContainer(spacing: 4) {
                 HStack(spacing: 4) {
-                    Text(game.platform == .macApp ? "MAC" : "IOS")
+                    let badgeText = game.platform == .macApp ? "MAC" : (game.platform == .nonSwitch ? "NATIVE" : "IOS")
+                    let badgeColor = game.platform == .macApp ? NXTheme.primary : (game.platform == .nonSwitch ? Color(red: 0.20, green: 0.82, blue: 0.60) : NXTheme.secondary)
+
+                    Text(badgeText)
                         .font(.system(size: 8, weight: .black, design: .rounded))
                         .foregroundColor(.white)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2.5)
                         .nxGlassBar(
                             in: Capsule(),
-                            tint: (game.platform == .macApp ? NXTheme.primary : NXTheme.secondary).opacity(0.68),
-                            fallbackFill: (game.platform == .macApp ? NXTheme.primary : NXTheme.secondary).opacity(0.85),
+                            tint: badgeColor.opacity(0.68),
+                            fallbackFill: badgeColor.opacity(0.85),
                             fallbackStroke: Color.white.opacity(0.22)
                         )
 
@@ -129,7 +132,7 @@ public struct SquareGameCardView: View {
             onSelect()
         }
         .contextMenu {
-            if game.platform == .macApp {
+            if game.isPlayableLocally {
                 Button {
                     viewModel.launchGame(game)
                 } label: {
@@ -181,6 +184,17 @@ public struct SquareGameCardView: View {
             } label: {
                 Label(viewModel.tr("actions.move_to_trash"), systemImage: "trash")
             }
+        }
+        .onAppear {
+            if cachedIcon == nil {
+                cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
+            }
+        }
+        .onChange(of: game.url) { _ in
+            cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
+        }
+        .onReceive(GameCoverService.shared.$refreshRevision) { _ in
+            cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
         }
     }
 }

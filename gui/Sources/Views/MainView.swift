@@ -163,7 +163,7 @@ public struct MainView: View {
         case 1:
             CompatibilityView(viewModel: viewModel)
         case 2:
-            ControlsView()
+            ControlsView(viewModel: viewModel)
         case 3:
             PersonalizationView(viewModel: viewModel)
         case 4:

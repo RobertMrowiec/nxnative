@@ -33,6 +33,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         public static let savedAllowOtherMetal = "NXNative_SavedAllowOtherMetal"
         public static let savedDeveloperMode = "NXNative_SavedDeveloperMode"
         public static let savedNonSwitchAppPaths = "NXNative_SavedNonSwitchAppPaths"
+        public static let savedNonSwitchGameFolders = "NXNative_SavedNonSwitchGameFolders"
         public static let savedLastPlayedDates = "NXNative_SavedLastPlayedDates"
         public static let savedActiveGroupFilter = "NXNative_SavedActiveGroupFilter"
         public static let savedActiveSortOption = "NXNative_SavedActiveSortOption"
@@ -174,6 +175,29 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var activeSettingsConfig: GameRuntimeConfig = GameRuntimeConfig()
     internal var runtimeConfigCache: [String: GameRuntimeConfig] = [:]
     @Published public var settingsModalFocusIndex: Int = 0
+    @Published public var controlsFocusIndex: Int = 0
+    @Published public var settingsFocusIndex: Int = 0
+    
+    // Controls Tab Navigation (2-Level Card Architecture)
+    @Published public var controlsCardIndex: Int = 0 // 0: Header, 1: Mapping, 2: Deadzone, 3: Rumble, 4: Mouse
+    @Published public var isInsideControlsCard: Bool = false
+    @Published public var controlsHeaderFocus: Int = 0 // 0: Player, 1: Profile, 2: Duplicate, 3: Reset
+    @Published public var controlsMappingFocus: Int = 0 // 0..18 (Buttons + Swap AB/XY)
+    @Published public var controlsHapticsFocus: Int = 0 // 0: Master, 1: Strength, 2: Floor Boost, 3: Test
+    @Published public var controlsMouseFocus: Int = 0 // 0: Master, 1: Sensitivity, 2: InvertX, 3: InvertY, 4: Mode
+    @Published public var showControlsPlayerModal: Bool = false
+    @Published public var showControlsProfileModal: Bool = false
+    @Published public var controlsPlayerModalFocus: Int = 0
+    @Published public var controlsProfileModalFocus: Int = 0
+    @Published public var controlsListeningButton: SwitchButton? = nil
+
+    // Personalize Tab Navigation (2-Level Card Architecture)
+    @Published public var personalizeCardIndex: Int = 1 // 0: Reset, 1: Language, 2: Colors/Glass, 3: Icons, 4: Sound
+    @Published public var isInsidePersonalizeCard: Bool = false
+    @Published public var personalizeLangFocus: Int = 0
+    @Published public var personalizeColorFocus: Int = 0 // 0..7: Swatches, 8: Glass Slider, 9: Glass Toggle
+    @Published public var personalizeIconFocus: Int = 0 // AppIconAppearanceMode index
+    @Published public var personalizeMenuBarFocus: Int = 0 // MenuBarIconStyle index
     @Published public var gameToDelete: PortedGame? = nil
     @Published public var showDeleteConfirm: Bool = false
     @Published public var hiddenGamePaths: Set<String> = [] {
@@ -190,6 +214,13 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var savedNonSwitchAppPaths: [String] = [] {
         didSet {
             UserDefaults.standard.set(savedNonSwitchAppPaths, forKey: StorageKeys.savedNonSwitchAppPaths)
+            refreshLibrary()
+        }
+    }
+    @Published public var nonSwitchGameFolders: [URL] = [] {
+        didSet {
+            let paths = nonSwitchGameFolders.map { $0.path }
+            UserDefaults.standard.set(paths, forKey: StorageKeys.savedNonSwitchGameFolders)
             refreshLibrary()
         }
     }
@@ -402,13 +433,16 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             }
         }
     }
-    @Published public var iconAppearanceMode: AppIconAppearanceMode = .light {
+    @Published public var iconAppearanceMode: AppIconAppearanceMode = .default {
         didSet {
             UserDefaults.standard.set(iconAppearanceMode.rawValue, forKey: StorageKeys.savedIconAppearanceMode)
             updateDockIcon()
+            DispatchQueue.main.async {
+                MenuBarManager.shared.updateMenuBarIcon()
+            }
         }
     }
-    @Published public var menuBarIconStyle: MenuBarIconStyle = .symbol {
+    @Published public var menuBarIconStyle: MenuBarIconStyle = .matchAppIcon {
         didSet {
             UserDefaults.standard.set(menuBarIconStyle.rawValue, forKey: StorageKeys.savedMenuBarIconStyle)
             let style = menuBarIconStyle
@@ -555,9 +589,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         if let savedProfile = UserDefaults.standard.string(forKey: StorageKeys.savedCustomProvisioningProfilePath) {
             self.customProvisioningProfilePath = savedProfile
         }
-        if let savedMode = UserDefaults.standard.string(forKey: StorageKeys.savedIconAppearanceMode),
-           let mode = AppIconAppearanceMode(rawValue: savedMode) {
-            self.iconAppearanceMode = mode
+        if let savedMode = UserDefaults.standard.string(forKey: StorageKeys.savedIconAppearanceMode) {
+            self.iconAppearanceMode = AppIconAppearanceMode.from(saved: savedMode)
         }
         if let savedMenuStyle = UserDefaults.standard.string(forKey: StorageKeys.savedMenuBarIconStyle),
            let menuStyle = MenuBarIconStyle(rawValue: savedMenuStyle) {
@@ -634,6 +667,15 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         // Load Non-Switch Games
         if let savedNonSwitch = UserDefaults.standard.stringArray(forKey: StorageKeys.savedNonSwitchAppPaths) {
             self.savedNonSwitchAppPaths = savedNonSwitch
+        }
+        
+        // Load Non-Switch Game Folders
+        if let savedNonSwitchFolders = UserDefaults.standard.stringArray(forKey: StorageKeys.savedNonSwitchGameFolders) {
+            let urls = savedNonSwitchFolders.compactMap { path -> URL? in
+                let url = URL(fileURLWithPath: path)
+                return FileManager.default.fileExists(atPath: path) ? url : nil
+            }
+            self.nonSwitchGameFolders = urls
         }
         
         // Load Last Played Dates

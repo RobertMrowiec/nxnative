@@ -45,7 +45,7 @@ extension AppViewModel {
         isGameActionMenuPresented = false
         switch gameActionFocusedIndex {
         case 0:
-            if game.platform == .macApp {
+            if game.isPlayableLocally {
                 launchGame(game)
             } else {
                 gameForSettingsSheet = game

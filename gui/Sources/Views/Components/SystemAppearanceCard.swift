@@ -10,18 +10,7 @@ public struct SystemAppearanceCard: View {
     }
     
     private func iconPreview(for mode: AppIconAppearanceMode) -> Image {
-        let name: String
-        switch mode {
-        case .auto:
-            name = colorScheme == .dark ? "AppIcon-Dark" : "AppIcon-Light"
-        case .light:
-            name = "AppIcon-Light"
-        case .dark:
-            name = "AppIcon-Dark"
-        case .mono:
-            name = "AppIcon-Mono"
-        }
-        
+        let name = mode.resourceName
         if let img = AppIconCache.image(named: name) {
             return Image(nsImage: img)
         }
@@ -30,12 +19,18 @@ public struct SystemAppearanceCard: View {
     
     private func modeTitle(for mode: AppIconAppearanceMode) -> String {
         switch mode {
-        case .light:
-            return viewModel.tr("personalization.icon_light")
+        case .default:
+            return viewModel.tr("personalization.icon_default")
         case .dark:
             return viewModel.tr("personalization.icon_dark")
-        case .mono:
-            return viewModel.tr("personalization.icon_mono")
+        case .clearLight:
+            return viewModel.tr("personalization.icon_clear_light")
+        case .clearDark:
+            return viewModel.tr("personalization.icon_clear_dark")
+        case .tintedLight:
+            return viewModel.tr("personalization.icon_tinted_light")
+        case .tintedDark:
+            return viewModel.tr("personalization.icon_tinted_dark")
         case .auto:
             return viewModel.tr("personalization.icon_auto")
         }
@@ -48,6 +43,8 @@ public struct SystemAppearanceCard: View {
 
     private func menuBarModeTitle(for style: MenuBarIconStyle) -> String {
         switch style {
+        case .matchAppIcon:
+            return viewModel.tr("menubar.icon_style_match")
         case .symbol:
             return viewModel.tr("menubar.icon_style_symbol")
         case .dark:
@@ -72,10 +69,11 @@ public struct SystemAppearanceCard: View {
                     Spacer()
                 }
                 
-                NXGlassContainer(spacing: 12) {
-                    HStack(spacing: 12) {
-                        ForEach(AppIconAppearanceMode.allCases, id: \.self) { mode in
+                NXGlassContainer(spacing: 10) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 94, maximum: 120), spacing: 8)], spacing: 8) {
+                        ForEach(Array(AppIconAppearanceMode.allCases.enumerated()), id: \.element) { idx, mode in
                             let isSelected: Bool = (viewModel.iconAppearanceMode == mode)
+                            let isFocused: Bool = viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 3 && viewModel.personalizeLangFocus == 0 && viewModel.personalizeIconFocus == idx
                             Button(action: {
                                 SoundEffectService.shared.play(.click)
                                 withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
@@ -129,9 +127,13 @@ public struct SystemAppearanceCard: View {
                                 .contentShape(Rectangle())
                                 .nxGlassInteractive(
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-                                    isSelected: isSelected,
+                                    isSelected: isSelected || isFocused,
                                     fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.6),
                                     fallbackSelectedFill: NXTheme.primary.opacity(0.25)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
                                 )
                             }
                             .buttonStyle(NXPressableButtonStyle())
@@ -156,10 +158,11 @@ public struct SystemAppearanceCard: View {
                     Spacer()
                 }
 
-                NXGlassContainer(spacing: 12) {
-                    HStack(spacing: 12) {
-                        ForEach(MenuBarIconStyle.allCases, id: \.self) { style in
+                NXGlassContainer(spacing: 10) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 110, maximum: 180), spacing: 8)], spacing: 8) {
+                        ForEach(Array(MenuBarIconStyle.allCases.enumerated()), id: \.element) { idx, style in
                             let isSelected: Bool = (viewModel.menuBarIconStyle == style)
+                            let isFocused: Bool = viewModel.isInsidePersonalizeCard && viewModel.personalizeCardIndex == 3 && viewModel.personalizeLangFocus == 1 && viewModel.personalizeMenuBarFocus == idx
                             Button(action: {
                                 SoundEffectService.shared.play(.click)
                                 withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
@@ -217,9 +220,13 @@ public struct SystemAppearanceCard: View {
                                 .contentShape(Rectangle())
                                 .nxGlassInteractive(
                                     in: RoundedRectangle(cornerRadius: 12, style: .continuous),
-                                    isSelected: isSelected,
+                                    isSelected: isSelected || isFocused,
                                     fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.6),
                                     fallbackSelectedFill: NXTheme.primary.opacity(0.25)
+                                )
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .stroke(isFocused ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
                                 )
                             }
                             .buttonStyle(NXPressableButtonStyle())

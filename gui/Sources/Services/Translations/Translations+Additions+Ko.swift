@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "타이틀 화면 활성화 (L + R 동시 입력)",
         "controls.title_screen_tip_desc": "거의 모든 Switch 게임은 타이틀 화면에서 컨트롤러를 인식하고 등록하기 위해 L + R 동시 입력이 필요합니다.",
         "controls.customize_keybindings": "조작 설정 사용자 지정...",
+        "system.nonswitch_games_folder": "Mac 기본 게임 폴더 (.app)",
+        "system.no_nonswitch_folder_selected": "선택된 Mac 게임 폴더가 없습니다. macOS 게임이 포함된 폴더를 추가하십시오.",
+        "system.add_nonswitch_folder": "게임 폴더 추가",
+        "system.add_nonswitch_single_app": "게임 추가 (.app)",
+        "system.select_nonswitch_folder_message": "기본 macOS 게임 애플리케이션 (.app)이 포함된 폴더를 선택하십시오.",
+        "system.select_nonswitch_app_message": "라이브러리에 추가할 기본 macOS 게임 애플리케이션 (.app)을 선택하십시오.",
+        "system.nonswitch_dirs_help": "통합 라이브러리에 표시하기 위해 Mac 기본 게임 (.app)을 재귀적으로 검색하는 폴더입니다."
     ]
 }

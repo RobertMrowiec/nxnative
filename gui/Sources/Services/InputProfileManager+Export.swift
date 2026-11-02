@@ -32,6 +32,32 @@ extension InputProfileManager {
         exportActiveMappingToDisk()
     }
 
+    /// Generates the complete mapping dictionary including player slots 0..7
+    public func exportCompositeDictionary(baseProfile: ControllerProfile? = nil, config: GameRuntimeConfig? = nil) -> [String: Any] {
+        let base = baseProfile ?? activeProfile
+        var dict = base.exportDictionary()
+
+        var playersDict: [String: Any] = [:]
+        for pIdx in 0..<8 {
+            let pProfile: ControllerProfile
+            if let cfg = config, let customId = cfg.playerProfileIds?[String(pIdx)],
+               let uuid = UUID(uuidString: customId),
+               let found = profiles.first(where: { $0.id == uuid }) {
+                pProfile = found
+            } else if pIdx == 0 && config?.controllerProfileId != nil,
+                      let p0Id = config?.controllerProfileId,
+                      let uuid = UUID(uuidString: p0Id),
+                      let found = profiles.first(where: { $0.id == uuid }) {
+                pProfile = found
+            } else {
+                pProfile = profile(forPlayer: pIdx)
+            }
+            playersDict[String(pIdx)] = pProfile.exportDictionary()
+        }
+        dict["players"] = playersDict
+        return dict
+    }
+
     /// Resolves the controller profile to use for a specific game (pinned per-game profile if configured, otherwise global active profile).
     public func resolveProfile(for game: PortedGame, config: GameRuntimeConfig? = nil) -> ControllerProfile {
         let resolvedConfig = config ?? GameRuntimeConfig.load(for: game)
@@ -46,7 +72,7 @@ extension InputProfileManager {
     /// Writes the resolved controller & keyboard mapping JSON directly into a specific game's `.app` bundle.
     public func exportMapping(for game: PortedGame, config: GameRuntimeConfig? = nil) {
         let profile = resolveProfile(for: game, config: config)
-        let dict = profile.exportDictionary()
+        let dict = exportCompositeDictionary(baseProfile: profile, config: config)
         guard let data = try? JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted]) else { return }
 
         let dmDir = game.url.appendingPathComponent("Contents/Resources/dm")
@@ -60,7 +86,7 @@ extension InputProfileManager {
     /// respecting any per-game pinned `controllerProfileId`.
     public func exportActiveMappingToDisk(libraryFolder: URL? = nil) {
         let fm = FileManager.default
-        let globalDict = activeProfile.exportDictionary()
+        let globalDict = exportCompositeDictionary()
         guard let globalData = try? JSONSerialization.data(withJSONObject: globalDict, options: [.prettyPrinted]) else { return }
 
         // 1. Global mapping in Application Support
@@ -99,11 +125,19 @@ extension InputProfileManager {
                 guard fm.fileExists(atPath: dmDir.path) else { continue }
 
                 let target = dmDir.appendingPathComponent("input_mapping.json")
-                if let pinnedProfile = resolvePinnedProfileForBundle(at: item),
-                   let pinnedData = try? JSONSerialization.data(withJSONObject: pinnedProfile.exportDictionary(), options: [.prettyPrinted]) {
-                    try? pinnedData.write(to: target, options: [.atomic])
+                let dummyGame = PortedGame(
+                    name: item.deletingPathExtension().lastPathComponent,
+                    url: item,
+                    platform: .macApp,
+                    sizeBytes: 0,
+                    modificationDate: Date()
+                )
+                let bundleCfg = GameRuntimeConfig.load(for: dummyGame)
+                let gameDict = exportCompositeDictionary(baseProfile: resolvePinnedProfileForBundle(at: item), config: bundleCfg)
+                if let gameData = try? JSONSerialization.data(withJSONObject: gameDict, options: [.prettyPrinted]) {
+                    try? gameData.write(to: target, options: Data.WritingOptions.atomic)
                 } else {
-                    try? globalData.write(to: target, options: [.atomic])
+                    try? globalData.write(to: target, options: Data.WritingOptions.atomic)
                 }
             }
         }

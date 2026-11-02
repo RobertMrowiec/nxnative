@@ -41,7 +41,7 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
                let style = MenuBarIconStyle(rawValue: saved) {
                 return style
             }
-            return .symbol
+            return .matchAppIcon
         }
         set {
             if let vm = viewModel {
@@ -77,11 +77,15 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
         self.statusItem = item
     }
 
-    public func createMenuBarIcon(style: MenuBarIconStyle = .symbol) -> NSImage {
+    public func createMenuBarIcon(style: MenuBarIconStyle = .matchAppIcon) -> NSImage {
         let ptSize: CGFloat = 18
         let size = NSSize(width: ptSize, height: ptSize)
 
         switch style {
+        case .matchAppIcon:
+            let resName = viewModel?.iconAppearanceMode.resourceName ?? "AppIcon-Default"
+            return createIconFromAppIcon(name: resName, fallbackName: "AppIcon", ptSize: ptSize)
+
         case .symbol:
             // 1. Try pre-rasterized high-DPI transparent PNGs
             let pngCandidates = [
@@ -97,8 +101,9 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
                 }
             }
 
-            // 2. Try Vector.svg from Bundle
+            // 2. Try NxLauncher_Logo.svg / Vector.svg from Bundle
             let svgCandidates = [
+                Bundle.main.url(forResource: "NxLauncher_Logo", withExtension: "svg"),
                 Bundle.main.url(forResource: "Vector", withExtension: "svg"),
                 Bundle.main.url(forResource: "AppLogo-Symbol", withExtension: "svg")
             ].compactMap { $0 }
@@ -114,6 +119,8 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
                 "nxnative/gui/Resources/MenuBarIcon-Symbol@2x.png",
                 "nxnative/gui/Resources/MenuBarIcon-Symbol.png",
                 "gui/Resources/MenuBarIcon-Symbol.png",
+                "NxLauncher_Logo.svg",
+                "nxnative/gui/Resources/NxLauncher_Logo.svg",
                 "Vector.svg",
                 "nxnative/gui/Resources/Vector.svg"
             ]
@@ -146,7 +153,7 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
             return createIconFromAppIcon(name: "AppIcon-Dark", ptSize: ptSize)
 
         case .lightColor:
-            return createIconFromAppIcon(name: "AppIcon-Light", fallbackName: "AppIcon", ptSize: ptSize)
+            return createIconFromAppIcon(name: "AppIcon-Default", fallbackName: "AppIcon", ptSize: ptSize)
         }
     }
 
@@ -176,17 +183,23 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
         let ctx = NSGraphicsContext(bitmapImageRep: rep)
         NSGraphicsContext.current = ctx
         ctx?.cgContext.clear(CGRect(x: 0, y: 0, width: CGFloat(pxSize), height: CGFloat(pxSize)))
+        ctx?.imageInterpolation = .high
+        ctx?.shouldAntialias = true
 
-        let maxDimension: CGFloat = ptSize - 2.0
+        let targetH: CGFloat = ptSize - 3.0 // Leaves 1.5pt margin top & bottom
         let svgSize = svg.size
-        let scaleFactor = min(maxDimension / max(svgSize.width, 1), maxDimension / max(svgSize.height, 1))
-        let drawWidth = svgSize.width * scaleFactor
-        let drawHeight = svgSize.height * scaleFactor
+        let aspect = max(svgSize.width, 1) / max(svgSize.height, 1)
+        var drawHeight = targetH
+        var drawWidth = drawHeight * aspect
+        if drawWidth > ptSize - 2.0 {
+            drawWidth = ptSize - 2.0
+            drawHeight = drawWidth / aspect
+        }
         let originX = (ptSize - drawWidth) / 2.0
         let originY = (ptSize - drawHeight) / 2.0
 
         let drawRect = NSRect(x: originX, y: originY, width: drawWidth, height: drawHeight)
-        svg.draw(in: drawRect, from: .zero, operation: .sourceOver, fraction: 1.0)
+        svg.draw(in: drawRect, from: NSRect(origin: .zero, size: svgSize), operation: .sourceOver, fraction: 1.0)
         NSGraphicsContext.restoreGraphicsState()
 
         let outImg = NSImage(size: size)
@@ -459,6 +472,7 @@ public final class MenuBarManager: NSObject, ObservableObject, NSWindowDelegate,
         let activeStyle = currentIconStyle
 
         let styles: [(MenuBarIconStyle, String)] = [
+            (.matchAppIcon, L10n.t("menubar.icon_style_match")),
             (.symbol, L10n.t("menubar.icon_style_symbol")),
             (.dark, L10n.t("menubar.icon_style_dark")),
             (.lightColor, L10n.t("menubar.icon_style_light_color"))

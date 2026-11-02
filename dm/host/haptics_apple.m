@@ -64,14 +64,19 @@ static CHHapticPattern *simple_pattern(dm_haptic_level level, NSError **error) {
         [[CHHapticDynamicParameter alloc] initWithParameterID:CHHapticDynamicParameterIDHapticSharpnessControl value:level.sharpness - 0.5f relativeTime:0]
     ] error:error];
 }
-// DM_RUMBLE_MIN (0 to 0.9, default 0): controller levels below it stay silent and the rest is stretched over the full range. On a Joy-Con's
-// resonant actuator a game's quiet texture is felt as texture; on rotating motors it is rumble that never lets up (Mario Kart 8 Deluxe holds its
-// low band at 0.1-0.4 all race long: 0.45 leaves crashes and drifts). The mapping stays linear by default: the opposite need, low levels that
-// rotating motors do not render at all (Breath of the Wild's charged attack on an Xbox controller), is open (docs/reference/services.md)
+// DM_RUMBLE_MIN (0 to 0.9, default 0): controller levels below it stay silent and the rest is stretched over the full range.
+// DM_RUMBLE_FLOOR (0 to 0.5, default 0): overcomes static friction / physical inertia of rotating ERM motors (Xbox / generics)
+// by lifting any non-zero signal above the motor's deadband threshold without affecting zero / silence.
 static float rumble_min;
+static float rumble_floor;
 static float controller_level(float x) {
     x = isfinite(x) ? fmaxf(0, fminf(1, x)) : 0;
-    return x <= rumble_min ? 0 : (x - rumble_min) / (1 - rumble_min);
+    if (x <= rumble_min || x <= 0.0001f) return 0;
+    float cut = (x - rumble_min) / (1 - rumble_min);
+    if (rumble_floor > 0 && cut > 0) {
+        return fminf(1.0f, rumble_floor + (1.0f - rumble_floor) * cut);
+    }
+    return cut;
 }
 static void report(NSError *e, NSString *target, const char *stage) {
     if (++errors <= 8 || errors % 64 == 0) {
@@ -400,6 +405,8 @@ void dm_haptics_apple_init(void) {
         if (e) { float v = strtof(e, NULL); if (isfinite(v)) gain = fmaxf(0, fminf(3, v)); }
         e = getenv("DM_RUMBLE_MIN");
         if (e) { float v = strtof(e, NULL); if (isfinite(v)) rumble_min = fmaxf(0, fminf(0.9f, v)); }
+        e = getenv("DM_RUMBLE_FLOOR");
+        if (e) { float v = strtof(e, NULL); if (isfinite(v)) rumble_floor = fmaxf(0, fminf(0.5f, v)); }
         e = getenv("DM_RUMBLE");
         dm_haptics_init(apply, !e || atoi(e) != 0);
 #if TARGET_OS_IPHONE

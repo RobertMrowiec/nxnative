@@ -10,21 +10,20 @@ extension AppViewModel {
                 NSApplication.shared.setActivationPolicy(.regular)
             }
             
-            let isDark = NSApp?.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            let resName: String
-            switch self.iconAppearanceMode {
-            case .light: resName = "AppIcon-Light"
-            case .dark: resName = "AppIcon-Dark"
-            case .mono: resName = "AppIcon-Mono"
-            case .auto: resName = isDark ? "AppIcon-Dark" : "AppIcon-Light"
-            }
+            let resName = self.iconAppearanceMode.resourceName
             
             let url = Bundle.main.url(forResource: resName, withExtension: "png")
                 ?? Bundle.main.url(forResource: resName, withExtension: "icns")
-                ?? Bundle.main.url(forResource: "AppIcon-Light", withExtension: "png")
+                ?? Bundle.main.url(forResource: "AppIcon-Default", withExtension: "png")
+                ?? Bundle.main.url(forResource: "AppIcon", withExtension: "png")
                 ?? Bundle.main.url(forResource: "AppIcon", withExtension: "icns")
             
-            if let iconURL = url, let img = NSImage(contentsOf: iconURL) {
+            var image = url.flatMap { NSImage(contentsOf: $0) }
+            if image == nil {
+                image = AppIconCache.image(named: resName)
+            }
+            
+            if let img = image {
                 NSApplication.shared.applicationIconImage = img
                 NSApplication.shared.dockTile.display()
                 

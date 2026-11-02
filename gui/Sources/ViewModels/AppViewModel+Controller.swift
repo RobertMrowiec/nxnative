@@ -11,7 +11,11 @@ extension AppViewModel {
     
     public func handleGamepadAction(_ action: GamepadAction) {
         if isAnyModalPresented {
-            if gameForSettingsSheet != nil {
+            if showControlsPlayerModal {
+                handleControlsPlayerModalGamepadAction(action)
+            } else if showControlsProfileModal {
+                handleControlsProfileModalGamepadAction(action)
+            } else if gameForSettingsSheet != nil {
                 handleSettingsModalGamepadAction(action)
             } else if gameForPortModal != nil {
                 handlePortModalGamepadAction(action)
@@ -35,14 +39,33 @@ extension AppViewModel {
         case .tabNext:
             SoundEffectService.shared.play(.tabSwitch)
             selectedTab = (selectedTab + 1) % tabCount
-        case .navigateLeft: handleNavigateLeft()
-        case .navigateRight: handleNavigateRight()
-        case .navigateDown: handleNavigateDown()
-        case .navigateUp: handleNavigateUp()
-        case .confirm: handleConfirm()
-        case .cancel: handleCancel()
-        case .secondaryAction: handleSecondaryAction()
-        case .contextAction: handleContextAction()
+        case .navigateLeft, .navigateRight, .navigateDown, .navigateUp, .confirm, .contextAction, .secondaryAction:
+            if selectedTab == 2 {
+                handleControlsGamepadAction(action)
+            } else if selectedTab == 3 {
+                handlePersonalizeGamepadAction(action)
+            } else if selectedTab == 4 {
+                handleSystemGamepadAction(action)
+            } else {
+                switch action {
+                case .navigateLeft: handleNavigateLeft()
+                case .navigateRight: handleNavigateRight()
+                case .navigateDown: handleNavigateDown()
+                case .navigateUp: handleNavigateUp()
+                case .confirm: handleConfirm()
+                case .contextAction: handleContextAction()
+                case .secondaryAction: handleSecondaryAction()
+                default: break
+                }
+            }
+        case .cancel:
+            if selectedTab == 2 && isInsideControlsCard {
+                handleControlsGamepadAction(.cancel)
+            } else if selectedTab == 3 && isInsidePersonalizeCard {
+                handlePersonalizeGamepadAction(.cancel)
+            } else {
+                handleCancel()
+            }
         case .menu:
             SoundEffectService.shared.play(.click)
             if selectedTab == 0, let game = currentFocusedGame {
@@ -62,18 +85,6 @@ extension AppViewModel {
             handleLibraryNavigateLeft()
         case 1:
             handleCompatibilityNavigateLeft()
-        case 2:
-            let profiles = InputProfileManager.shared.profiles
-            if let idx = profiles.firstIndex(where: { $0.id == InputProfileManager.shared.activeProfileId }), idx > 0 {
-                InputProfileManager.shared.activeProfileId = profiles[idx - 1].id
-                SoundEffectService.shared.play(.focus)
-            }
-        case 3:
-            let themes = LauncherHighlightTheme.allCases
-            if let idx = themes.firstIndex(of: highlightTheme), idx > 0 {
-                highlightTheme = themes[idx - 1]
-                SoundEffectService.shared.play(.focus)
-            }
         default: break
         }
     }
@@ -84,18 +95,6 @@ extension AppViewModel {
             handleLibraryNavigateRight()
         case 1:
             handleCompatibilityNavigateRight()
-        case 2:
-            let profiles = InputProfileManager.shared.profiles
-            if let idx = profiles.firstIndex(where: { $0.id == InputProfileManager.shared.activeProfileId }), idx < profiles.count - 1 {
-                InputProfileManager.shared.activeProfileId = profiles[idx + 1].id
-                SoundEffectService.shared.play(.focus)
-            }
-        case 3:
-            let themes = LauncherHighlightTheme.allCases
-            if let idx = themes.firstIndex(of: highlightTheme), idx < themes.count - 1 {
-                highlightTheme = themes[idx + 1]
-                SoundEffectService.shared.play(.focus)
-            }
         default: break
         }
     }
@@ -263,11 +262,11 @@ extension AppViewModel {
             SoundEffectService.shared.play(.click)
             return
         }
-        if selectedTab == 0 && currentFocusedGame != nil {
-            SoundEffectService.shared.play(.click)
-            withAnimation(.easeInOut(duration: 0.18)) {
-                isGameActionMenuPresented.toggle()
-                if isGameActionMenuPresented { gameActionFocusedIndex = 0 }
+        // Select / View button: toggle fullscreen on macOS
+        DispatchQueue.main.async {
+            if let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) {
+                window.toggleFullScreen(nil)
+                SoundEffectService.shared.play(.click)
             }
         }
     }

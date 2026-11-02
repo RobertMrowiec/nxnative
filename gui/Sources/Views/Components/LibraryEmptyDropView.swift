@@ -40,28 +40,53 @@ public struct LibraryEmptyDropView: View {
                         .frame(maxWidth: 420)
                 }
                 
-                Button(action: {
-                    SoundEffectService.shared.play(.click)
-                    viewModel.selectAdditionalGameFolder()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "folder.badge.plus")
-                        Text(viewModel.tr("library.choose_folder"))
+                HStack(spacing: 12) {
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        viewModel.selectAdditionalGameFolder()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "shippingbox.fill")
+                            Text(viewModel.tr("library.choose_folder"))
+                        }
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .contentShape(Capsule())
+                        .nxGlassInteractive(
+                            in: Capsule(),
+                            tint: NXTheme.primary.opacity(0.80),
+                            isSelected: true,
+                            fallbackFill: NXTheme.primary,
+                            fallbackSelectedFill: NXTheme.primary
+                        )
                     }
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
-                    .contentShape(Capsule())
-                    .nxGlassInteractive(
-                        in: Capsule(),
-                        tint: NXTheme.primary.opacity(0.80),
-                        isSelected: true,
-                        fallbackFill: NXTheme.primary,
-                        fallbackSelectedFill: NXTheme.primary
-                    )
+                    .buttonStyle(NXPressableButtonStyle())
+                    .nxNoFocusRing()
+                    
+                    Button(action: {
+                        SoundEffectService.shared.play(.click)
+                        viewModel.selectAdditionalNonSwitchGameFolder()
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "gamecontroller.fill")
+                            Text(viewModel.tr("system.add_nonswitch_folder"))
+                        }
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 9)
+                        .contentShape(Capsule())
+                        .nxGlassInteractive(
+                            in: Capsule(),
+                            tint: Color(red: 0.20, green: 0.82, blue: 0.60).opacity(0.80),
+                            isSelected: true,
+                            fallbackFill: Color(red: 0.20, green: 0.82, blue: 0.60),
+                            fallbackSelectedFill: Color(red: 0.20, green: 0.82, blue: 0.60)
+                        )
+                    }
+                    .buttonStyle(NXPressableButtonStyle())
+                    .nxNoFocusRing()
                 }
-                .buttonStyle(NXPressableButtonStyle())
-                .nxNoFocusRing()
                 .padding(.top, 4)
             }
             .padding(40)

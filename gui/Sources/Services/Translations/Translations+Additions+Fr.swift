@@ -108,5 +108,12 @@ extension Translations {
         "controls.title_screen_tip_title": "Activation à l'écran titre (Appuyez sur L + R)",
         "controls.title_screen_tip_desc": "Presque tous les jeux Switch nécessitent d'appuyer simultanément sur L + R à l'écran titre pour détecter et associer la manette.",
         "controls.customize_keybindings": "Personnaliser les commandes...",
+        "system.nonswitch_games_folder": "Dossiers de jeux natifs Mac (.app)",
+        "system.no_nonswitch_folder_selected": "Aucun dossier de jeux Mac sélectionné. Ajoutez des dossiers contenant vos jeux macOS.",
+        "system.add_nonswitch_folder": "Ajouter un dossier de jeux",
+        "system.add_nonswitch_single_app": "Ajouter un jeu (.app)",
+        "system.select_nonswitch_folder_message": "Sélectionnez des dossiers contenant vos applications de jeux natifs macOS (.app).",
+        "system.select_nonswitch_app_message": "Choisissez des applications de jeux natifs macOS (.app) à ajouter à votre bibliothèque.",
+        "system.nonswitch_dirs_help": "Dossiers analysés récursivement pour trouver des jeux Mac natifs (.app) et organiser votre bibliothèque unifiée."
     ]
 }

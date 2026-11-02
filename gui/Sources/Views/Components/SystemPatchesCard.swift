@@ -28,6 +28,10 @@ public struct SystemPatchesCard: View {
                         }
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(viewModel.settingsFocusIndex == 7 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                    )
                 }
                 
                 VStack(spacing: 8) {

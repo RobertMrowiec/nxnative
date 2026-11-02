@@ -39,6 +39,17 @@ public final class LibraryScanner {
             
             guard fm.fileExists(atPath: path) else { continue }
             
+            // If the folder itself is an .app package, parse it directly
+            if dir.pathExtension.lowercased() == "app" {
+                if !seenURLs.contains(dir) {
+                    seenURLs.insert(dir)
+                    if let game = parseMacApp(at: dir, isExplicit: false) {
+                        games.append(game)
+                    }
+                }
+                continue
+            }
+            
             guard let enumerator = fm.enumerator(
                 at: dir,
                 includingPropertiesForKeys: [.isDirectoryKey, .contentModificationDateKey, .fileSizeKey],
@@ -52,7 +63,7 @@ public final class LibraryScanner {
                     enumerator.skipDescendants()
                     if !seenURLs.contains(itemURL) {
                         seenURLs.insert(itemURL)
-                        if let game = parseMacApp(at: itemURL) {
+                        if let game = parseMacApp(at: itemURL, isExplicit: false) {
                             games.append(game)
                         }
                     }
@@ -72,7 +83,7 @@ public final class LibraryScanner {
             let path = appURL.standardized.path
             guard !seenURLs.contains(appURL), fm.fileExists(atPath: path), appURL.pathExtension.lowercased() == "app" else { continue }
             seenURLs.insert(appURL)
-            if let game = parseMacApp(at: appURL) {
+            if let game = parseMacApp(at: appURL, isExplicit: true) {
                 games.append(game)
             }
         }
@@ -82,7 +93,38 @@ public final class LibraryScanner {
     
     private var sizeCache: [URL: Int64] = [:]
 
-    private func parseMacApp(at url: URL) -> PortedGame? {
+    private static let nonGameCategories: Set<String> = [
+        "public.app-category.developer-tools",
+        "public.app-category.productivity",
+        "public.app-category.graphics-design",
+        "public.app-category.utilities",
+        "public.app-category.social-networking",
+        "public.app-category.business",
+        "public.app-category.finance",
+        "public.app-category.lifestyle",
+        "public.app-category.medical",
+        "public.app-category.music",
+        "public.app-category.news",
+        "public.app-category.photography",
+        "public.app-category.video",
+        "public.app-category.weather",
+        "public.app-category.education",
+        "public.app-category.travel",
+        "public.app-category.reference"
+    ]
+
+    private static let excludedToolBundleIds: [String] = [
+        "com.valvesoftware.steam",
+        "com.epicgames.EpicGamesLauncher",
+        "com.codeweavers.CrossOver",
+        "com.heroicgameslauncher.hgl",
+        "org.ryujinx.",
+        "org.ryubing.",
+        "com.rileytestut.AltServer",
+        "org.nxnative."
+    ]
+
+    private func parseMacApp(at url: URL, isExplicit: Bool = false) -> PortedGame? {
         let fm = FileManager.default
         let plistURL = url.appendingPathComponent("Contents/Info.plist")
         guard fm.fileExists(atPath: plistURL.path) else { return nil }
@@ -142,6 +184,82 @@ public final class LibraryScanner {
         }
         
         let isSwitchPort = hasDmhost || hasExplicitDmTitleId || (titleId != nil && titleId?.hasPrefix("0100") == true)
+        
+        // Strict Game Filter for folder scans (unless explicitly selected by user via Add Game (.app))
+        if !isSwitchPort && !isExplicit {
+            let appFileName = url.lastPathComponent
+            let helperSuffixes = ["Helper.app", "CrashHandler.app", "CrashReporter.app", "Updater.app", "Uninstall.app", "Service.app"]
+            if helperSuffixes.contains(where: { appFileName.hasSuffix($0) }) || appFileName.hasPrefix(".") {
+                return nil
+            }
+            
+            let bid = bundleId?.lowercased() ?? ""
+            let category = (rawPlist?["LSApplicationCategoryType"] as? String)?.lowercased() ?? ""
+            
+            // Exclude Apple system utilities unless Apple Arcade / game
+            if bid.hasPrefix("com.apple.") && !category.contains("game") && !bid.contains("arcade") && !bid.contains("game") {
+                return nil
+            }
+            
+            // Exclude known launchers, translation tools and emulators
+            if Self.excludedToolBundleIds.contains(where: { bid.hasPrefix($0.lowercased()) }) {
+                return nil
+            }
+            
+            // Non-game category rejection
+            if Self.nonGameCategories.contains(category) {
+                return nil
+            }
+            
+            // If explicit game category, accept immediately
+            var isVerifiedGame = category.contains("game")
+            
+            // If no category declared, verify game engine / runtime signature
+            if !isVerifiedGame {
+                let contentsURL = url.appendingPathComponent("Contents")
+                
+                // 1. Unity
+                if fm.fileExists(atPath: contentsURL.appendingPathComponent("Frameworks/UnityPlayer.dylib").path) ||
+                   fm.fileExists(atPath: contentsURL.appendingPathComponent("Resources/Data/Managed").path) ||
+                   fm.fileExists(atPath: contentsURL.appendingPathComponent("Resources/Data/boot.config").path) {
+                    isVerifiedGame = true
+                }
+                
+                // 2. Unreal Engine
+                if !isVerifiedGame && (fm.fileExists(atPath: contentsURL.appendingPathComponent("UE4").path) ||
+                                       fm.fileExists(atPath: contentsURL.appendingPathComponent("UE5").path) ||
+                                       fm.fileExists(atPath: contentsURL.appendingPathComponent("Engine/Binaries").path)) {
+                    isVerifiedGame = true
+                }
+                
+                // 3. Godot, Love2D, GameMaker, Steam in Resources
+                let resourcesURL = contentsURL.appendingPathComponent("Resources")
+                if !isVerifiedGame, let rContents = try? fm.contentsOfDirectory(atPath: resourcesURL.path) {
+                    if rContents.contains(where: { $0.hasSuffix(".pck") || $0.hasSuffix(".love") || $0 == "game.unx" || $0 == "game.ios" || $0 == "steam_appid.txt" }) {
+                        isVerifiedGame = true
+                    }
+                }
+                
+                // 4. Steam or Wineskin in MacOS
+                let macosURL = contentsURL.appendingPathComponent("MacOS")
+                if !isVerifiedGame, let mContents = try? fm.contentsOfDirectory(atPath: macosURL.path) {
+                    if mContents.contains(where: { $0 == "steam_appid.txt" || $0 == "wineskinlauncher" }) {
+                        isVerifiedGame = true
+                    }
+                }
+                
+                // 5. Wine / GPTK / PortingKit prefix
+                if !isVerifiedGame && (fm.fileExists(atPath: contentsURL.appendingPathComponent("SharedSupport/prefix/drive_c").path) ||
+                                       fm.fileExists(atPath: resourcesURL.appendingPathComponent("drive_c").path)) {
+                    isVerifiedGame = true
+                }
+            }
+            
+            if !isVerifiedGame {
+                return nil
+            }
+        }
+        
         let targetPlatform: TargetPlatform = isSwitchPort ? .macApp : .nonSwitch
         
         // Fast instant size retrieval without blocking RomFS traversal
