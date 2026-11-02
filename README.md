@@ -5,7 +5,7 @@
   <a href="README.md"><b>📖 Overview & Guide</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games & Timeline</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="CONTRIBUTING.md"><b>🤝 Contributing</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest"><b>📦 Latest Release (.dmg)</b></a>
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>📦 Releases & Downloads (.dmg)</b></a>
 </div>
 
 <br>
@@ -18,7 +18,7 @@
 
 ### The Definitive Native Game Porting & Playback Suite for Apple Silicon
 
-[![GitLab Release](https://img.shields.io/badge/Release-v1.9.1-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest)
+[![GitLab Release](https://img.shields.io/badge/Release-v1.9.1-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
 [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B%20%7C%20iOS%2018%2B-blue.svg)](https://apple.com/macos)
@@ -38,7 +38,7 @@
 <p align="center">
   <a href="#-table-of-contents--índice-rápido"><b>🇺🇸 English Documentation</b></a> • 
   <a href="#-guia-rápido-em-português-pt-br"><b>🇧🇷 Guia em Português (PT-BR)</b></a> •
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest"><b>💾 Download Latest .DMG (v1.9.1)</b></a> •
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>💾 Download Latest .DMG (v1.9.1)</b></a> •
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games List (130+ Titles)</b></a>
 </p>
 
@@ -205,7 +205,7 @@ Traditional Nintendo Switch emulators (such as Yuzu or Ryujinx) rely on **Just-I
 ## ⚡ Quick Start Guide
 
 ### 🎮 For Gamers (Play in 60 Seconds)
-1. **Download the Official Release**: Grab the latest `NxNative_Launcher.dmg` from the [GitLab Releases](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest) page.
+1. **Download the Official Release**: Grab the latest `NxNative_Launcher.dmg` from the [GitLab Releases](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases) page.
 2. **Mount and Install**: Open `NxNative_Launcher.dmg` and drag `NxNative_Launcher.app` into your `Applications` folder.
 3. **Launch & Auto-Install**: On first launch, if toolchains are missing, click **"Install Missing Dependencies"** in Settings. The app handles Homebrew, Python, and required packages automatically.
 4. **Port Your First Game**: Go to the **Port** tab, drag and drop your game dump folder, review the hardware time estimate, click **"Start Porting"**, and play!
@@ -234,7 +234,7 @@ We maintain automated release packaging for GitLab. Every production update gene
 
 - **Permanent Latest Release Link (v1.9.1)**:
   Always points to the newest release without needing to guess tag numbers:
-  👉 **[https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest)**
+  👉 **[https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)**
 - **All Releases Archive**:
   👉 **[https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)**
 
@@ -443,7 +443,7 @@ O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift 
 8. **Saves no iCloud**: Sincronização inteligente entre Mac e iPhone/iPad com botão de 1 clique para revelar a pasta no Finder.
 9. **NxNative Launcher Status bar icon**: Acesso rápido e status diretamente na barra de menus do macOS.
 10. **14 Idiomas Suportados**: Totalmente traduzido para Português do Brasil e Português de Portugal.
-11. **Instalador Oficial `.dmg` no GitLab**: Sempre disponível através do link permanente do [Latest Release no GitLab](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest).
+11. **Instalador Oficial `.dmg` no GitLab**: Sempre disponível através do link permanente do [Latest Release no GitLab](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases).
 
 ### Em Desenvolvimento Ativo
 - Smooth Navigation
@@ -452,7 +452,7 @@ O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift 
 - Better Mouse Orbit support
 
 ### Como Começar em 3 Passos
-1. **Baixar o Instalador**: Baixe o `NxNative_Launcher.dmg` na página de [Latest Release](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest) e arraste para sua pasta `Aplicativos`.
+1. **Baixar o Instalador**: Baixe o `NxNative_Launcher.dmg` na página de [Latest Release](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases) e arraste para sua pasta `Aplicativos`.
 2. **Configuração Automática**: Abra o launcher. Na aba **Settings**, caso falte alguma ferramenta, clique em **"Instalar Dependências Faltantes"** (o app instala Homebrew, Python e bibliotecas automaticamente).
 3. **Portar e Jogar**: Vá para a aba **Port**, arraste a pasta com seus dumps do jogo, confira a estimativa de tempo e clique em **"Iniciar Portabilidade"**!
 
@@ -465,5 +465,5 @@ Consulte a lista completa de [130+ Jogos Suportados e Histórico de Features em 
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games (130+ Titles)</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="CONTRIBUTING.md"><b>🤝 Contributing</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues"><b>🐞 Report Bug on GitLab</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest"><b>📦 Latest Release (.dmg)</b></a>
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>📦 Latest Release (.dmg)</b></a>
 </div>
