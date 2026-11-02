@@ -70,6 +70,7 @@ public struct FileCard: View {
     private func colorForType(_ type: GameFileType) -> Color {
         switch type {
         case .base: return NXTheme.primary
+        case .switch2Dump: return Color(red: 0.95, green: 0.48, blue: 0.16)
         case .update: return NXTheme.secondary
         case .dlc: return NXTheme.tertiary
         case .unknown: return NXTheme.textMuted

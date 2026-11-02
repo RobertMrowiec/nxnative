@@ -88,7 +88,15 @@ extension AppViewModel {
     }
 
     public var macLibraryGames: [PortedGame] {
-        libraryGames.filter { $0.platform == .macApp }
+        libraryGames.filter { $0.platform == .macApp && !$0.isSwitch2 }
+    }
+
+    public var switch1LibraryGames: [PortedGame] {
+        libraryGames.filter { $0.platform == .macApp && !$0.isSwitch2 }
+    }
+
+    public var switch2LibraryGames: [PortedGame] {
+        libraryGames.filter { $0.platform == .macApp && $0.isSwitch2 }
     }
 
     public var iosLibraryGames: [PortedGame] {

@@ -7,7 +7,7 @@ extension AppViewModel {
         !isBuilding &&
         selectedGameFolder != nil &&
         selectedGame != nil &&
-        isProdKeysValid &&
+        (isProdKeysValid || selectedGame?.isSwitch2 == true) &&
         isNxnativeValid &&
         !isDiskSpaceLow
     }
@@ -53,7 +53,10 @@ extension AppViewModel {
             ))
         }
         
-        if detectedGames.count > 1 || sel.files.count < detectedFiles.count || hasSubfolderFiles {
+        if sel.isSwitch2, let dumpFolder = sel.files.first?.url {
+            targetGameDirectory = dumpFolder
+            logs.append(LogEntry(level: .info, message: "Nintendo Switch 2 dump folder identified: '\(dumpFolder.path)'."))
+        } else if detectedGames.count > 1 || sel.files.count < detectedFiles.count || hasSubfolderFiles {
             let safeName = sel.name.replacingOccurrences(of: "[^a-zA-Z0-9._-]", with: "_", options: .regularExpression)
             let stagingDir = URL(fileURLWithPath: defaultInstallPath)
                 .appendingPathComponent("Staging")

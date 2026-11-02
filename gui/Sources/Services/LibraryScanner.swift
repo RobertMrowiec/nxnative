@@ -159,7 +159,7 @@ public final class LibraryScanner {
             if titleId == nil || titleId?.isEmpty == true {
                 if let bid = bundleId {
                     let range = NSRange(bid.startIndex..., in: bid)
-                    if let regex = try? NSRegularExpression(pattern: "(0100[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
+                    if let regex = try? NSRegularExpression(pattern: "((?:0100|0400)[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
                        let match = regex.firstMatch(in: bid, range: range),
                        let r = Range(match.range(at: 1), in: bid) {
                         titleId = String(bid[r]).uppercased()
@@ -169,7 +169,7 @@ public final class LibraryScanner {
             if titleId == nil || titleId?.isEmpty == true {
                 let fname = url.lastPathComponent
                 let range = NSRange(fname.startIndex..., in: fname)
-                if let regex = try? NSRegularExpression(pattern: "\\[(0100[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
+                if let regex = try? NSRegularExpression(pattern: "\\[((?:0100|0400)[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
                    let match = regex.firstMatch(in: fname, range: range),
                    let r = Range(match.range(at: 1), in: fname) {
                     titleId = String(fname[r]).uppercased()
@@ -183,7 +183,7 @@ public final class LibraryScanner {
             titleId = nil
         }
         
-        let isSwitchPort = hasDmhost || hasExplicitDmTitleId || (titleId != nil && titleId?.hasPrefix("0100") == true)
+        let isSwitchPort = hasDmhost || hasExplicitDmTitleId || (titleId != nil && (titleId?.hasPrefix("0100") == true || titleId?.hasPrefix("0400") == true))
         
         // Strict Game Filter for folder scans (unless explicitly selected by user via Add Game (.app))
         if !isSwitchPort && !isExplicit {
@@ -337,7 +337,7 @@ public final class LibraryScanner {
         if titleId == nil || titleId?.isEmpty == true {
             if let bid = bundleId {
                 let range = NSRange(bid.startIndex..., in: bid)
-                if let regex = try? NSRegularExpression(pattern: "(0100[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
+                if let regex = try? NSRegularExpression(pattern: "((?:0100|0400)[0-9A-Fa-f]{12})", options: [.caseInsensitive]),
                    let match = regex.firstMatch(in: bid, range: range),
                    let r = Range(match.range(at: 1), in: bid) {
                     titleId = String(bid[r]).uppercased()
@@ -345,11 +345,11 @@ public final class LibraryScanner {
             }
         }
         
-        // Extract TitleID from filename regex [0100...]
+        // Extract TitleID from filename regex [0100...] or [0400...]
         if titleId == nil || titleId?.isEmpty == true {
             let fname = url.lastPathComponent
             let range = NSRange(fname.startIndex..., in: fname)
-            if let regex = try? NSRegularExpression(pattern: "\\[(0100[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
+            if let regex = try? NSRegularExpression(pattern: "\\[((?:0100|0400)[0-9A-Fa-f]{12})\\]", options: [.caseInsensitive]),
                let match = regex.firstMatch(in: fname, range: range),
                let r = Range(match.range(at: 1), in: fname) {
                 titleId = String(fname[r]).uppercased()

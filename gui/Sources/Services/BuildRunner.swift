@@ -62,19 +62,28 @@ public final class BuildRunner {
         // Determina caminho do python usando deteccao centralizada e estavel
         let pythonPath = SystemDetector.findBestPythonPath()
         
+        let isDump = FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent("base/exefs/main.npdm").path)
+        
         var arguments: [String] = [
             scriptPath,
             gameDirectory.path,
-            "-k", prodKeysPath,
             "--progress", "json"
         ]
         
-        // Plataforma
-        switch platform {
-        case .ios:
-            arguments.append(contentsOf: ["--platform", "ios"])
-        case .macApp, .nonSwitch:
+        if !isDump && !prodKeysPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            arguments.append(contentsOf: ["-k", prodKeysPath])
+        }
+        
+        // Plataforma (Dumps are Mac-native)
+        if isDump {
             arguments.append(contentsOf: ["--platform", "mac-app"])
+        } else {
+            switch platform {
+            case .ios:
+                arguments.append(contentsOf: ["--platform", "ios"])
+            case .macApp, .nonSwitch:
+                arguments.append(contentsOf: ["--platform", "mac-app"])
+            }
         }
         
         // Output path (always explicitly provided so .app is generated for Mac App)

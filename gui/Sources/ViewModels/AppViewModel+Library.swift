@@ -37,7 +37,8 @@ extension AppViewModel {
                 if self.focusedGameIndex >= visible.count {
                     self.focusedGameIndex = max(0, visible.count - 1)
                 }
-                self.focusedMacIndex = max(0, min(self.focusedMacIndex, max(0, self.macLibraryGames.count - 1)))
+                self.focusedMacIndex = max(0, min(self.focusedMacIndex, max(0, self.switch1LibraryGames.count - 1)))
+                self.focusedSwitch2Index = max(0, min(self.focusedSwitch2Index, max(0, self.switch2LibraryGames.count - 1)))
                 self.focusedIosIndex = max(0, min(self.focusedIosIndex, max(0, self.iosLibraryGames.count - 1)))
                 self.focusedNonSwitchIndex = max(0, min(self.focusedNonSwitchIndex, max(0, self.nonSwitchLibraryGames.count - 1)))
                 self.focusedUnportedGameIndex = max(0, min(self.focusedUnportedGameIndex, max(0, self.unportedGames.count - 1)))

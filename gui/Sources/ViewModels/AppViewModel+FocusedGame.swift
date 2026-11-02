@@ -15,26 +15,33 @@ extension AppViewModel {
         
         switch activeLibraryShelf {
         case .mac:
-            let macs = macLibraryGames
+            let macs = switch1LibraryGames
             if !macs.isEmpty {
                 let clamped = max(0, min(focusedMacIndex, macs.count - 1))
                 return macs[clamped]
             }
-            return iosLibraryGames.first
+            return switch2LibraryGames.first ?? iosLibraryGames.first
+        case .switch2:
+            let s2 = switch2LibraryGames
+            if !s2.isEmpty {
+                let clamped = max(0, min(focusedSwitch2Index, s2.count - 1))
+                return s2[clamped]
+            }
+            return switch1LibraryGames.first ?? iosLibraryGames.first
         case .ios:
             let ioses = iosLibraryGames
             if !ioses.isEmpty {
                 let clamped = max(0, min(focusedIosIndex, ioses.count - 1))
                 return ioses[clamped]
             }
-            return macLibraryGames.first
+            return switch1LibraryGames.first ?? switch2LibraryGames.first
         case .nonSwitch:
             let nons = nonSwitchLibraryGames
             if !nons.isEmpty {
                 let clamped = max(0, min(focusedNonSwitchIndex, nons.count - 1))
                 return nons[clamped]
             }
-            return macLibraryGames.first
+            return switch1LibraryGames.first ?? switch2LibraryGames.first
         case .unportedSwitch:
             return nil
         }

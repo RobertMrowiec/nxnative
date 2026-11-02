@@ -13,7 +13,11 @@ public struct SwitchConsoleLibraryView: View {
     }
 
     private var macGames: [PortedGame] {
-        games.filter { $0.platform == .macApp }
+        games.filter { $0.platform == .macApp && !$0.isSwitch2 }
+    }
+
+    private var switch2Games: [PortedGame] {
+        games.filter { $0.platform == .macApp && $0.isSwitch2 }
     }
 
     private var iosGames: [PortedGame] {
@@ -58,6 +62,8 @@ public struct SwitchConsoleLibraryView: View {
                             switch newShelf {
                             case .mac:
                                 verticalProxy.scrollTo("shelf_mac", anchor: .top)
+                            case .switch2:
+                                verticalProxy.scrollTo("shelf_switch2", anchor: .center)
                             case .ios:
                                 verticalProxy.scrollTo("shelf_ios", anchor: .center)
                             case .nonSwitch:
@@ -112,7 +118,7 @@ public struct SwitchConsoleLibraryView: View {
                 if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .mac) && !macGames.isEmpty {
                     PortedCategoryShelfView(
                         viewModel: viewModel,
-                        title: "Mac (macOS Native)",
+                        title: viewModel.tr("shelf.switch1_title"),
                         icon: "laptopcomputer",
                         shelf: .mac,
                         categoryColor: NXTheme.primary,
@@ -122,10 +128,23 @@ public struct SwitchConsoleLibraryView: View {
                     .id("shelf_mac")
                 }
 
+                if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .switch2) && !switch2Games.isEmpty {
+                    PortedCategoryShelfView(
+                        viewModel: viewModel,
+                        title: viewModel.tr("shelf.switch2_title"),
+                        icon: "sparkles.tv.fill",
+                        shelf: .switch2,
+                        categoryColor: Color(red: 0.95, green: 0.48, blue: 0.16),
+                        items: switch2Games,
+                        hoveredTargetGamePath: $hoveredTargetGamePath
+                    )
+                    .id("shelf_switch2")
+                }
+
                 if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .ios) && !iosGames.isEmpty {
                     PortedCategoryShelfView(
                         viewModel: viewModel,
-                        title: "iPhone / iPad (iOS Port)",
+                        title: viewModel.tr("shelf.ios_title"),
                         icon: "iphone.gen3",
                         shelf: .ios,
                         categoryColor: NXTheme.secondary,
@@ -138,7 +157,7 @@ public struct SwitchConsoleLibraryView: View {
                 if (viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .nonSwitch) && !nonSwitchGames.isEmpty {
                     PortedCategoryShelfView(
                         viewModel: viewModel,
-                        title: "Non-Switch Games (macOS)",
+                        title: viewModel.tr("shelf.non_switch_title"),
                         icon: "gamecontroller.fill",
                         shelf: .nonSwitch,
                         categoryColor: Color(red: 0.20, green: 0.82, blue: 0.60),
@@ -155,7 +174,7 @@ public struct SwitchConsoleLibraryView: View {
             }
         }
 
-        if macGames.isEmpty && iosGames.isEmpty && nonSwitchGames.isEmpty && viewModel.unportedGames.isEmpty {
+        if macGames.isEmpty && switch2Games.isEmpty && iosGames.isEmpty && nonSwitchGames.isEmpty && viewModel.unportedGames.isEmpty {
             VStack(spacing: 12) {
                 Image(systemName: "gamecontroller")
                     .font(.system(size: 38))

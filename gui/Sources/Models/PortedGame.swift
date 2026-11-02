@@ -52,4 +52,14 @@ public struct PortedGame: Identifiable, Hashable {
     public var isPlayableLocally: Bool {
         platform == .macApp || platform == .nonSwitch
     }
+    
+    public var isSwitch2: Bool {
+        guard let tid = titleId?.uppercased(), !tid.isEmpty else { return false }
+        return tid.hasPrefix("0400")
+    }
+    
+    public var isSwitch1: Bool {
+        guard let tid = titleId?.uppercased(), !tid.isEmpty else { return false }
+        return tid.hasPrefix("0100")
+    }
 }

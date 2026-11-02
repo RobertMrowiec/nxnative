@@ -9,9 +9,14 @@ public final class GameScanner {
         let fm = FileManager.default
         let allowedExtensions = Set(["nsp", "nsz", "xci", "xcz"])
         
+        // Check if directory itself is a game dump folder
+        if let dumpItem = inspectDumpFolder(url: directory) {
+            return [dumpItem]
+        }
+        
         guard let enumerator = fm.enumerator(
             at: directory,
-            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            includingPropertiesForKeys: [.isRegularFileKey, .isDirectoryKey, .fileSizeKey],
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else {
             return []
@@ -22,10 +27,19 @@ public final class GameScanner {
         let versionRegex = try? NSRegularExpression(pattern: "\\[v([0-9]+)\\]|v([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)", options: [.caseInsensitive])
         
         for case let fileURL as URL in enumerator {
+            let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey, .fileSizeKey])
+            
+            // Check for game dumps (folders containing base/exefs/main.npdm)
+            if resourceValues?.isDirectory == true {
+                if let dumpItem = inspectDumpFolder(url: fileURL) {
+                    enumerator.skipDescendants()
+                    results.append(dumpItem)
+                    continue
+                }
+            }
+            
             let ext = fileURL.pathExtension.lowercased()
             guard allowedExtensions.contains(ext) else { continue }
-            
-            let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             guard resourceValues?.isRegularFile == true else { continue }
             let size = Int64(resourceValues?.fileSize ?? 0)
             let filename = fileURL.lastPathComponent
@@ -100,12 +114,12 @@ public final class GameScanner {
             ))
         }
         
-        // Sort: Base first, then Update, then DLC
+        // Sort: Base and Switch 2 Dumps first, then Update, then DLC
         return results.sorted { a, b in
             let scoreA: Int
-            switch a.type { case .base: scoreA = 0; case .update: scoreA = 1; case .dlc: scoreA = 2; case .unknown: scoreA = 3 }
+            switch a.type { case .base, .switch2Dump: scoreA = 0; case .update: scoreA = 1; case .dlc: scoreA = 2; case .unknown: scoreA = 3 }
             let scoreB: Int
-            switch b.type { case .base: scoreB = 0; case .update: scoreB = 1; case .dlc: scoreB = 2; case .unknown: scoreB = 3 }
+            switch b.type { case .base, .switch2Dump: scoreB = 0; case .update: scoreB = 1; case .dlc: scoreB = 2; case .unknown: scoreB = 3 }
             if scoreA != scoreB { return scoreA < scoreB }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
@@ -129,9 +143,9 @@ public final class GameScanner {
         
         return allItems.sorted { a, b in
             let scoreA: Int
-            switch a.type { case .base: scoreA = 0; case .update: scoreA = 1; case .dlc: scoreA = 2; case .unknown: scoreA = 3 }
+            switch a.type { case .base, .switch2Dump: scoreA = 0; case .update: scoreA = 1; case .dlc: scoreA = 2; case .unknown: scoreA = 3 }
             let scoreB: Int
-            switch b.type { case .base: scoreB = 0; case .update: scoreB = 1; case .dlc: scoreB = 2; case .unknown: scoreB = 3 }
+            switch b.type { case .base, .switch2Dump: scoreB = 0; case .update: scoreB = 1; case .dlc: scoreB = 2; case .unknown: scoreB = 3 }
             if scoreA != scoreB { return scoreA < scoreB }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
@@ -181,6 +195,64 @@ public final class GameScanner {
             return String(rawStrings[range]).uppercased()
         }
         return nil
+    }
+    
+    /// Detecta se uma pasta é um dump de Nintendo Switch (Switch 1 ou Switch 2: base/exefs/main.npdm).
+    public func inspectDumpFolder(url: URL) -> GameFileItem? {
+        let fm = FileManager.default
+        let npdmURL = url.appendingPathComponent("base/exefs/main.npdm")
+        guard fm.fileExists(atPath: npdmURL.path) else { return nil }
+        
+        guard let data = try? Data(contentsOf: npdmURL, options: .mappedIfSafe), data.count >= 0x80 else { return nil }
+        guard data.prefix(4) == Data([0x4D, 0x45, 0x54, 0x41]) else { return nil } // "META"
+        
+        let aci0Offset = data.subdata(in: 0x70..<0x74).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        let aci0Size = data.subdata(in: 0x74..<0x78).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        guard aci0Size >= 0x18, data.count >= Int(aci0Offset) + Int(aci0Size) else { return nil }
+        
+        let aci0Header = data.subdata(in: Int(aci0Offset)..<(Int(aci0Offset) + 4))
+        guard aci0Header == Data([0x41, 0x43, 0x49, 0x30]) else { return nil } // "ACI0"
+        
+        let programId = data.subdata(in: (Int(aci0Offset) + 0x10)..<(Int(aci0Offset) + 0x18)).withUnsafeBytes {
+            $0.load(as: UInt64.self).littleEndian
+        }
+        let tidString = String(format: "%016llX", programId).uppercased()
+        
+        // Detecta versão em updates/
+        var versionString: String? = nil
+        let updatesURL = url.appendingPathComponent("updates")
+        if let updateFolders = try? fm.contentsOfDirectory(at: updatesURL, includingPropertiesForKeys: [.isDirectoryKey]) {
+            let numericVers = updateFolders.compactMap { u -> Int? in
+                let name = u.lastPathComponent
+                guard (try? u.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { return nil }
+                return Int(name)
+            }
+            if let maxVer = numericVers.max() {
+                versionString = "v\(maxVer)"
+            }
+        }
+        
+        // Calcula tamanho total dos arquivos
+        var totalSize: Int64 = 0
+        if let sizeEnumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles]) {
+            for case let file as URL in sizeEnumerator {
+                if let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
+                    totalSize += Int64(vals.fileSize ?? 0)
+                }
+            }
+        }
+        
+        let isSwitch2 = tidString.hasPrefix("0400")
+        let fileType: GameFileType = isSwitch2 ? .switch2Dump : .base
+        
+        return GameFileItem(
+            url: url,
+            name: url.lastPathComponent,
+            sizeBytes: totalSize,
+            type: fileType,
+            titleId: tidString,
+            versionString: versionString
+        )
     }
     
     public func groupFilesIntoGames(files: [GameFileItem]) -> [SelectableGame] {
@@ -245,7 +317,7 @@ public final class GameScanner {
         
         // Caso ainda existam grupos apenas com Updates/DLCs e apenas 1 grupo com jogo Base na mesma pasta, mescla automaticamente
         let baseGroupKeys = groups.keys.filter { key in
-            groups[key]?.items.contains(where: { $0.type == .base || $0.type == .unknown }) == true
+            groups[key]?.items.contains(where: { $0.type == .base || $0.type == .switch2Dump || $0.type == .unknown }) == true
         }
         let addonOnlyKeys = groups.keys.filter { key in
             !baseGroupKeys.contains(key)
@@ -261,13 +333,13 @@ public final class GameScanner {
         var games: [SelectableGame] = []
         for (k, val) in groups {
             let sortedItems = val.items.sorted { a, b in
-                let scoreA = (a.type == .base ? 0 : (a.type == .update ? 1 : 2))
-                let scoreB = (b.type == .base ? 0 : (b.type == .update ? 1 : 2))
+                let scoreA = (a.type == .base || a.type == .switch2Dump ? 0 : (a.type == .update ? 1 : 2))
+                let scoreB = (b.type == .base || b.type == .switch2Dump ? 0 : (b.type == .update ? 1 : 2))
                 if scoreA != scoreB { return scoreA < scoreB }
                 return a.name.localizedStandardCompare(b.name) == .orderedAscending
             }
             
-            let baseItemTitle = sortedItems.first(where: { $0.type == .base }).map { cleanGameTitle($0.name) }
+            let baseItemTitle = sortedItems.first(where: { $0.type == .base || $0.type == .switch2Dump }).map { cleanGameTitle($0.name) }
             let resolvedTitle = (baseItemTitle?.isEmpty == false ? baseItemTitle! : val.title)
             let gameTitle = resolvedTitle.isEmpty ? (sortedItems.first?.name ?? "Unknown Game") : resolvedTitle
             games.append(SelectableGame(

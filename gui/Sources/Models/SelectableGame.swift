@@ -22,7 +22,14 @@ public struct SelectableGame: Identifiable, Hashable {
     }
     
     public var baseFile: GameFileItem? {
-        files.first(where: { $0.type == .base }) ?? files.first
+        files.first(where: { $0.type == .base || $0.type == .switch2Dump }) ?? files.first
+    }
+    
+    public var isSwitch2: Bool {
+        if let tid = titleId?.uppercased(), tid.hasPrefix("0400") {
+            return true
+        }
+        return files.contains { $0.type == .switch2Dump }
     }
     
     public var updateCount: Int {

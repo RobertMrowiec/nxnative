@@ -4,6 +4,7 @@ public enum GameFileType: String {
     case base = "Base Game"
     case update = "Update"
     case dlc = "DLC"
+    case switch2Dump = "Switch 2 Dump"
     case unknown = "Switch File"
     
     public var iconName: String {
@@ -14,6 +15,8 @@ public enum GameFileType: String {
             return "arrow.triangle.2.circlepath.circle.fill"
         case .dlc:
             return "sparkles.rectangle.stack.fill"
+        case .switch2Dump:
+            return "sparkles.tv.fill"
         case .unknown:
             return "doc.fill"
         }

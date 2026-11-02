@@ -12,9 +12,16 @@ extension AppViewModel {
         switch item {
         case .ported(let game):
             if game.platform == .macApp {
-                activeLibraryShelf = .mac
-                if let mIdx = macLibraryGames.firstIndex(where: { $0.id == game.id }) {
-                    focusedMacIndex = mIdx
+                if game.isSwitch2 {
+                    activeLibraryShelf = .switch2
+                    if let sIdx = switch2LibraryGames.firstIndex(where: { $0.id == game.id }) {
+                        focusedSwitch2Index = sIdx
+                    }
+                } else {
+                    activeLibraryShelf = .mac
+                    if let mIdx = switch1LibraryGames.firstIndex(where: { $0.id == game.id }) {
+                        focusedMacIndex = mIdx
+                    }
                 }
             } else if game.platform == .ios {
                 activeLibraryShelf = .ios

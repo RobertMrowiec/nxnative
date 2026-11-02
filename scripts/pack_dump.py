@@ -53,12 +53,14 @@ def pack(src, img, say=print):
 
 
 def is_dump(folder):   # whether a folder has the layout above
-    return (folder / 'base/exefs/main.npdm').is_file() and (folder / 'base/romfs').is_dir()
+    has_exefs = (folder / 'base/exefs/main.npdm').is_file()
+    has_romfs = (folder / 'base/romfs').is_dir() or ((folder / 'updates').is_dir() and any((p / 'romfs').is_dir() for p in (folder / 'updates').iterdir() if p.is_dir()))
+    return has_exefs and has_romfs
 
 
 def scan(dump):
     """What a dump folder holds: (title ID, {update version: its folder}, {DLC title ID: its RomFS folder})"""
-    if not is_dump(dump): raise Error(f'{dump}: no base/exefs/main.npdm and base/romfs')
+    if not is_dump(dump): raise Error(f'{dump}: no base/exefs/main.npdm and romfs (in base or updates)')
     app = program_id(dump / 'base/exefs/main.npdm')
     if app & 0xFFF: raise Error(f'{dump}: base program ID {app:016X} is not a base title ID')
     vers = {int(p.name): p for p in (dump / 'updates').iterdir() if p.is_dir() and p.name.isdigit()} if (dump / 'updates').is_dir() else {}

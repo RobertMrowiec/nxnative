@@ -499,6 +499,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var selectedTab: Int = 0
     @Published public var focusedGameIndex: Int = 0
     @Published public var focusedMacIndex: Int = 0
+    @Published public var focusedSwitch2Index: Int = 0
     @Published public var focusedIosIndex: Int = 0
     @Published public var focusedNonSwitchIndex: Int = 0
     @Published public var focusedUnifiedIndex: Int = 0

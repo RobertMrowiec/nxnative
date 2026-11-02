@@ -43,7 +43,8 @@ public struct PortedCategoryShelfView: View {
                             let game = items[idx]
                             let isFocused = (viewModel.activeLibraryShelf == shelf) &&
                                             (shelf == .mac ? viewModel.focusedMacIndex == idx :
-                                             (shelf == .ios ? viewModel.focusedIosIndex == idx : viewModel.focusedNonSwitchIndex == idx))
+                                             (shelf == .switch2 ? viewModel.focusedSwitch2Index == idx :
+                                              (shelf == .ios ? viewModel.focusedIosIndex == idx : viewModel.focusedNonSwitchIndex == idx)))
                             let isDropTarget = hoveredTargetGamePath == game.url.standardized.path &&
                                                viewModel.draggedGame != nil &&
                                                viewModel.draggedGame?.url.standardized.path != game.url.standardized.path
@@ -66,6 +67,8 @@ public struct PortedCategoryShelfView: View {
                                     } else {
                                         if shelf == .mac {
                                             viewModel.selectMacGame(at: idx)
+                                        } else if shelf == .switch2 {
+                                            viewModel.selectSwitch2Game(at: idx)
                                         } else if shelf == .ios {
                                             viewModel.selectIosGame(at: idx)
                                         } else {
@@ -91,7 +94,7 @@ public struct PortedCategoryShelfView: View {
                     .padding(.horizontal, 36)
                     .padding(.vertical, verticalPadding)
                 }
-                .onChange(of: shelf == .mac ? viewModel.focusedMacIndex : (shelf == .ios ? viewModel.focusedIosIndex : viewModel.focusedNonSwitchIndex)) { newIdx in
+                .onChange(of: shelf == .mac ? viewModel.focusedMacIndex : (shelf == .switch2 ? viewModel.focusedSwitch2Index : (shelf == .ios ? viewModel.focusedIosIndex : viewModel.focusedNonSwitchIndex))) { newIdx in
                     guard viewModel.activeLibraryShelf == shelf else { return }
                     withAnimation(.easeOut(duration: 0.16)) {
                         let anchor: UnitPoint = newIdx == 0 ? .leading : (newIdx >= items.count - 1 ? .trailing : .center)

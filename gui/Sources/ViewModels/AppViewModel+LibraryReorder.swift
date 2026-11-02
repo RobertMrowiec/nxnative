@@ -15,8 +15,11 @@ extension AppViewModel {
         games.insert(moved, at: to)
         libraryGames = games
 
-        if let idx = macLibraryGames.firstIndex(where: { $0.url.standardized.path == draggedPath }) {
+        if let idx = switch1LibraryGames.firstIndex(where: { $0.url.standardized.path == draggedPath }) {
             focusedMacIndex = idx
+        }
+        if let idx = switch2LibraryGames.firstIndex(where: { $0.url.standardized.path == draggedPath }) {
+            focusedSwitch2Index = idx
         }
         if let idx = iosLibraryGames.firstIndex(where: { $0.url.standardized.path == draggedPath }) {
             focusedIosIndex = idx
@@ -30,7 +33,7 @@ extension AppViewModel {
         LibraryOrder.save(games)
     }
 
-    // MARK: - Library Directional Navigation (Three-Row Shelves: Mac, iOS, Switch Unported)
+    // MARK: - Library Directional Navigation (Five-Row Shelves: Switch 1, Switch 2, iOS, Non-Switch, Switch Unported)
     public var focusedUnportedGame: SelectableGame? {
         guard !unportedGames.isEmpty else { return nil }
         let idx = max(0, min(focusedUnportedGameIndex, unportedGames.count - 1))
@@ -45,10 +48,19 @@ extension AppViewModel {
     }
 
     public func selectMacGame(at idx: Int) {
-        let macs = macLibraryGames
+        let macs = switch1LibraryGames
         guard macs.indices.contains(idx) else { return }
         activeLibraryShelf = .mac
         focusedMacIndex = idx
+        syncFocusedGameIndex()
+        SoundEffectService.shared.play(.focus)
+    }
+
+    public func selectSwitch2Game(at idx: Int) {
+        let s2 = switch2LibraryGames
+        guard s2.indices.contains(idx) else { return }
+        activeLibraryShelf = .switch2
+        focusedSwitch2Index = idx
         syncFocusedGameIndex()
         SoundEffectService.shared.play(.focus)
     }
@@ -87,10 +99,18 @@ extension AppViewModel {
         }
         switch activeLibraryShelf {
         case .mac:
-            let macs = macLibraryGames
+            let macs = switch1LibraryGames
             guard !macs.isEmpty else { return }
             if focusedMacIndex > 0 {
                 focusedMacIndex -= 1
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            }
+        case .switch2:
+            let s2 = switch2LibraryGames
+            guard !s2.isEmpty else { return }
+            if focusedSwitch2Index > 0 {
+                focusedSwitch2Index -= 1
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
             }
@@ -128,10 +148,18 @@ extension AppViewModel {
         }
         switch activeLibraryShelf {
         case .mac:
-            let macs = macLibraryGames
+            let macs = switch1LibraryGames
             guard !macs.isEmpty else { return }
             if focusedMacIndex < macs.count - 1 {
                 focusedMacIndex += 1
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            }
+        case .switch2:
+            let s2 = switch2LibraryGames
+            guard !s2.isEmpty else { return }
+            if focusedSwitch2Index < s2.count - 1 {
+                focusedSwitch2Index += 1
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
             }
@@ -174,7 +202,8 @@ extension AppViewModel {
             return
         }
 
-        let macs = macLibraryGames
+        let s1 = switch1LibraryGames
+        let s2 = switch2LibraryGames
         let ioses = iosLibraryGames
         let nons = nonSwitchLibraryGames
 
@@ -190,9 +219,14 @@ extension AppViewModel {
                 focusedIosIndex = min(focusedUnportedGameIndex, ioses.count - 1)
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
-            } else if !macs.isEmpty {
+            } else if !s2.isEmpty {
+                activeLibraryShelf = .switch2
+                focusedSwitch2Index = min(focusedUnportedGameIndex, s2.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !s1.isEmpty {
                 activeLibraryShelf = .mac
-                focusedMacIndex = min(focusedUnportedGameIndex, macs.count - 1)
+                focusedMacIndex = min(focusedUnportedGameIndex, s1.count - 1)
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
             }
@@ -202,16 +236,33 @@ extension AppViewModel {
                 focusedIosIndex = min(focusedNonSwitchIndex, ioses.count - 1)
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
-            } else if !macs.isEmpty {
+            } else if !s2.isEmpty {
+                activeLibraryShelf = .switch2
+                focusedSwitch2Index = min(focusedNonSwitchIndex, s2.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !s1.isEmpty {
                 activeLibraryShelf = .mac
-                focusedMacIndex = min(focusedNonSwitchIndex, macs.count - 1)
+                focusedMacIndex = min(focusedNonSwitchIndex, s1.count - 1)
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
             }
         case .ios:
-            if !macs.isEmpty {
+            if !s2.isEmpty {
+                activeLibraryShelf = .switch2
+                focusedSwitch2Index = min(focusedIosIndex, s2.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !s1.isEmpty {
                 activeLibraryShelf = .mac
-                focusedMacIndex = min(focusedIosIndex, macs.count - 1)
+                focusedMacIndex = min(focusedIosIndex, s1.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            }
+        case .switch2:
+            if !s1.isEmpty {
+                activeLibraryShelf = .mac
+                focusedMacIndex = min(focusedSwitch2Index, s1.count - 1)
                 syncFocusedGameIndex()
                 SoundEffectService.shared.play(.focus)
             }
@@ -233,13 +284,19 @@ extension AppViewModel {
             return
         }
 
+        let s2 = switch2LibraryGames
         let ioses = iosLibraryGames
         let nons = nonSwitchLibraryGames
         let unporteds = unportedGames
 
         switch activeLibraryShelf {
         case .mac:
-            if !ioses.isEmpty {
+            if !s2.isEmpty {
+                activeLibraryShelf = .switch2
+                focusedSwitch2Index = min(focusedMacIndex, s2.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !ioses.isEmpty {
                 activeLibraryShelf = .ios
                 focusedIosIndex = min(focusedMacIndex, ioses.count - 1)
                 syncFocusedGameIndex()
@@ -252,6 +309,22 @@ extension AppViewModel {
             } else if !unporteds.isEmpty {
                 activeLibraryShelf = .unportedSwitch
                 focusedUnportedGameIndex = min(focusedMacIndex, unporteds.count - 1)
+                SoundEffectService.shared.play(.focus)
+            }
+        case .switch2:
+            if !ioses.isEmpty {
+                activeLibraryShelf = .ios
+                focusedIosIndex = min(focusedSwitch2Index, ioses.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !nons.isEmpty {
+                activeLibraryShelf = .nonSwitch
+                focusedNonSwitchIndex = min(focusedSwitch2Index, nons.count - 1)
+                syncFocusedGameIndex()
+                SoundEffectService.shared.play(.focus)
+            } else if !unporteds.isEmpty {
+                activeLibraryShelf = .unportedSwitch
+                focusedUnportedGameIndex = min(focusedSwitch2Index, unporteds.count - 1)
                 SoundEffectService.shared.play(.focus)
             }
         case .ios:

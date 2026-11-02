@@ -52,6 +52,9 @@ public struct PortGameModalView: View {
         .onAppear {
             viewModel.portModalFocusIndex = 0
             viewModel.selectedGame = game
+            if game.isSwitch2 {
+                viewModel.platform = .macApp
+            }
             if viewModel.appName.isEmpty {
                 viewModel.appName = game.name
             }
@@ -119,6 +122,20 @@ public struct PortGameModalView: View {
                         Text(tid)
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(NXTheme.textSecondary)
+                    }
+                    
+                    if game.isSwitch2 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "sparkles.tv.fill")
+                                .font(.system(size: 9, weight: .bold))
+                            Text("Switch 2 Dump · No Keys Needed")
+                                .font(.system(size: 9, weight: .bold, design: .rounded))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.85))
+                        .clipShape(Capsule())
                     }
                     
                     Text(game.formattedSize)
