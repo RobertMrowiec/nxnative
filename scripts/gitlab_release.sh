@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKSPACE_DIR="$(cd "$REPO_ROOT/.." && pwd)"
 
-GITLAB_PROJECT="rennan-group2%2Fnxnative_Launcher"
+GITLAB_PROJECT="88419597"
 GITLAB_URL="https://gitlab.com"
 DMG_NAME="NxNative_Launcher.dmg"
 DMG_PATH="$WORKSPACE_DIR/$DMG_NAME"
@@ -48,6 +48,12 @@ echo "==> DMG successfully created: $DMG_PATH ($DMG_SIZE)"
 echo "==> [3/3] Preparing GitLab Release for $TAG_NAME..."
 
 TOKEN="${GITLAB_TOKEN:-${GL_TOKEN:-}}"
+if [ -z "$TOKEN" ]; then
+    REMOTE_URL=$(git -C "$REPO_ROOT" remote get-url gitlab 2>/dev/null || true)
+    if [[ "$REMOTE_URL" =~ (glpat-[a-zA-Z0-9_.-]+) ]]; then
+        TOKEN="${BASH_REMATCH[1]}"
+    fi
+fi
 
 if [ -n "$TOKEN" ]; then
     echo "==> Uploading $DMG_NAME to GitLab Generic Package Registry..."

@@ -103,12 +103,15 @@ if [ ! -x "$DEST_RES/python/bin/python3" ]; then
         fi
     done
 
-    # Strip unused libraries (tests, idle, tkinter) to reduce bundle size
+    # Strip unused libraries (tests, idle, tkinter, pip, development headers) to reduce bundle size
     PY_LIB_SITE="$DEST_RES/python/lib/python${PYTHON_VERSION%.*}"
     rm -rf "$PY_LIB_SITE/test" "$PY_LIB_SITE/idlelib" "$PY_LIB_SITE/turtledemo" "$PY_LIB_SITE/tkinter" \
-           "$PY_LIB_SITE/lib-dynload/_tkinter"*.so "$DEST_RES/python/lib/tcl"* "$DEST_RES/python/lib/tk"* \
+           "$PY_LIB_SITE/lib-dynload/_tkinter"*.so "$DEST_RES/python/lib/libtcl"* "$DEST_RES/python/lib/libtk"* \
+           "$DEST_RES/python/lib/itcl"* "$DEST_RES/python/lib/thread"* "$DEST_RES/python/lib/pkgconfig" \
+           "$PY_LIB_SITE/site-packages/pip"* "$PY_LIB_SITE/ensurepip" "$DEST_RES/python/include" \
            "$DEST_RES/python/share/man" 2>/dev/null || true
     find "$DEST_RES/python" -type d -name tests -path '*site-packages*' -prune -exec rm -rf {} + 2>/dev/null || true
+    find "$DEST_RES/python" -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
     echo "==> Verifying standalone Python packages..."
     "$PY_BIN" -I -c "import lz4.block, capstone, fontTools, nsz, ssl, sqlite3, zlib, lzma, bz2; print('All core modules OK')"

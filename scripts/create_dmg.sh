@@ -28,10 +28,10 @@ cp -R "$APP_PATH" "$STAGING/"
 # Create Applications shortcut
 ln -s /Applications "$STAGING/Applications"
 
-# Create DMG
+# Create DMG with maximum compression level
 echo "==> Building compressed DMG: $OUTPUT_DMG"
 rm -f "$OUTPUT_DMG"
-hdiutil create -volname "NxNative_Launcher" -srcfolder "$STAGING" -ov -format UDZO "$OUTPUT_DMG"
+hdiutil create -volname "NxNative_Launcher" -srcfolder "$STAGING" -ov -format UDZO -imagekey zlib-level=9 "$OUTPUT_DMG"
 
 # Clean staging
 rm -rf "$STAGING"

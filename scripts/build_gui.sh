@@ -35,8 +35,9 @@ build_app_bundle() {
     chmod +x "$APP_BUNDLE/Contents/MacOS/NXNativeGUI"
     
     if [ -d "$GUI_DIR/Resources" ]; then
+        # Copy primary icon sets and menu bar icons (avoid redundant 1024x1024 iOS PNG clones)
         cp "$GUI_DIR/Resources/"*.icns "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
-        cp "$GUI_DIR/Resources/"*.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
+        cp "$GUI_DIR/Resources/MenuBarIcon-"*.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
         cp "$GUI_DIR/Resources/"*.svg "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
         if [ -d "$GUI_DIR/Resources/NxNative_Launcher.icon" ]; then
             cp -R "$GUI_DIR/Resources/NxNative_Launcher.icon" "$APP_BUNDLE/Contents/Resources/"
@@ -46,8 +47,13 @@ build_app_bundle() {
             cp -R "$GUI_DIR/Resources/patches/" "$APP_BUNDLE/Contents/Resources/patches/"
         fi
         if [ -d "$GUI_DIR/Resources/python" ]; then
-            echo "==> Copiando runtime Python standalone embutido..."
+            echo "==> Copiando runtime Python standalone embutido (otimizado)..."
             cp -R "$GUI_DIR/Resources/python" "$APP_BUNDLE/Contents/Resources/"
+            # Remove development headers, pip and bytecode caches from target bundle
+            rm -rf "$APP_BUNDLE/Contents/Resources/python/include" \
+                   "$APP_BUNDLE/Contents/Resources/python/lib/python"*/site-packages/pip* \
+                   "$APP_BUNDLE/Contents/Resources/python/lib/python"*/ensurepip 2>/dev/null || true
+            find "$APP_BUNDLE/Contents/Resources/python" -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
         fi
         if [ -d "$GUI_DIR/Resources/tools" ]; then
             echo "==> Copiando ferramentas standalone embutidas..."
