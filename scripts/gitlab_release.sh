@@ -75,11 +75,11 @@ if [ -n "$TOKEN" ]; then
 {
   "name": "NxNative Launcher $TAG_NAME",
   "tag_name": "$TAG_NAME",
-  "description": "### 🚀 NxNative Launcher $TAG_NAME - Latest Release\n\nOfficial native Apple Silicon build for macOS 13+ (Ventura, Sonoma, Sequoia).\n\n- **DMG Package**: \`$DMG_NAME\` ($DMG_SIZE)\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\n\n#### ⚖️ Game Preservation Notice (\"for those who come after\")\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No game copies, ROMs, keys, or proprietary firmwares are distributed.",
+  "description": "### 🚀 NxNative Launcher $TAG_NAME - Official Release\n\nOfficial native Apple Silicon build for macOS 13+ (Ventura, Sonoma, Sequoia, Golden Gate).\n\n- **Package**: \`$DMG_NAME\` ($DMG_SIZE)\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\n\n---\n\n### 🌟 Highlights & Features in $TAG_NAME\n\n- **Automated Artwork & Store-Branding Zero Tolerance**: dynamic Apple Vision OCR neural filter guarantees that no game artwork displays eShop, store logos, or commercial banners. Clean community covers automatically cached locally.\n- **Enhanced Controller & Input Management**: mouse input settings cleanly separated to Keyboard & Mouse tab; pure gamepad setup when controller is active.\n- **Over 130+ Verified Games Supported**, including Switch 2 titles.\n- **Up to 8 Players / Gamepad Profiles** simultaneously supported.\n- **Apple Liquid Glass Design System**: dynamic material refraction, responsive glass cards, and physical sliders.\n- **Optimized Standalone Bundle**: streamlined down to ~64 MB with built-in standalone Python 3.13 and runtime tools (\`zstd\`, \`xcodegen\`, \`glslangValidator\`, \`spirv-cross\`).\n\n---\n\n### ⚖️ Game Preservation Notice (\"for those who come after\")\n\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No copyrighted game copies, ROMs, keys, or proprietary firmwares are distributed.",
   "assets": {
     "links": [
       {
-        "name": "$DMG_NAME",
+        "name": "$DMG_NAME ($DMG_SIZE)",
         "url": "$DIRECT_DOWNLOAD_URL",
         "filepath": "/binaries/$DMG_NAME",
         "link_type": "package"
