@@ -83,6 +83,13 @@ extension AppViewModel {
             self.isCompatibilityFromOnline = isOnline
             self.compatibilityLastUpdated = Date()
             self.isLoadingCompatibility = false
+            
+            // Automatically fetch and cache clean covers for all games (Steam/Playnite style)
+            DispatchQueue.global(qos: .utility).async {
+                for game in games {
+                    _ = GameCoverService.shared.coverImage(titleId: game.titleId, gameName: game.title)
+                }
+            }
         }
     }
     

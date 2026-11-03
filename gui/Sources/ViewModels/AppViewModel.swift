@@ -179,7 +179,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var settingsFocusIndex: Int = 0
     
     // Controls Tab Navigation (2-Level Card Architecture)
-    @Published public var controlsCardIndex: Int = 0 // 0: Header, 1: Mapping, 2: Deadzone, 3: Rumble, 4: Mouse
+    @Published public var controlsCardIndex: Int = 0 // 0: Header, 1: Mapping, 2: Deadzone, 3: Rumble
     @Published public var isInsideControlsCard: Bool = false
     @Published public var controlsHeaderFocus: Int = 0 // 0: Player, 1: Profile, 2: Duplicate, 3: Reset
     @Published public var controlsMappingFocus: Int = 0 // 0..18 (Buttons + Swap AB/XY)
@@ -705,6 +705,13 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         
         if let savedHidden = UserDefaults.standard.stringArray(forKey: StorageKeys.savedHiddenGamePaths) {
             self.hiddenGamePaths = Set(savedHidden)
+        }
+        
+        // Force one-time cleanup of legacy image cache containing old eShop icons / uncropped console headers
+        let legacyCacheCleanKey = "nxnative_cleaned_legacy_image_cache_v1_9_2"
+        if !UserDefaults.standard.bool(forKey: legacyCacheCleanKey) {
+            _ = BuildCleanupService.shared.cleanImageCache()
+            UserDefaults.standard.set(true, forKey: legacyCacheCleanKey)
         }
         
         InputProfileManager.shared.exportActiveMappingToDisk(libraryFolder: self.libraryFolder)

@@ -373,11 +373,8 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 4. Nintendo Official eShop Artwork
+        // 4. Official High-Resolution Artwork (Banners only - never square eShop icons with badges)
         if let tid = tidUpper, let artwork = ArtworkStore.shared.artworkUrls(for: tid) {
-            if let iconUrl = artwork.icon {
-                candidates.append(iconUrl)
-            }
             if let bannerUrl = artwork.banner {
                 candidates.append(bannerUrl)
             }
@@ -442,7 +439,8 @@ public final class GameCoverService: ObservableObject {
         
         // Top 13.5% is the red console header banner containing registered platform trademarks
         let cutY = height * 0.135
-        let remainingHeight = height - cutY
+        let bottomCut = height * 0.025
+        let remainingHeight = max(10, height - cutY - bottomCut)
         let cropRect = CGRect(x: 0, y: cutY, width: width, height: remainingHeight)
         
         guard let croppedCg = cgImage.cropping(to: cropRect) else {

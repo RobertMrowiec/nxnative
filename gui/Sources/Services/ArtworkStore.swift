@@ -75,21 +75,10 @@ public final class ArtworkStore: ObservableObject {
             }
         }
 
-        // 2. Official 1024x1024 1:1 Nintendo Switch Square Icon (local cache or repository)
-        if let tid = tid {
-            let diskIcon = artworkDir.appendingPathComponent("\(tid).icon.jpg")
-            if fileManager.fileExists(atPath: diskIcon.path),
-               let img = ImageDownsampler.downsample(url: diskIcon, maxPixelSize: 320) ?? NSImage(contentsOf: diskIcon) {
-                cacheImage(img, forKey: cacheKey)
-                return img
-            }
-            let repoIcon = localRepoDir.appendingPathComponent("icons/\(tid).jpg")
-            if fileManager.fileExists(atPath: repoIcon.path),
-               let img = ImageDownsampler.downsample(url: repoIcon, maxPixelSize: 320) ?? NSImage(contentsOf: repoIcon) {
-                cacheImage(img, forKey: cacheKey)
-                return img
-            }
-            fetchSquareIconAsync(titleId: tid)
+        // 2. Clean Steam / Playnite / RetroArch style cover from GameCoverService (no console headers, no eShop badges)
+        if let cover = GameCoverService.shared.coverImage(for: game) {
+            cacheImage(cover, forKey: cacheKey)
+            return cover
         }
 
         // 3. Direct app bundle resources check (macOS .app) for square icon or cover
@@ -128,24 +117,7 @@ public final class ArtworkStore: ObservableObject {
             return cached
         }
 
-        // 1. Official 1024x1024 1:1 Nintendo Switch Square Icon from local cache / repository
-        if let tid = tid {
-            let diskIcon = artworkDir.appendingPathComponent("\(tid).icon.jpg")
-            if fileManager.fileExists(atPath: diskIcon.path),
-               let img = ImageDownsampler.downsample(url: diskIcon, maxPixelSize: 320) ?? NSImage(contentsOf: diskIcon) {
-                cacheImage(img, forKey: cacheKey)
-                return img
-            }
-            let repoIcon = localRepoDir.appendingPathComponent("icons/\(tid).jpg")
-            if fileManager.fileExists(atPath: repoIcon.path),
-               let img = ImageDownsampler.downsample(url: repoIcon, maxPixelSize: 320) ?? NSImage(contentsOf: repoIcon) {
-                cacheImage(img, forKey: cacheKey)
-                return img
-            }
-            fetchSquareIconAsync(titleId: tid)
-        }
-
-        // 2. Authentic box art cover from GameCoverService
+        // 1. Clean Steam / Playnite / RetroArch style cover from GameCoverService (no console headers, no eShop badges)
         if let cover = GameCoverService.shared.coverImage(titleId: tid, gameName: gameName) {
             cacheImage(cover, forKey: cacheKey)
             return cover

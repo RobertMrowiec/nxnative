@@ -131,11 +131,11 @@ public struct CompatibleGameGridCard: View {
         .shadow(color: isCardFocused ? NXTheme.primary.opacity(0.4) : Color.clear, radius: 8, x: 0, y: 3)
     }
     
-    // MARK: - Game Cover Art (1:1 Square matching Play Screen)
+    // MARK: - Game Cover Art (Clean Steam / Playnite / RetroArch style)
     @ViewBuilder
     private var coverArtView: some View {
-        let coverImg = ArtworkStore.shared.loadSquareIcon(titleId: item.titleId, gameName: item.title)
-            ?? GameCoverService.shared.coverImage(titleId: item.titleId, gameName: item.title)
+        let coverImg = GameCoverService.shared.coverImage(titleId: item.titleId, gameName: item.title)
+            ?? ArtworkStore.shared.loadSquareIcon(titleId: item.titleId, gameName: item.title)
         
         Color.clear
             .aspectRatio(1.0, contentMode: .fit)

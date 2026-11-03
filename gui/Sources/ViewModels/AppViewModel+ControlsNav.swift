@@ -29,16 +29,17 @@ extension AppViewModel {
         
         // Level 1: Outer Card Selection Mode
         if !isInsideControlsCard {
+            let maxCards = 4
             switch action {
             case .navigateUp:
                 SoundEffectService.shared.play(.focus)
                 withAnimation(.easeInOut(duration: 0.16)) {
-                    controlsCardIndex = (controlsCardIndex - 1 + 5) % 5
+                    controlsCardIndex = (controlsCardIndex - 1 + maxCards) % maxCards
                 }
             case .navigateDown:
                 SoundEffectService.shared.play(.focus)
                 withAnimation(.easeInOut(duration: 0.16)) {
-                    controlsCardIndex = (controlsCardIndex + 1) % 5
+                    controlsCardIndex = (controlsCardIndex + 1) % maxCards
                 }
             case .confirm:
                 SoundEffectService.shared.play(.click)
@@ -69,8 +70,6 @@ extension AppViewModel {
             handleControlsDeadzoneAction(action)
         case 3:
             handleControlsHapticsAction(action)
-        case 4:
-            handleControlsMouseAction(action)
         default:
             break
         }

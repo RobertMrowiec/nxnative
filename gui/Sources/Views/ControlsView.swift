@@ -82,18 +82,6 @@ public struct ControlsView: View {
                         )
                         .id("controls_card_3")
                         .overlay(cardStroke(for: 3, cornerRadius: 18))
-
-                        // Mouse Look & Motion Mapping
-                        MouseLookSettingsView(
-                            profile: $activeProfile,
-                            isMasterFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 4 && viewModel.controlsMouseFocus == 0,
-                            isSensitivityFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 4 && viewModel.controlsMouseFocus == 1,
-                            isInvertXFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 4 && viewModel.controlsMouseFocus == 2,
-                            isInvertYFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 4 && viewModel.controlsMouseFocus == 3,
-                            isModeFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 4 && viewModel.controlsMouseFocus == 4
-                        )
-                        .id("controls_card_4")
-                        .overlay(cardStroke(for: 4, cornerRadius: 18))
                     } else {
                         // Simple Keyboard Mapping View
                         GlassCard {
