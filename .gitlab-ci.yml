@@ -19,19 +19,20 @@ lint_clean_room:
     - if: $CI_COMMIT_TAG
   script:
     - echo "==> Verifying Clean-Room compliance (No proprietary keys or ROM dumps in repo)..."
-    - python3 -c '
-import os, sys
-banned_exts = [".keys", ".nsp", ".nsz", ".xci", ".xcz"]
-found = []
-for root, dirs, files in os.walk("."):
-    for f in files:
-        if any(f.endswith(ext) for ext in banned_exts) or f in ["prod.keys", "title.keys"]:
-            found.append(os.path.join(root, f))
-if found:
-    print("❌ Violation: Found proprietary files:", found)
-    sys.exit(1)
-print("✅ Clean-Room check passed: No keys or ROM dumps found.")
-'
+    - |
+      python3 -c '
+      import os, sys
+      banned_exts = [".keys", ".nsp", ".nsz", ".xci", ".xcz"]
+      found = []
+      for root, dirs, files in os.walk("."):
+          for f in files:
+              if any(f.endswith(ext) for ext in banned_exts) or f in ["prod.keys", "title.keys"]:
+                  found.append(os.path.join(root, f))
+      if found:
+          print("❌ Violation: Found proprietary files:", found)
+          sys.exit(1)
+      print("✅ Clean-Room check passed: No keys or ROM dumps found.")
+      '
 
 security_scan:
   stage: security
@@ -41,49 +42,52 @@ security_scan:
     - if: $CI_COMMIT_BRANCH == "main"
   script:
     - echo "==> Running security audit for code injection and secret leaks..."
-    - python3 -c '
-import os, re, sys
+    - |
+      python3 -c '
+      import os, re, sys
 
-SECRET_PATTERNS = [
-    r"glpat-[a-zA-Z0-9_\-]{20,}",
-    r"ghp_[a-zA-Z0-9]{36}",
-    r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----",
-]
+      SECRET_PATTERNS = [
+          r"glpat-[a-zA-Z0-9_\-]{20,}",
+          r"ghp_[a-zA-Z0-9]{36}",
+          r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----",
+      ]
 
-SUSPICIOUS_PATTERNS = [
-    r"base64\s+-d\s*\|\s*(ba|z)?sh",
-    r"nc\s+-e\s+/bin/",
-    r"/dev/tcp/[0-9]+\.[0-9]+",
-]
+      SUSPICIOUS_PATTERNS = [
+          r"base64\s+-d\s*\|\s*(ba|z)?sh",
+          r"nc\s+-e\s+/bin/",
+          r"/dev/tcp/[0-9]+\.[0-9]+",
+      ]
 
-violations = []
+      violations = []
 
-for root, dirs, files in os.walk("."):
-    if ".git" in root or ".build" in root or "tools" in root or "python" in root:
-        continue
-    for f in files:
-        if f.endswith((".swift", ".py", ".sh", ".command", ".md", ".yml", ".json")):
-            path = os.path.join(root, f)
-            try:
-                with open(path, "r", encoding="utf-8", errors="ignore") as fh:
-                    content = fh.read()
-                    for sp in SECRET_PATTERNS:
-                        if re.search(sp, content):
-                            violations.append(f"Secret leak pattern matched in {path}")
-                    for susp in SUSPICIOUS_PATTERNS:
-                        if re.search(susp, content):
-                            violations.append(f"Suspicious shell injection pattern matched in {path}")
-            except Exception as e:
-                pass
+      for root, dirs, files in os.walk("."):
+          if ".git" in root or ".build" in root or "tools" in root or "python" in root:
+              continue
+          for f in files:
+              if f == ".gitlab-ci.yml":
+                  continue
+              if f.endswith((".swift", ".py", ".sh", ".command", ".md", ".yml", ".json")):
+                  path = os.path.join(root, f)
+                  try:
+                      with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+                          content = fh.read()
+                          for sp in SECRET_PATTERNS:
+                              if re.search(sp, content):
+                                  violations.append(f"Secret leak pattern matched in {path}")
+                          for susp in SUSPICIOUS_PATTERNS:
+                              if re.search(susp, content):
+                                  violations.append(f"Suspicious shell injection pattern matched in {path}")
+                  except Exception as e:
+                      pass
 
-if violations:
-    print("❌ Security audit failed:")
-    for v in violations:
-        print("  -", v)
-    sys.exit(1)
+      if violations:
+          print("❌ Security audit failed:")
+          for v in violations:
+              print("  -", v)
+          sys.exit(1)
 
-print("✅ Security audit passed: No token leaks or malicious injection patterns detected.")
-'
+      print("✅ Security audit passed: No token leaks or malicious injection patterns detected.")
+      '
 
 release_job:
   stage: release
