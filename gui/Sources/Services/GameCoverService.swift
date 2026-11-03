@@ -143,13 +143,13 @@ public final class GameCoverService: ObservableObject {
             return img
         }
 
-        // 2. Check game bundle's Contents/Resources for cover art (only if portrait)
+        // 2. Check game bundle's Contents/Resources for cover art
         let bundleResources = game.url.appendingPathComponent("Contents/Resources")
         for filename in ["cover.jpg", "cover.png", "coverHQ.jpg", "boxart.jpg"] {
             let bundleCover = bundleResources.appendingPathComponent(filename)
             if fileManager.fileExists(atPath: bundleCover.path),
                let img = ImageDownsampler.downsample(url: bundleCover, maxPixelSize: 320) ?? NSImage(contentsOf: bundleCover),
-               img.size.height >= img.size.width * 1.05 {
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
                 cacheImage(img, forKeys: lookupKeys)
                 return img
             }
@@ -160,7 +160,7 @@ public final class GameCoverService: ObservableObject {
             let cached = cacheDirectory.appendingPathComponent("\(tid).jpg")
             if fileManager.fileExists(atPath: cached.path),
                let img = ImageDownsampler.downsample(url: cached, maxPixelSize: 320) ?? NSImage(contentsOf: cached),
-               img.size.height >= img.size.width * 1.05 {
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
                 cacheImage(img, forKeys: lookupKeys)
                 injectCoverIfPossible(sourceImageURL: cached, targetAppURL: game.url)
                 return img
@@ -213,7 +213,7 @@ public final class GameCoverService: ObservableObject {
             let cached = cacheDirectory.appendingPathComponent("\(tid).jpg")
             if fileManager.fileExists(atPath: cached.path),
                let img = ImageDownsampler.downsample(url: cached, maxPixelSize: 320) ?? NSImage(contentsOf: cached),
-               img.size.height >= img.size.width * 1.05 {
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
                 cacheImage(img, forKeys: lookupKeys)
                 return img
             }
@@ -221,7 +221,7 @@ public final class GameCoverService: ObservableObject {
 
         if let localCover = findLocalRepoCover(forGameName: gameName, titleId: resolvedId) {
             if let img = ImageDownsampler.downsample(url: localCover, maxPixelSize: 320) ?? NSImage(contentsOf: localCover),
-               img.size.height >= img.size.width * 1.05 {
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
                 cacheImage(img, forKeys: lookupKeys)
                 return img
             }
@@ -269,7 +269,7 @@ public final class GameCoverService: ObservableObject {
                 let byId = coversRepoDirectory.appendingPathComponent("\(tid.uppercased()).\(ext)")
                 if fileManager.fileExists(atPath: byId.path),
                    let img = ImageDownsampler.downsample(url: byId, maxPixelSize: 320) ?? NSImage(contentsOf: byId),
-                   img.size.height >= img.size.width * 1.05 {
+                   img.isValid, img.size.width >= 32, img.size.height >= 32 {
                     return byId
                 }
             }
@@ -282,7 +282,7 @@ public final class GameCoverService: ObservableObject {
                 let bySlug = imagesDir.appendingPathComponent("\(slug).\(ext)")
                 if fileManager.fileExists(atPath: bySlug.path),
                    let img = ImageDownsampler.downsample(url: bySlug, maxPixelSize: 320) ?? NSImage(contentsOf: bySlug),
-                   img.size.height >= img.size.width * 1.05 {
+                   img.isValid, img.size.width >= 32, img.size.height >= 32 {
                     return bySlug
                 }
             }
@@ -336,7 +336,18 @@ public final class GameCoverService: ObservableObject {
 
         var candidates: [URL] = []
 
-        // 1. High-Probability GameTDB Box Arts (Priority: US, EN, JA)
+        // 1. High-Quality Clean Game Artwork from upstream repository (Gallery / Showcase)
+        if let fn = ArtworkStore.shared.galleryFilename(for: tidUpper ?? searchKey) ?? ArtworkStore.shared.galleryFilename(for: gameName) {
+            let localGallery = self.coversRepoDirectory.deletingLastPathComponent().appendingPathComponent(fn)
+            if fileManager.fileExists(atPath: localGallery.path) {
+                candidates.append(localGallery)
+            }
+            if let rawGitURL = URL(string: "https://raw.githubusercontent.com/seedds/nxnative/main/docs/images/\(fn)") {
+                candidates.append(rawGitURL)
+            }
+        }
+
+        // 2. High-Probability GameTDB Box Arts (Priority: US, EN, JA)
         if let tid = tidUpper {
             let gids = Self.verifiedGameTDBIds[tid] ?? []
             for gid in gids {
@@ -350,7 +361,7 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 2. High-Probability Libretro Named_Boxarts
+        // 3. High-Probability Libretro Named_Boxarts
         let cleanTitle = gameName
             .replacingOccurrences(of: ":", with: " -")
             .replacingOccurrences(of: "\u{2122}", with: "")
@@ -362,7 +373,7 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 3. Nintendo Official eShop Artwork
+        // 4. Nintendo Official eShop Artwork
         if let tid = tidUpper, let artwork = ArtworkStore.shared.artworkUrls(for: tid) {
             if let iconUrl = artwork.icon {
                 candidates.append(iconUrl)
@@ -379,7 +390,7 @@ public final class GameCoverService: ObservableObject {
             return
         }
 
-        tryFetchCandidate(candidates: candidates, index: 0) { [weak self] data, img in
+        tryFetchCandidate(candidates: candidates, index: 0) { [weak self] rawData, rawImg in
             guard let self = self else { return }
             defer {
                 self.lock.lock()
@@ -387,12 +398,15 @@ public final class GameCoverService: ObservableObject {
                 self.lock.unlock()
             }
 
-            guard let data = data, let img = img else {
+            guard let rawData = rawData, let rawImg = rawImg else {
                 self.lock.lock()
                 self.failedLookups.insert(searchKey)
                 self.lock.unlock()
                 return
             }
+
+            // Strip physical console branding banners (e.g. red Nintendo Switch banner) for clean-room art presentation
+            let (data, img) = self.stripConsoleHeaderBanner(from: rawImg, originalData: rawData)
 
             if let tid = tidUpper {
                 let target = self.cacheDirectory.appendingPathComponent("\(tid).jpg")
@@ -413,6 +427,36 @@ public final class GameCoverService: ObservableObject {
         }
     }
 
+    /// Strips retail plastic console header banner (e.g. red Nintendo Switch brand bar) from vertical box arts,
+    /// ensuring only clean game illustration is displayed and removing platform trademarks from the UI.
+    private func stripConsoleHeaderBanner(from image: NSImage, originalData: Data) -> (Data, NSImage) {
+        guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            return (originalData, image)
+        }
+        let width = CGFloat(cgImage.width)
+        let height = CGFloat(cgImage.height)
+        // Only crop retail box art scans where aspect ratio indicates a tall plastic case (height > 1.25x width)
+        guard height > width * 1.25 else {
+            return (originalData, image)
+        }
+        
+        // Top 13.5% is the red console header banner containing registered platform trademarks
+        let cutY = height * 0.135
+        let remainingHeight = height - cutY
+        let cropRect = CGRect(x: 0, y: cutY, width: width, height: remainingHeight)
+        
+        guard let croppedCg = cgImage.cropping(to: cropRect) else {
+            return (originalData, image)
+        }
+        
+        let rep = NSBitmapImageRep(cgImage: croppedCg)
+        guard let jpgData = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.90]) else {
+            return (originalData, image)
+        }
+        let cleanedImage = NSImage(cgImage: croppedCg, size: NSSize(width: width, height: remainingHeight))
+        return (jpgData, cleanedImage)
+    }
+
     private func tryFetchCandidate(
         candidates: [URL],
         index: Int,
@@ -427,8 +471,8 @@ public final class GameCoverService: ObservableObject {
             guard let self = self else { return }
             if let http = response as? HTTPURLResponse, http.statusCode == 200,
                let d = data, !d.isEmpty,
-               let img = ImageDownsampler.downsample(data: d, maxPixelSize: 320) ?? NSImage(data: d),
-               img.isValid, img.size.height >= img.size.width * 1.05 {
+               let img = ImageDownsampler.downsample(data: d, maxPixelSize: 480) ?? NSImage(data: d),
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
                 completion(d, img)
             } else {
                 self.tryFetchCandidate(candidates: candidates, index: index + 1, completion: completion)

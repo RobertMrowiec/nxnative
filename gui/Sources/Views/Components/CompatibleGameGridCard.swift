@@ -147,7 +147,7 @@ public struct CompatibleGameGridCard: View {
                             Image(nsImage: img)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: side, height: side, alignment: .top)
+                                .frame(width: side, height: side, alignment: .center)
                                 .clipped()
                         } else {
                             fallbackIcon

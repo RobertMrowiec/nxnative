@@ -6,24 +6,38 @@ public struct GameTDBVerifiedDatabase {
         "0100000000010000": ["AAACA", "AAACB"], // Super Mario Odyssey
         "0100000011D90000": ["AX7QA"],          // Pokémon Brilliant Diamond
         "010005501E68C000": ["BG9VA"],          // Ace Attorney Investigations Collection
+        "010012101468C000": ["A3SDA"],          // Metroid Prime Remastered
         "010013C00E930000": ["AUSUA"],          // Hollow Knight: Silksong
+        "010014C011146000": ["AY7RA"],          // Subnautica: Below Zero
         "010014E00DB56000": ["ATPMB", "ATPMA"], // Digimon Story Cyber Sleuth: Complete Edition
         "010015100B514000": ["AQMXA"],          // Super Mario Bros. Wonder
         "0100152000022000": ["AABPA", "AABPB"], // Mario Kart 8 Deluxe
+        "010016100A186000": ["AK9NA"],          // SteamWorld Heist: Ultimate Edition
+        "0100199023B2E000": ["BQBEB"],          // Atelier Ryza: Ever Darkness & the Secret Hideout DX
+        "01001F5010DFA000": ["AW7KA"],          // Pokémon Legends: Arceus
         "010020400E1C2000": ["AEK3B", "AEK3A"], // Raging Loop
         "010020D01AD24000": ["BCCHA"],          // ANIMAL WELL
+        "0100217023F6C000": ["BQQFA"],          // Well Dweller
         "010028600EBDA000": ["AUZPA"],          // Super Mario 3D World + Bowser's Fury
+        "010029B0118E8000": ["A5FDA"],          // Need for Speed: Hot Pursuit Remastered
         "010029B018432000": ["A8VEA"],          // Ghost Trick: Phantom Detective
         "01002B00111A2000": ["AXEAA", "AXEAB"], // Hyrule Warriors: Age of Calamity
         "01002B30028F6000": ["ACF3A"],          // Celeste
+        "01002CD00A51C000": ["APDEA"],          // Baba Is You
+        "01002DA013484000": ["AZ89A"],          // The Legend of Zelda: Skyward Sword HD
+        "01002E7016C46000": ["A6YYA"],          // Cult of the Lamb
         "0100300012F2A000": ["AZRMA"],          // Advance Wars 1+2: Re-Boot Camp
         "0100317013770000": ["A2G7A", "A2G7B"], // Mario + Rabbids Sparks of Hope
+        "010031F019294000": ["A923A"],          // Super Monkey Ball Banana Rumble
         "010032E00E6E2000": ["AULSA"],          // Return of the Obra Dinn
         "0100346017304000": ["A7G4A"],          // Taiko Risshiden V DX
         "010036E00FB20000": ["AV3JA", "AV3JB"], // The Great Ace Attorney Chronicles
+        "010038600B27E000": ["AQDUA"],          // Bastion
         "010038B015560000": ["A43UA"],          // FINAL FANTASY TACTICS - The Ivalice Chronicles
+        "01003E601E324000": ["BGX2A"],          // DRAGON QUEST III HD-2D Remake
         "01003FC01670C000": ["A3RVA", "A3RVB", "A3RVC"], // 13 Sentinels: Aegis Rim
         "010040801A4C8000": ["BBLYA"],          // Blasphemous 2
+        "0100429011144000": ["AX4CA"],          // Subnautica
         "010045C014650000": ["A3RVB", "A3RVA", "A3RVC"], // 13 Sentinels: Aegis Rim, Japanese release
         "01004A4010FEA000": ["AXB7A"],          // Bayonetta 3
         "01004AB00A260000": ["AK63B", "AK63A"], // DARK SOULS: REMASTERED
@@ -39,12 +53,19 @@ public struct GameTDBVerifiedDatabase {
         "01006000040C2000": ["AEA2A", "AEA2B"], // Yoshi's Crafted World
         "0100606026F12000": ["BUCVA"],          // FINAL FANTASY RESONANCE
         "0100620012D6E000": ["AZLSA"],          // Big Brain Academy: Brain vs. Brain
+        "010062B01525C000": ["A4TQA"],          // Persona 4 Golden
+        "0100633007D48000": ["AKLHA"],          // Hollow Knight
+        "010063301BD50000": ["BDPZA"],          // SUPER ROBOT WARS Y
+        "0100646009FBE000": ["ANXTB"],          // Dead Cells
+        "010067300059A000": ["AV3DA"],          // Mario + Rabbids Kingdom Battle
         "010069401ADB8000": ["BACCA", "BACCB", "BACCC"], // Unicorn Overlord
+        "0100698009C6E000": ["ANKSA"],          // Blasphemous
         "010069C01AB82000": ["BBXAA", "BBXAB", "BBXAC"], // SHIN MEGAMI TENSEI V: Vengeance
         "01006A800016E000": ["AAABA"],          // Super Smash Bros. Ultimate
         "01006BB00C6F0000": ["AR3NA"],          // The Legend of Zelda: Link's Awakening
         "01006C300E9F0000": ["ALC7C", "ALC7E", "ALC7A"], // DRAGON QUEST XI S
         "01006F8002326000": ["ACBAA"],          // Animal Crossing: New Horizons
+        "01006FE013472000": ["AZ82A"],          // Mario Party Superstars
         "0100713016CCC000": ["A4EFA", "A4EFB", "A4EFC"], // AI: THE SOMNIUM FILES - nirvanA Initiative
         "01007300020FA000": ["AB48A"],          // ASTRAL CHAIN
         "010074F013262000": ["AZ3HA"],          // Xenoblade Chronicles 3
@@ -54,36 +75,56 @@ public struct GameTDBVerifiedDatabase {
         "01007EF00011E000": ["AAAAA"],          // The Legend of Zelda: Breath of the Wild
         "010086A022444000": ["BNQEA"],          // BALL x PIT
         "010089B00D09C000": ["ASRPB", "ASRPA", "ASRPD"], // AI: THE SOMNIUM FILES
+        "010089C01E9CA000": ["BHK6A"],          // SteamWorld Heist II
         "01008BC024FDE000": ["AMNPA", "AMNPB", "ASB4A"], // STEINS;GATE RE:BOOT
         "01008C0016544000": ["A6G7A"],          // Sea of Stars
         "01008CF01BAAC000": ["BDGEA"],          // The Legend of Zelda: Echoes of Wisdom
         "01008D7016438000": ["A3RVC", "A3RVA", "A3RVB"], // 13 Sentinels: Aegis Rim (Asian release)
         "01008DB008C2C000": ["ALZBA"],          // Pokémon Shield
+        "01008F6008C5E000": ["ALZYA"],          // Pokémon Violet
+        "010092B0091D0000": ["AMKCC"],          // Team Sonic Racing
+        "01009320084A4000": ["AK9RA"],          // SteamWorld Dig
         "010093801237C000": ["AYL8A"],          // Metroid Dread
+        "0100965017338000": ["A7HLA"],          // Super Mario Party Jamboree
         "010099C022B96000": ["BN84A"],          // Super Mario Galaxy
         "01009BF0072D4000": ["AJH9A"],          // Captain Toad: Treasure Tracker
         "01009D901BC56000": ["BDLWA"],          // Donkey Kong Country Returns HD
         "0100A00019DE0000": ["BA3FA"],          // Hades II
         "0100A3501946E000": ["A98RA"],          // OCTOPATH TRAVELER II
+        "0100A3900C3E2000": ["ARUUA"],          // Paper Mario: The Origami King
         "0100A3D008C5C000": ["ALZXA"],          // Pokémon Scarlet
         "0100A5C00D162000": ["ASVUA", "ASVUG"], // Cuphead
         "0100A6301214E000": ["AYFNA"],          // Fire Emblem Engage
         "0100A83022A22000": ["BN47A"],          // Absolum
         "0100A9D01C446000": ["BD9VA", "BD9VB"], // DRAGON QUEST VII Reimagined
+        "0100ABD01785C000": ["A5FDA"],          // Portal 2
         "0100ABF008968000": ["ALZAA"],          // Pokémon Sword
+        "0100ACD0163D0000": ["A6DPA"],          // Batman: Arkham Knight
+        "0100AE00096EA000": ["AKUTB"],          // Hyrule Warriors: Definitive Edition
         "0100B04011742000": ["AXSEA", "AXSEB"], // Monster Hunter Rise
         "0100B7C00933A000": ["AMPYA"],          // Pikmin 4
+        "0100B8A026F14000": ["BUCVA"],          // FINAL FANTASY RESONANCE, Asian release
+        "0100B8E016F76000": ["A532A"],          // NieR:Automata The End of YoRHa Edition, Asian release
         "0100B99019412000": ["A97PA"],          // Mario vs. Donkey Kong
+        "0100BA4026E94000": ["BUBLA"],          // Castlevania: Belmont's Curse
+        "0100BC0018138000": ["A8LUA"],          // Super Mario RPG
+        "0100BC300CB48000": ["A3CHA"],          // FINAL FANTASY X/X-2 HD Remaster
         "0100BF00112C0000": ["AJ2AC"],          // Catherine: Full Body
         "0100C1F0051B6000": ["AFWTA"],          // Donkey Kong Country: Tropical Freeze
         "0100C2A01A730000": ["BBTCA", "BBTCC", "BBTCB"], // ROMANCE OF THE THREE KINGDOMS 8 REMAKE
+        "0100C49025D3E000": ["BSYBA"],          // EA SPORTS FC 27
+        "0100CA9002322000": ["ACATA"],          // SteamWorld Dig 2
+        "0100CC80140F8000": ["A3AWB"],          // TRIANGLE STRATEGY
         "0100CD801CE5E000": ["BEYKA"],          // Balatro
         "0100CE4010AAC000": ["AUYRA", "AUYRB", "AUYRC"], // FINAL FANTASY CRYSTAL CHRONICLES Remastered Edition
+        "0100D5B026844000": ["BTU9A"],          // Silver Pines
+        "0100D7C01F254000": ["BJEAA"],          // DRAGON QUEST I & II HD-2D Remake
         "0100D9F01D474000": ["BFLTA"],          // Rhythm Heaven Groove
         "0100DCA0064A6000": ["AG3JA"],          // Luigi's Mansion 3
         "0100E44016C22000": ["A6YSA"],          // Patrick's Parabox
         "0100E65002BB8000": ["ACPGA", "ACPGB"], // Stardew Valley
         "0100E95004038000": ["ADENB", "ADENA"], // Xenoblade Chronicles 2
+        "0100EC9010258000": ["AWGWE"],          // Streets of Rage 4
         "0100ECD018EBE000": ["A9QDA"],          // Paper Mario: The Thousand-Year Door
         "0100F2C0115B6000": ["AXN7A"],          // The Legend of Zelda: Tears of the Kingdom
         "0100F43008C44000": ["ALZLA"],          // Pokémon Legends: Z-A

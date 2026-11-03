@@ -232,6 +232,13 @@ public final class ArtworkStore: ObservableObject {
         return nil
     }
 
+    public func galleryFilename(for key: String) -> String? {
+        let upper = key.uppercased()
+        if let fn = galleryMapByTid[upper] { return fn }
+        let norm = normalizeString(key)
+        return galleryMapByTitle[norm]
+    }
+
     private func loadLocalGalleryIndex() {
         let tsvPath = localRepoDir.appendingPathComponent("gallery.tsv")
         guard let content = try? String(contentsOf: tsvPath, encoding: .utf8) else { return }
@@ -245,8 +252,11 @@ public final class ArtworkStore: ObservableObject {
             let name = parts[1]
             let cleanName = normalizeString(name)
             galleryMapByTitle[cleanName] = filename
-            if parts.count >= 4 && parts[3].hasPrefix("0100") {
-                galleryMapByTid[parts[3].uppercased()] = filename
+            if parts.count >= 4 {
+                let tidCandidate = parts[3].trimmingCharacters(in: .whitespaces).uppercased()
+                if tidCandidate.hasPrefix("0100") || tidCandidate.hasPrefix("0400") {
+                    galleryMapByTid[tidCandidate] = filename
+                }
             }
         }
     }
