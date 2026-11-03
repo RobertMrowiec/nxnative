@@ -66,7 +66,7 @@ public struct PortedGameCard: View {
                 
                 // Centered Large Artwork / Icon
                 VStack(spacing: 8) {
-                    let icon = GameCoverService.shared.coverImage(for: game) ?? NSWorkspace.shared.icon(forFile: game.url.path)
+                    let icon = ArtworkStore.shared.loadSquareIcon(for: game)
                     let isPortrait = icon.size.height >= icon.size.width * 1.15
                     Image(nsImage: icon)
                         .resizable()

@@ -75,37 +75,36 @@ public final class ArtworkStore: ObservableObject {
             }
         }
 
-        // 2. Clean Steam / Playnite / RetroArch style cover from GameCoverService (no console headers, no eShop badges)
-        if let cover = GameCoverService.shared.coverImage(for: game) {
-            cacheImage(cover, forKey: cacheKey)
-            return cover
-        }
-
-        // 3. Direct app bundle resources check (macOS .app) for square icon or cover
-        if game.platform == .macApp {
+        // 2. Original game bundle icon from the app shortcut (macOS .app bundle)
+        let isAppBundle = game.url.pathExtension.lowercased() == "app" || fileManager.fileExists(atPath: game.url.path)
+        if isAppBundle {
             let res = game.url.appendingPathComponent("Contents/Resources")
-            for name in ["icon.png", "AppIcon.icns", "cover.jpg", "cover.png"] {
+            for name in ["AppIcon.icns", "icon.png", "icon.icns"] {
                 let target = res.appendingPathComponent(name)
                 if fileManager.fileExists(atPath: target.path),
-                   let img = ImageDownsampler.downsample(url: target, maxPixelSize: 320) ?? NSImage(contentsOf: target) {
+                   let img = ImageDownsampler.downsample(url: target, maxPixelSize: 512) ?? NSImage(contentsOf: target),
+                   img.isValid {
                     cacheImage(img, forKey: cacheKey)
                     return img
                 }
             }
+            let wsIcon = NSWorkspace.shared.icon(forFile: game.url.path)
+            if wsIcon.isValid {
+                wsIcon.size = NSSize(width: 512, height: 512)
+                cacheImage(wsIcon, forKey: cacheKey)
+                return wsIcon
+            }
         }
 
-        // 4. Authentic box art cover from GameCoverService (cropped 1:1 in UI until square icon is ready)
+        // 3. Clean Steam / Playnite / RetroArch style cover from GameCoverService (no console headers, no eShop badges)
         if let cover = GameCoverService.shared.coverImage(for: game) {
             cacheImage(cover, forKey: cacheKey)
             return cover
         }
 
-        // 5. Trigger proactive background cover fetch so the card gets populated automatically
-        GameCoverService.shared.ensureCover(for: game)
-
-        // 6. Temporary fallback system workspace icon
+        // 4. Fallback system workspace icon
         let wsIcon = NSWorkspace.shared.icon(forFile: game.url.path)
-        wsIcon.size = NSSize(width: 256, height: 256)
+        wsIcon.size = NSSize(width: 512, height: 512)
         cacheImage(wsIcon, forKey: cacheKey)
         return wsIcon
     }
@@ -297,56 +296,6 @@ public final class ArtworkStore: ObservableObject {
         return result
     }
 
-    private func fetchSquareIconAsync(titleId: String) {
-        let iconFlightKey = "icon_\(titleId)"
-        lock.lock()
-        if inFlightDownloads.contains(iconFlightKey) || failedLookups.contains(iconFlightKey) {
-            lock.unlock()
-            return
-        }
-        inFlightDownloads.insert(iconFlightKey)
-        lock.unlock()
-
-        DispatchQueue.global(qos: .utility).async { [weak self] in
-            guard let self = self else { return }
-            guard let entry = self.lookupTitleDbEntry(for: titleId),
-                  let iconUrlStr = entry["icon"],
-                  let url = URL(string: iconUrlStr) else {
-                self.lock.lock()
-                self.inFlightDownloads.remove(iconFlightKey)
-                self.failedLookups.insert(iconFlightKey)
-                self.lock.unlock()
-                return
-            }
-
-            let task = self.urlSession.dataTask(with: url) { [weak self] data, response, _ in
-                guard let self = self else { return }
-                defer {
-                    self.lock.lock()
-                    self.inFlightDownloads.remove(iconFlightKey)
-                    self.lock.unlock()
-                }
-                guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                      let data = data,
-                      let img = ImageDownsampler.downsample(data: data, maxPixelSize: 320) ?? NSImage(data: data) else {
-                    self.lock.lock()
-                    self.failedLookups.insert(iconFlightKey)
-                    self.lock.unlock()
-                    return
-                }
-                let iconDest = self.artworkDir.appendingPathComponent("\(titleId).icon.jpg")
-                try? data.write(to: iconDest, options: .atomic)
-
-                DispatchQueue.main.async {
-                    self.cacheImage(img, forKey: "icon_\(titleId)" as NSString)
-                    self.refreshTrigger += 1
-                    self.objectWillChange.send()
-                }
-            }
-            task.resume()
-        }
-    }
-
     private func fetchWidescreenHeroAsync(titleId: String) {
         let flightKey = "hero_\(titleId)"
         lock.lock()
@@ -389,19 +338,6 @@ public final class ArtworkStore: ObservableObject {
 
                 let destination = self.artworkDir.appendingPathComponent("\(titleId).jpg")
                 try? data.write(to: destination, options: .atomic)
-
-                if let iconUrlStr = entry["icon"],
-                   let iconUrl = URL(string: iconUrlStr),
-                   !self.fileManager.fileExists(atPath: self.artworkDir.appendingPathComponent("\(titleId).icon.jpg").path) {
-                    let iconTask = self.urlSession.dataTask(with: iconUrl) { iconData, iconResp, _ in
-                        if let iconHttp = iconResp as? HTTPURLResponse, iconHttp.statusCode == 200,
-                           let iconD = iconData {
-                            let iconDest = self.artworkDir.appendingPathComponent("\(titleId).icon.jpg")
-                            try? iconD.write(to: iconDest, options: .atomic)
-                        }
-                    }
-                    iconTask.resume()
-                }
 
                 DispatchQueue.main.async {
                     self.cacheImage(img, forKey: "hero_\(titleId)" as NSString)

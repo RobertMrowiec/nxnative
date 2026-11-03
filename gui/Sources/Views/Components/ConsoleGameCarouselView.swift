@@ -48,7 +48,7 @@ public struct ConsoleGameCarouselView: View {
     }
     
     private func gameCoverCard(game: PortedGame, index: Int, isFocused: Bool, isLaunching: Bool) -> some View {
-        let cardImage = coverService.coverImage(for: game) ?? NSWorkspace.shared.icon(forFile: game.url.path)
+        let cardImage = ArtworkStore.shared.loadSquareIcon(for: game)
         let cardWidth = isFocused
             ? LibraryCardSize.focusedWidth(scale: viewModel.libraryCardScale)
             : LibraryCardSize.unfocusedWidth(scale: viewModel.libraryCardScale)

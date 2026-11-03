@@ -109,6 +109,7 @@ public final class BuildCleanupService {
             if fileManager.fileExists(atPath: dir.path),
                let items = try? fileManager.contentsOfDirectory(atPath: dir.path) {
                 for item in items {
+                    if item.hasSuffix(".custom.jpg") { continue }
                     let target = dir.appendingPathComponent(item)
                     try? fileManager.removeItem(at: target)
                 }

@@ -373,13 +373,6 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 4. Official High-Resolution Artwork (Banners only - never square eShop icons with badges)
-        if let tid = tidUpper, let artwork = ArtworkStore.shared.artworkUrls(for: tid) {
-            if let bannerUrl = artwork.banner {
-                candidates.append(bannerUrl)
-            }
-        }
-
         guard !candidates.isEmpty else {
             lock.lock()
             inFlightDownloads.remove(searchKey)
@@ -402,8 +395,8 @@ public final class GameCoverService: ObservableObject {
                 return
             }
 
-            // Strip physical console branding banners (e.g. red Nintendo Switch banner) for clean-room art presentation
-            let (data, img) = self.stripConsoleHeaderBanner(from: rawImg, originalData: rawData)
+            // Strip console branding banners, age ratings, and platform logos (Steam/Playnite/RetroArch clean art style)
+            let (data, img) = self.cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
 
             if let tid = tidUpper {
                 let target = self.cacheDirectory.appendingPathComponent("\(tid).jpg")
@@ -424,34 +417,67 @@ public final class GameCoverService: ObservableObject {
         }
     }
 
-    /// Strips retail plastic console header banner (e.g. red Nintendo Switch brand bar) from vertical box arts,
-    /// ensuring only clean game illustration is displayed and removing platform trademarks from the UI.
-    private func stripConsoleHeaderBanner(from image: NSImage, originalData: Data) -> (Data, NSImage) {
+    /// Strips retail plastic console header banners, age ratings, and console logos from box arts,
+    /// ensuring only pure game illustration and title logo are displayed (matching Steam Grid / Playnite clean room style).
+    private func cleanArtworkForCleanPresentation(from image: NSImage, originalData: Data) -> (Data, NSImage) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return (originalData, image)
         }
         let width = CGFloat(cgImage.width)
         let height = CGFloat(cgImage.height)
-        // Only crop retail box art scans where aspect ratio indicates a tall plastic case (height > 1.25x width)
-        guard height > width * 1.25 else {
+        
+        // Only crop retail box art scans where aspect ratio indicates a vertical case (height >= width * 1.05)
+        guard height >= width * 1.05 else {
             return (originalData, image)
         }
         
-        // Top 13.5% is the red console header banner containing registered platform trademarks
-        let cutY = height * 0.135
-        let bottomCut = height * 0.025
-        let remainingHeight = max(10, height - cutY - bottomCut)
-        let cropRect = CGRect(x: 0, y: cutY, width: width, height: remainingHeight)
+        let rep = NSBitmapImageRep(cgImage: cgImage)
+        let w = rep.pixelsWide
+        let h = rep.pixelsHigh
+        
+        // Dynamic Red Console Header Detection (Nintendo Switch red bar #E60012)
+        var lastRedY = 0
+        let scanLimit = Int(Double(h) * 0.35)
+        for y in 0..<scanLimit {
+            var redCount = 0
+            for x in 0..<w {
+                if let c = rep.colorAt(x: x, y: y),
+                   c.redComponent > 0.55 && c.greenComponent < 0.35 && c.blueComponent < 0.35 {
+                    redCount += 1
+                }
+            }
+            if Double(redCount) / Double(w) > 0.55 {
+                lastRedY = y
+            }
+        }
+        
+        // Top cut: if solid red header found, cut through the last red row + 6px safety padding into the illustration.
+        // If no solid red detected (e.g. monochromatic or dark header), enforce universal 18.5% console header standard.
+        var topCut = CGFloat(lastRedY > 0 ? lastRedY + 6 : Int(Double(h) * 0.185))
+        topCut = max(CGFloat(h) * 0.18, min(topCut, CGFloat(h) * 0.33))
+        
+        // Bottom cut: 9% removes publisher logos, Nintendo red oval mark, and ESRB/PEGI rating boxes.
+        let bottomCut = CGFloat(h) * 0.09
+        
+        // Side cut: 2.5% removes plastic case bevel, shadows, and spine edges.
+        let sideCut = CGFloat(w) * 0.025
+        
+        let cropRect = CGRect(
+            x: sideCut,
+            y: topCut,
+            width: max(10, CGFloat(w) - (sideCut * 2)),
+            height: max(10, CGFloat(h) - topCut - bottomCut)
+        )
         
         guard let croppedCg = cgImage.cropping(to: cropRect) else {
             return (originalData, image)
         }
         
-        let rep = NSBitmapImageRep(cgImage: croppedCg)
-        guard let jpgData = rep.representation(using: .jpeg, properties: [.compressionFactor: 0.90]) else {
+        let croppedRep = NSBitmapImageRep(cgImage: croppedCg)
+        guard let jpgData = croppedRep.representation(using: .jpeg, properties: [.compressionFactor: 0.90]) else {
             return (originalData, image)
         }
-        let cleanedImage = NSImage(cgImage: croppedCg, size: NSSize(width: width, height: remainingHeight))
+        let cleanedImage = NSImage(cgImage: croppedCg, size: NSSize(width: cropRect.width, height: cropRect.height))
         return (jpgData, cleanedImage)
     }
 
