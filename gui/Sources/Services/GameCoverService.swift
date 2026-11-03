@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import Vision
 
 public final class GameCoverService: ObservableObject {
     public static let shared = GameCoverService()
@@ -398,6 +399,14 @@ public final class GameCoverService: ObservableObject {
             // Strip console branding banners, age ratings, and platform logos (Steam/Playnite/RetroArch clean art style)
             let (data, img) = self.cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
 
+            // Strict Anti-Store Branding Guard: if image still contains eShop text, discard immediately
+            if self.containsForbiddenStoreBranding(in: img) {
+                self.lock.lock()
+                self.failedLookups.insert(searchKey)
+                self.lock.unlock()
+                return
+            }
+
             if let tid = tidUpper {
                 let target = self.cacheDirectory.appendingPathComponent("\(tid).jpg")
                 try? data.write(to: target, options: .atomic)
@@ -481,6 +490,22 @@ public final class GameCoverService: ObservableObject {
         return (jpgData, cleanedImage)
     }
 
+    private func containsForbiddenStoreBranding(in image: NSImage) -> Bool {
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .fast
+        request.usesLanguageCorrection = false
+        let handler = VNImageRequestHandler(cgImage: cg, options: [:])
+        try? handler.perform([request])
+        for obs in request.results ?? [] {
+            let text = obs.topCandidates(1).first?.string.lowercased() ?? ""
+            if text.contains("eshop") || text.contains("e-shop") || text.contains("nintendo eshop") {
+                return true
+            }
+        }
+        return false
+    }
+
     private func tryFetchCandidate(
         candidates: [URL],
         index: Int,
@@ -497,6 +522,13 @@ public final class GameCoverService: ObservableObject {
                let d = data, !d.isEmpty,
                let img = ImageDownsampler.downsample(data: d, maxPixelSize: 480) ?? NSImage(data: d),
                img.isValid, img.size.width >= 32, img.size.height >= 32 {
+                
+                // Real-time Vision Guard: reject candidate if it has eShop marks
+                if self.containsForbiddenStoreBranding(in: img) {
+                    self.tryFetchCandidate(candidates: candidates, index: index + 1, completion: completion)
+                    return
+                }
+
                 completion(d, img)
             } else {
                 self.tryFetchCandidate(candidates: candidates, index: index + 1, completion: completion)

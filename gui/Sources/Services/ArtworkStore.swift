@@ -207,7 +207,23 @@ public final class ArtworkStore: ObservableObject {
         let upper = key.uppercased()
         if let fn = galleryMapByTid[upper] { return fn }
         let norm = normalizeString(key)
-        return galleryMapByTitle[norm]
+        if let fn = galleryMapByTitle[norm] { return fn }
+        
+        let cleaned = cleanRegionalSuffix(from: key)
+        let normCleaned = normalizeString(cleaned)
+        if let fn = galleryMapByTitle[normCleaned] { return fn }
+        return nil
+    }
+
+    private func cleanRegionalSuffix(from title: String) -> String {
+        return title
+            .replacingOccurrences(of: ", Asian release", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: ", Japanese release", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: " (Asian release)", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: " (Japanese release)", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: " (Asian)", with: "", options: .caseInsensitive)
+            .replacingOccurrences(of: " (Japan)", with: "", options: .caseInsensitive)
+            .trimmingCharacters(in: .whitespaces)
     }
 
     private func loadLocalGalleryIndex() {

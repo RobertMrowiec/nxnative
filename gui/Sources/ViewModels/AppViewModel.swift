@@ -708,7 +708,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         }
         
         // Force one-time cleanup of legacy image cache containing old eShop icons / uncropped console headers
-        let legacyCacheCleanKey = "nxnative_cleaned_legacy_image_cache_v2_1_0"
+        let legacyCacheCleanKey = "nxnative_cleaned_legacy_image_cache_v2_2_0"
         if !UserDefaults.standard.bool(forKey: legacyCacheCleanKey) {
             _ = BuildCleanupService.shared.cleanImageCache()
             UserDefaults.standard.set(true, forKey: legacyCacheCleanKey)

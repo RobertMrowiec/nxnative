@@ -51,7 +51,6 @@ public struct GameTDBVerifiedDatabase {
         "010057D006492000": ["AGY7A", "AGY7B", "AGY7E"], // OCTOPATH TRAVELER
         "01005CA01580E000": ["A42UC", "A42UA"], // Persona 5 Royal
         "01006000040C2000": ["AEA2A", "AEA2B"], // Yoshi's Crafted World
-        "0100606026F12000": ["BUCVA"],          // FINAL FANTASY RESONANCE
         "0100620012D6E000": ["AZLSA"],          // Big Brain Academy: Brain vs. Brain
         "010062B01525C000": ["A4TQA"],          // Persona 4 Golden
         "0100633007D48000": ["AKLHA"],          // Hollow Knight
@@ -103,7 +102,6 @@ public struct GameTDBVerifiedDatabase {
         "0100AE00096EA000": ["AKUTB"],          // Hyrule Warriors: Definitive Edition
         "0100B04011742000": ["AXSEA", "AXSEB"], // Monster Hunter Rise
         "0100B7C00933A000": ["AMPYA"],          // Pikmin 4
-        "0100B8A026F14000": ["BUCVA"],          // FINAL FANTASY RESONANCE, Asian release
         "0100B8E016F76000": ["A532A"],          // NieR:Automata The End of YoRHa Edition, Asian release
         "0100B99019412000": ["A97PA"],          // Mario vs. Donkey Kong
         "0100BA4026E94000": ["BUBLA"],          // Castlevania: Belmont's Curse
