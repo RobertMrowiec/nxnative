@@ -13,12 +13,14 @@ public struct CompatibilityFilterBarView: View {
     private var hasActiveFilter: Bool {
         viewModel.compatibilityRamFilter != nil ||
         viewModel.compatibilityChipFilter != nil ||
+        viewModel.compatibilityGenerationFilter != .all ||
+        viewModel.compatibilityOnlyMyDevice ||
         viewModel.compatibilityNameFilter != "All"
     }
     
     public var body: some View {
         VStack(spacing: 8) {
-            // Row 1: Dropdown Hardware Filters (Mac RAM + iPhone Chip Tier)
+            // Row 1: Dropdown Hardware Filters (Mac RAM + iPhone Chip Tier + My Device)
             GeometryReader { geo in
                 ScrollView(.horizontal, showsIndicators: false) {
                     NXGlassContainer(spacing: 8) {
@@ -31,6 +33,12 @@ public struct CompatibilityFilterBarView: View {
                             
                             chipDropdownMenu
                             
+                            Rectangle()
+                                .fill(Color.white.opacity(0.14))
+                                .frame(width: 1, height: 18)
+                            
+                            myDeviceButton
+
                             if hasActiveFilter {
                                 resetButton
                             }
@@ -43,7 +51,7 @@ public struct CompatibilityFilterBarView: View {
             }
             .frame(height: 30)
             
-            // Row 2: Centered [New | All | A-Z] Filter Buttons (Single persistent sliding Liquid Glass droplet)
+            // Row 2: Centered [New | All (Switch 1/2) | A-Z] Filter Buttons (Single persistent sliding Liquid Glass droplet)
             GeometryReader { geo in
                 ScrollView(.horizontal, showsIndicators: false) {
                     NXGlassContainer(spacing: 4) {
@@ -57,13 +65,7 @@ public struct CompatibilityFilterBarView: View {
                                 viewModel.compatibilityNameFilter = "New"
                             }
                             
-                            nameLetterButton(
-                                viewModel.tr("compatibility.all"),
-                                filterKey: "All",
-                                isSelected: viewModel.compatibilityNameFilter == "All"
-                            ) {
-                                viewModel.compatibilityNameFilter = "All"
-                            }
+                            allGenerationDropdownMenu
                             
                             ForEach(alphabet, id: \.self) { letter in
                                 nameLetterButton(letter, filterKey: letter, isSelected: viewModel.compatibilityNameFilter == letter) {
@@ -276,6 +278,58 @@ public struct CompatibilityFilterBarView: View {
         )
     }
     
+    // MARK: - My Device Filter Button
+    private var myDeviceButton: some View {
+        let isFiltered = viewModel.compatibilityOnlyMyDevice
+        let intensity = viewModel.liquidGlassIntensity
+        let buttonBgOpacity = isFiltered
+            ? (0.20 + 0.12 * intensity)
+            : (0.04 + 0.05 * (1.0 - intensity))
+        let borderOpacity = isFiltered
+            ? (0.40 + 0.15 * intensity)
+            : (0.08 + 0.10 * intensity)
+        
+        return Button(action: {
+            SoundEffectService.shared.play(.click)
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                viewModel.compatibilityFocusArea = .filters
+                viewModel.compatibilityOnlyMyDevice.toggle()
+            }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: "laptopcomputer")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(isFiltered ? NXTheme.primary : NXTheme.secondary)
+                
+                Text(isFiltered ? "✓ \(viewModel.tr("compatibility.my_device")): \(viewModel.macPhysicalMemoryGB)GB" : "\(viewModel.tr("compatibility.my_device")): \(viewModel.macPhysicalMemoryGB)GB")
+                    .font(.system(size: 11, weight: isFiltered ? .bold : .semibold, design: .rounded))
+                    .foregroundColor(isFiltered ? NXTheme.primary : .white)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                Capsule()
+                    .fill(isFiltered ? NXTheme.primary.opacity(buttonBgOpacity) : Color.white.opacity(buttonBgOpacity))
+            )
+            .overlay(
+                Capsule()
+                    .strokeBorder(
+                        isFiltered ? NXTheme.primary.opacity(borderOpacity) : Color.white.opacity(borderOpacity),
+                        lineWidth: 0.75
+                    )
+            )
+            .contentShape(Capsule())
+            .nxGlassInteractive(
+                in: Capsule(),
+                tint: isFiltered ? NXTheme.primary.opacity(0.35) : nil,
+                fallbackFill: Color.clear
+            )
+        }
+        .buttonStyle(NXPressableButtonStyle())
+        .nxNoFocusRing()
+        .help("Show only games compatible with this Mac (\(viewModel.macPhysicalMemoryGB)GB RAM)")
+    }
+
     // MARK: - Reset Button
     private var resetButton: some View {
         let intensity = viewModel.liquidGlassIntensity
@@ -284,6 +338,8 @@ public struct CompatibilityFilterBarView: View {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.76)) {
                 viewModel.compatibilityRamFilter = nil
                 viewModel.compatibilityChipFilter = nil
+                viewModel.compatibilityGenerationFilter = .all
+                viewModel.compatibilityOnlyMyDevice = false
                 viewModel.compatibilityNameFilter = "All"
             }
         }) {
@@ -314,6 +370,89 @@ public struct CompatibilityFilterBarView: View {
         }
         .buttonStyle(NXPressableButtonStyle())
         .nxNoFocusRing()
+    }
+
+    // MARK: - All Generation Dropdown Menu
+    private var allGenerationDropdownMenu: some View {
+        let isSelected = viewModel.compatibilityNameFilter == "All"
+        let gen = viewModel.compatibilityGenerationFilter
+        let displayText: String = {
+            switch gen {
+            case .all: return viewModel.tr("compatibility.all")
+            case .switch1: return "Switch 1"
+            case .switch2: return "Switch 2"
+            }
+        }()
+        let intensity = viewModel.liquidGlassIntensity
+
+        return Menu {
+            Button(action: {
+                SoundEffectService.shared.play(.click)
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                    viewModel.compatibilityFocusArea = .filters
+                    viewModel.compatibilityNameFilter = "All"
+                    viewModel.compatibilityGenerationFilter = .all
+                }
+            }) {
+                HStack {
+                    Text(viewModel.tr("compatibility.switch_all"))
+                    if gen == .all { Image(systemName: "checkmark") }
+                }
+            }
+            Button(action: {
+                SoundEffectService.shared.play(.click)
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                    viewModel.compatibilityFocusArea = .filters
+                    viewModel.compatibilityNameFilter = "All"
+                    viewModel.compatibilityGenerationFilter = .switch1
+                }
+            }) {
+                HStack {
+                    Text(viewModel.tr("compatibility.switch1"))
+                    if gen == .switch1 { Image(systemName: "checkmark") }
+                }
+            }
+            Button(action: {
+                SoundEffectService.shared.play(.click)
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.76)) {
+                    viewModel.compatibilityFocusArea = .filters
+                    viewModel.compatibilityNameFilter = "All"
+                    viewModel.compatibilityGenerationFilter = .switch2
+                }
+            }) {
+                HStack {
+                    Text(viewModel.tr("compatibility.switch2"))
+                    if gen == .switch2 { Image(systemName: "checkmark") }
+                }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(displayText)
+                    .font(.system(size: 10, weight: isSelected ? .bold : .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.white.opacity(0.75))
+            }
+            .padding(.horizontal, 7)
+            .frame(minWidth: 42)
+            .frame(height: 22)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isSelected ? Color.clear : Color.white.opacity(0.04 + 0.04 * (1.0 - intensity)))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(isSelected ? Color.clear : Color.white.opacity(0.06 + 0.06 * intensity), lineWidth: 0.5)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .menuStyle(.button)
+        .buttonStyle(NXPressableButtonStyle())
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .nxNoFocusRing()
+        .matchedGeometryEffect(id: "All", in: alphaFilterNamespace, isSource: true)
     }
     
     // MARK: - Alphabet Buttons

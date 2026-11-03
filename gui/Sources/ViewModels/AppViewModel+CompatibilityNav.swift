@@ -23,6 +23,17 @@ extension AppViewModel {
         if let maxChip = compatibilityChipFilter {
             list = list.filter { $0.minChipTier <= maxChip }
         }
+
+        if compatibilityGenerationFilter == .switch1 {
+            list = list.filter { $0.isSwitch1 }
+        } else if compatibilityGenerationFilter == .switch2 {
+            list = list.filter { $0.isSwitch2 }
+        }
+
+        if compatibilityOnlyMyDevice {
+            let myRam = macPhysicalMemoryGB
+            list = list.filter { $0.minRamGB <= myRam }
+        }
         
         if compatibilityNameFilter == "New" {
             list = list.sorted { lhs, rhs in

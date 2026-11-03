@@ -12,6 +12,7 @@ public final class GameControllerService: ObservableObject {
     
     public var onAction: ((GamepadAction) -> Void)?
     public var onRawElementPressed: ((String) -> Void)?
+    public var onRightStickScroll: ((CGFloat) -> Void)?
     
     private var lastNavTime: TimeInterval = 0
     private let navCooldown: TimeInterval = 0.20
@@ -125,6 +126,17 @@ public final class GameControllerService: ObservableObject {
             } else if yVal < -self.stickDeadzone {
                 self.lastNavTime = now
                 self.triggerAction(.navigateDown)
+            }
+        }
+        
+        // Right Thumbstick Analog Scrolling for catalogs
+        gamepad.rightThumbstick.valueChangedHandler = { [weak self] _, _, yVal in
+            guard let self = self else { return }
+            if abs(yVal) > 0.15 {
+                let delta = CGFloat(yVal * 16.0)
+                DispatchQueue.main.async {
+                    self.onRightStickScroll?(delta)
+                }
             }
         }
         

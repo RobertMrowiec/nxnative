@@ -114,6 +114,11 @@ extension Translations {
         "system.add_nonswitch_single_app": "ゲームを追加 (.app)",
         "system.select_nonswitch_folder_message": "ネイティブ macOS ゲームアプリケーション (.app) を含むフォルダを選択してください。",
         "system.select_nonswitch_app_message": "ライブラリに追加するネイティブ macOS ゲーム (.app) を選択してください。",
-        "system.nonswitch_dirs_help": "統合ライブラリに表示するため、ネイティブ Mac ゲーム (.app) を再帰的にスキャンするフォルダです。"
+        "system.nonswitch_dirs_help": "統合ライブラリに表示するため、ネイティブ Mac ゲーム (.app) を再帰的にスキャンするフォルダです。",
+        "port_modal.coming_soon": "近日公開",
+        "compatibility.switch_all": "すべてのSwitch",
+        "compatibility.switch1": "Nintendo Switch 1",
+        "compatibility.switch2": "Nintendo Switch 2",
+        "compatibility.my_device": "マイMac"
     ]
 }

@@ -9,10 +9,21 @@ cd "$REPO_ROOT"
 
 echo "🔄 [NxNative Launcher] Checking upstream synchronization (seedds/nxnative)..."
 
-# 1. Ensure upstream remote is configured
+# 1. Ensure upstream (GitHub) and origin (GitLab) remotes are configured
 if ! git remote get-url upstream >/dev/null 2>&1; then
     echo "⚙️ Adding upstream remote (https://github.com/seedds/nxnative.git)..."
     git remote add upstream https://github.com/seedds/nxnative.git
+fi
+
+if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "⚙️ Adding origin remote (https://gitlab.com/rennan-group2/nxnative_Launcher.git)..."
+    git remote add origin https://gitlab.com/rennan-group2/nxnative_Launcher.git
+else
+    ORIGIN_URL=$(git remote get-url origin)
+    if [[ "$ORIGIN_URL" =~ "github.com/rennan101" ]]; then
+        echo "⚙️ Migrating origin remote from suspended GitHub to GitLab..."
+        git remote set-url origin https://gitlab.com/rennan-group2/nxnative_Launcher.git
+    fi
 fi
 
 # 2. Fetch upstream updates
@@ -74,7 +85,7 @@ if git merge upstream/main --no-edit -m "chore(sync): merge upstream updates fro
         git commit -m "docs: auto-update SUPPORTED_GAMES.md from upstream game list" || true
     fi
     echo ""
-    echo "👉 To publish the updates to your GitHub fork, run:"
+    echo "👉 To publish the updates to your GitLab repository, run:"
     echo "   git push origin main"
 else
     echo ""

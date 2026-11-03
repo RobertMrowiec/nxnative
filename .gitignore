@@ -43,6 +43,8 @@ docs/images/*.png
 *.xci
 *.xcz
 Staging/
-Screenshots/
+/Screenshots/
+!docs/images/screenshots/*
+docs/images/screenshots/Captura de Tela*.png
 
 

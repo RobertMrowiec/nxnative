@@ -46,7 +46,8 @@ public struct MainView: View {
                 GeometryReader { windowGeo in
                     ZStack {
                         // MARK: - Obsidian Liquid Glass Canvas & Atmospheric Refractions
-                        Color.nxCanvas.ignoresSafeArea()
+                        NXWindowGlassBackground(viewModel: viewModel)
+                            .ignoresSafeArea()
                         
                         // Dynamic ambient glows calibrated continuously to Liquid vs Frosted vs Classic modes
                         atmosphericGlows(in: windowGeo.size)

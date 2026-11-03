@@ -20,11 +20,15 @@ public struct GameSettingsModsAndSavesView: View {
             if game.platform == .ios {
                 GameSettingsIosDeploymentView(game: game)
             }
-            modsSection
+            if game.platform != .nonSwitch {
+                modsSection
+            }
             GameSettingsSavesSectionView(game: game)
         }
         .onAppear {
-            refreshMods()
+            if game.platform != .nonSwitch {
+                refreshMods()
+            }
             deviceService.refreshDevicesAndTeams()
         }
     }

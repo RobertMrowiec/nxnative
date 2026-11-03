@@ -81,16 +81,17 @@
 | [📚 Supported Games Catalog](#supported-games-catalog-130-titles) | 130+ verified games, Switch 2 titles, link to [SUPPORTED_GAMES.md](SUPPORTED_GAMES.md) |
 | [🗺️ Roadmap & Milestones](#roadmap-community-lineage) | Completed milestones, in active development, clean-room policy |
 | [⚖️ Clean-Room & Legal Policy](#clean-room--legal-policy) | Preservation manifesto, DMCA § 1201(f), nominative fair use |
+| [🙏 Acknowledgements](#acknowledgements) | Special gratitude to seedds and the open-source engineering lineage |
 | [🇧🇷 Guia Rápido em Português](#guia-rápido-em-português-pt-br) | Instalação simplificada, tutorial passo a passo, manifesto e controles |
 
 ---
 
 ## 🎬 Live Showcase
 
-> Experience a console-grade desktop application with fluid cover carousels, responsive neon accents, and instantaneous 60 FPS performance toggles in full Retina clarity:
+> Experience a console-grade desktop application with fluid navigation between screens, dynamic cover carousels, responsive Apple Liquid Glass neon accents, and instantaneous 60 FPS performance toggles in full Retina clarity:
 
 <p align="center">
-  <img src="docs/images/gifs/demo_library_carousel.gif" width="100%" alt="NxNative Launcher Console Library Demo">
+  <img src="docs/images/gifs/demo_screens_nav.gif" width="100%" alt="NxNative Launcher Seamless Tab Navigation">
 </p>
 
 ---
@@ -134,6 +135,10 @@ Traditional Nintendo Switch emulators (such as Yuzu or Ryujinx) rely on **Just-I
 - **Non-Switch Games**: Standalone Mac and PC ports cataloged directly in the unified library.
 - **Nintendo Switch Files**: Unported game dumps (`.nsp`, `.xci`, `.nsz`, folders) with an instant 1-click **Port Game** modal.
 
+<p align="center">
+  <img src="docs/images/gifs/demo_library_carousel.gif" width="95%" alt="NxNative Launcher Dynamic Atmosphere & Category Shelves">
+</p>
+
 ---
 
 ### 3. 👥 Up to 8 Players & Individual Controller Profiles
@@ -170,6 +175,10 @@ Traditional Nintendo Switch emulators (such as Yuzu or Ryujinx) rely on **Just-I
 - **Cinematic Glassmorphism**: Built from custom SwiftUI rendering components with translucent refraction, specular rims, and depth layering.
 - **Liquid Glass Sliders & Pickers**: Continuous volume, deadzone, and sensitivity adjustments use `NXLiquidGlassSlider`; mode switching uses `NXLiquidSegmentedPicker` with physical pill animations.
 - **8 Neon Accent Themes**: Choose between Neon Cyan, Electric Purple, Sunset Amber, Emerald Green, Hot Pink, Laser Red, Oceanic Blue, or Midnight Stealth.
+
+<p align="center">
+  <img src="docs/images/gifs/demo_theme_colors.gif" width="95%" alt="NxNative Launcher 8 Neon Accent Themes & Personalization">
+</p>
 
 ---
 
@@ -413,6 +422,21 @@ NxNative Launcher tracks **over 130 verified playable game profiles**, including
 
 ---
 
+## 🙏 Acknowledgements
+
+This project is built on other people's work ([licenses](https://github.com/seedds/nxnative/blob/main/dm/third_party/README.md)):
+
+* **[seedds/nxnative](https://github.com/seedds/nxnative)**: A monumental thank you to **seedds** for creating `nxnative`. The core clean-room native recompilation engine, the ahead-of-time Metal shader pipelines, the Horizon kernel host, and the foundational macOS/iOS architecture that powers this entire project exist thanks to his brilliant technical breakthroughs, visionary engineering, and continuous open-source leadership.
+* **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT): Developed this native-execution approach, for *Diablo II: Resurrected*. `nxnative` started as a copy of its generic parts: the NSO rewriter, the host that stands in for Horizon, the NVN-on-Metal layer, and the iOS app shell. Fixes go both ways.
+* **Ryujinx** (MIT): Its shader translator (`Ryujinx.Graphics.Shader`, `Ryujinx.Common` and `Spv.Generator 1.3.2`, in `dm/third_party/ryujinx` with a few fixes listed in [its README](https://github.com/seedds/nxnative/blob/main/dm/third_party/ryujinx/README.md)) turns the games' shaders into SPIR-V. Its emulation of the kernel and system services is also a reference when the host's behaviour is in doubt.
+* **[Atmosphère](https://github.com/Atmosphere-NX/Atmosphere)**: Its kernel, *mesosphère*, is the reference for Horizon's synchronization semantics (address arbiter, condition variables).
+* **[LibHac](https://github.com/Thealexbarney/LibHac)**: Reads NSPs and layers updates over the base game in `dm/tools/nx_extract`.
+* **[SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)**: SPIR-V to Metal Shading Language.
+* **[glslang](https://github.com/KhronosGroup/glslang)**: Compiles the GLSL of OpenGL games to SPIR-V for it.
+* **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT): The GPU widening of 8-bit indices and in-pass clears in `dm/gfx/nvn/nvn_mtl.m`, and the visibility-counter lowering in the shader translator.
+
+---
+
 ## 🇧🇷 Guia Rápido em Português (PT-BR)
 
 > [!NOTE]
@@ -432,6 +456,10 @@ O **NxNative Launcher** é uma iniciativa técnica de código aberto dedicada à
 ### O que é o NxNative Launcher?
 O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift para Apple Silicon (Mac M1/M2/M3/M4 e iPhone 15/16 Pro). **Ele não é um emulador tradicional**: o código ARM64 do jogo roda diretamente no processador da Apple sem tradução dinâmica (JIT), e os gráficos são reconstruídos diretamente em **Apple Metal 4**. Atualmente, **mais de 130 jogos verificados** funcionam, incluindo jogos do **Nintendo Switch 2**.
 
+<p align="center">
+  <img src="docs/images/gifs/demo_screens_nav.gif" width="95%" alt="NxNative Launcher - Navegação Fluida entre Telas">
+</p>
+
 ### Principais Novidades da Versão v1.9.1
 1. **Suporte a Jogos de Nintendo Switch 2 (Ounce)**: Tradução direta de shaders Ampere para Metal sem necessidade de `prod.keys`, com suporte a pastas de dump completas (`base/`, `updates/`, `dlc/`).
 2. **Suporte a até 8 Jogadores / Controles Simultâneos**: Perfis individuais para controles PlayStation DualSense, Switch Pro Controller e Xbox Wireless Controller.
@@ -439,6 +467,10 @@ O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift 
 4. **Estimativa de Tempo de Portabilidade por Hardware (`BuildEstimationService`)**: Analisa seu chip Apple Silicon (M1 a M4) e núcleos ativos para prever exatamente quanto tempo levará para compilar o jogo, com selo de reconstrução instantânea caso os shaders já estejam em cache.
 5. **Garantia Invariante Zero-Hang no Lançamento**: Watchdog de 6 segundos impedindo qualquer travamento em tela de carregamento, com timeouts rígidos de 2.0s em todos os comandos do sistema.
 6. **Design System Apple Liquid Glass**: Efeito de vidro translúcido com refração, sliders físicos táteis (`NXLiquidGlassSlider`) e 8 temas de destaque em neon.
+
+<p align="center">
+  <img src="docs/images/gifs/demo_theme_colors.gif" width="95%" alt="NxNative Launcher - Temas Neon em Liquid Glass">
+</p>
 7. **Navegabilidade Total por Gamepad & Modo Câmera 3D**: Jogue no sofá com suporte a gamepad em 100% da interface, ou use o mouse como câmera livre estilo FPS (`F1`).
 8. **Saves no iCloud**: Sincronização inteligente entre Mac e iPhone/iPad com botão de 1 clique para revelar a pasta no Finder.
 9. **NxNative Launcher Status bar icon**: Acesso rápido e status diretamente na barra de menus do macOS.
@@ -457,6 +489,17 @@ O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift 
 3. **Portar e Jogar**: Vá para a aba **Port**, arraste a pasta com seus dumps do jogo, confira a estimativa de tempo e clique em **"Iniciar Portabilidade"**!
 
 Consulte a lista completa de [130+ Jogos Suportados e Histórico de Features em SUPPORTED_GAMES.md](SUPPORTED_GAMES.md).
+
+### 🙏 Agradecimentos & Linhagem Técnica
+Este projeto foi construído sobre o esforço e dedicação de projetos e desenvolvedores extraordinários da comunidade de código aberto ([licenças](https://github.com/seedds/nxnative/blob/main/dm/third_party/README.md)):
+* **[seedds/nxnative](https://github.com/seedds/nxnative)**: Nosso agradecimento mais profundo e especial ao **seedds** pela criação do `nxnative`. O motor central de recompilação estática, as pipelines de tradução de shaders para Metal, o emulador de serviços Horizon e a base de engenharia para macOS e iOS existem graças à sua visão pioneira e genialidade técnica.
+* **[d2r-mobile](https://github.com/jhaizhou-ops/d2r-mobile)** (MIT): Desenvolveu a abordagem original de execução nativa para *Diablo II: Resurrected*. O `nxnative` começou como cópia de suas partes genéricas: reescritor de NSO, host do Horizon, camada NVN sobre Metal e shell para iOS.
+* **Ryujinx** (MIT): Seu tradutor de shaders (`Ryujinx.Graphics.Shader`, `Ryujinx.Common` e `Spv.Generator 1.3.2`, em `dm/third_party/ryujinx`) converte os shaders dos jogos para SPIR-V, e sua implementação de serviços é referência essencial de comportamento do sistema.
+* **[Atmosphère](https://github.com/Atmosphere-NX/Atmosphere)**: Seu kernel, *mesosphère*, é a referência para a semântica de sincronização do Horizon (address arbiter, condition variables).
+* **[LibHac](https://github.com/Thealexbarney/LibHac)**: Leitura de pacotes NSP e mesclagem de atualizações sobre o jogo base.
+* **[SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross)**: Conversão de SPIR-V para Metal Shading Language (MSL).
+* **[glslang](https://github.com/KhronosGroup/glslang)**: Compila o GLSL de jogos OpenGL para SPIR-V.
+* **[MacNativeGames](https://github.com/ly05010419/MacNativeGames)** (MIT): Alargamento de índices de 8 bits na GPU, in-pass clears em `nvn_mtl.m` e lowering de contadores de visibilidade no tradutor de shaders.
 
 ---
 

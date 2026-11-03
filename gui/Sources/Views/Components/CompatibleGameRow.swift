@@ -53,13 +53,24 @@ public struct CompatibleGameRow: View {
                 
                 Spacer(minLength: 12)
                 
-                // Hardware Specs Badges (Mac, iOS, Storage)
+                // Hardware Specs Badges (Switch 2, Mac, iOS, Storage)
                 HStack(spacing: 6) {
-                    Text(game.macReq)
+                    if game.isSwitch2 {
+                        Text("Switch 2")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.85))
+                            .foregroundColor(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+
+                    let isMacReady = game.minRamGB <= Int(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024))
+                    Text(isMacReady ? "✓ \(game.macReq)" : game.macReq)
                         .font(.system(size: 9, weight: .semibold, design: .rounded))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
-                        .background(Color.blue.opacity(0.35))
+                        .background(isMacReady ? Color(red: 0.13, green: 0.77, blue: 0.37).opacity(0.40) : Color.blue.opacity(0.35))
                         .foregroundColor(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 5))
                     

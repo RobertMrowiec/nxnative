@@ -54,11 +54,22 @@ public struct CompatibleGameGridCard: View {
                 // MARK: - Hardware Requirements (Mac & iOS Specs)
                 VStack(alignment: .leading, spacing: 2.5) {
                     HStack(spacing: 3) {
-                        Text(item.macReq)
+                        if item.isSwitch2 {
+                            Text("Switch 2")
+                                .font(.system(size: 7.5, weight: .bold, design: .rounded))
+                                .padding(.horizontal, 4.5)
+                                .padding(.vertical, 1.5)
+                                .background(Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.85))
+                                .foregroundColor(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 3.5))
+                        }
+
+                        let isMacReady = item.minRamGB <= Int(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024))
+                        Text(isMacReady ? "✓ Mac" : item.macReq)
                             .font(.system(size: 7.5, weight: .semibold, design: .rounded))
                             .padding(.horizontal, 4.5)
                             .padding(.vertical, 1.5)
-                            .background(Color.blue.opacity(0.35))
+                            .background(isMacReady ? Color(red: 0.13, green: 0.77, blue: 0.37).opacity(0.40) : Color.blue.opacity(0.35))
                             .foregroundColor(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 3.5))
                         

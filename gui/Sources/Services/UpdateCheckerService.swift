@@ -49,10 +49,10 @@ public final class UpdateCheckerService {
                 return
             }
             
-            // Automatically migrate origin from seedds/nxnative to rennan101/nxnative_Launcher if needed
+            // Automatically migrate origin and ensure upstream
             let remoteURL = self.ensureOfficialRemote(in: nxnativePath)
             
-            // 1. git fetch origin main
+            // 1. git fetch origin main (GitLab Launcher)
             let fetchRes = self.runGitWithStatus(["fetch", "origin", "main", "--quiet"], in: nxnativePath)
             if fetchRes.exitCode != 0 {
                 self.isChecking = false
@@ -60,17 +60,27 @@ public final class UpdateCheckerService {
                 return
             }
             
-            // 2. Local & Remote HEAD commits
+            // 2. git fetch upstream main (seedds/nxnative GitHub Core Engine)
+            _ = self.runGitWithStatus(["fetch", "upstream", "main", "--quiet"], in: nxnativePath)
+            
+            // 3. Local & Remote HEAD commits
             let localHead = self.runGit(["rev-parse", "--short", "HEAD"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
             let remoteHead = self.runGit(["rev-parse", "--short", "origin/main"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
             
-            // 3. Count commits that origin/main has ahead of HEAD
+            // 4. Count commits that origin/main (GitLab) has ahead of HEAD
             let countStr = self.runGit(["rev-list", "--count", "HEAD..origin/main"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
             let aheadCount = Int(countStr) ?? 0
             
-            // 4. Log of incoming commits
+            // 5. Log of incoming commits from GitLab
             let logOutput = self.runGit(["log", "HEAD..origin/main", "--oneline"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
             let commits = logOutput.isEmpty ? [] : logOutput.components(separatedBy: .newlines).filter { !$0.isEmpty }
+            
+            // 6. Upstream checks (seedds/nxnative from GitHub)
+            let upstreamCountStr = self.runGit(["rev-list", "--count", "HEAD..upstream/main"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
+            let upstreamAheadCount = Int(upstreamCountStr) ?? 0
+            
+            let upstreamLogOutput = self.runGit(["log", "HEAD..upstream/main", "--oneline", "-n", "10"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
+            let upstreamCommits = upstreamLogOutput.isEmpty ? [] : upstreamLogOutput.components(separatedBy: .newlines).filter { !$0.isEmpty }
             
             let hasUpdate = aheadCount > 0 && !commits.isEmpty && localHead != remoteHead
             let info = UpdateInfo(
@@ -79,7 +89,10 @@ public final class UpdateCheckerService {
                 remoteCommit: remoteHead,
                 commitMessages: commits,
                 checkDate: Date(),
-                repoURL: remoteURL.isEmpty ? Self.launcherRepoURL : remoteURL
+                repoURL: remoteURL.isEmpty ? Self.launcherRepoURL : remoteURL,
+                upstreamBehindCount: upstreamAheadCount,
+                upstreamCommitMessages: upstreamCommits,
+                upstreamRepoURL: Self.upstreamRepoURL
             )
             
             self.isChecking = false
@@ -136,13 +149,13 @@ public final class UpdateCheckerService {
             // Discard auto-patched tracked modifications so git pull/merge never conflicts with PatchService edits
             _ = self.runGitWithStatus(["checkout", "--", "."], in: nxnativePath)
             
-            reportProgress("==> Downloading latest version from GitHub (rennan101/nxnative_Launcher)...")
+            reportProgress("==> Downloading latest version from GitLab (rennan-group2/nxnative_Launcher)...")
             let fetchRes = self.runGitWithStatus(["fetch", "origin", "main"], in: nxnativePath)
             if !fetchRes.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 reportProgress(fetchRes.output.trimmingCharacters(in: .whitespacesAndNewlines))
             }
             
-            reportProgress("==> Merging GitHub updates into local branch...")
+            reportProgress("==> Merging GitLab updates into local branch...")
             let mergeRes = self.runGitWithStatus(["merge", "-X", "theirs", "--no-edit", "origin/main"], in: nxnativePath)
             if !mergeRes.output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 reportProgress(mergeRes.output.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -199,6 +212,113 @@ public final class UpdateCheckerService {
             
             DispatchQueue.main.async {
                 completion(true, "NxNative Launcher updated & installed successfully (commit [\(newHead)])!")
+            }
+        }
+    }
+    
+    /// Safely fetches and merges upstream engine updates from seedds/nxnative (GitHub) into the local repository,
+    /// re-applies compatibility patches, and rebuilds the launcher if requested.
+    public func syncUpstream(
+        nxnativePath: String,
+        rebuildLauncher: Bool = true,
+        progressHandler: ((String) -> Void)? = nil,
+        completion: @escaping (Bool, String) -> Void
+    ) {
+        guard !isBuildActive else {
+            let msg = "Sync blocked: A compilation process is currently active."
+            delegate?.updateCheckerDidProduceLog(msg)
+            completion(false, msg)
+            return
+        }
+        guard !isUpdating else {
+            completion(false, "Update or sync already in progress")
+            return
+        }
+        isUpdating = true
+        
+        let reportProgress: (String) -> Void = { [weak self] msg in
+            DispatchQueue.main.async {
+                self?.delegate?.updateCheckerDidProduceLog(msg)
+                progressHandler?(msg)
+            }
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            
+            if self.isBuildActive {
+                self.isUpdating = false
+                reportProgress("==> Sync aborted: A build process has started.")
+                DispatchQueue.main.async { completion(false, "Sync cancelled: Build in progress.") }
+                return
+            }
+            
+            reportProgress("==> Fetching upstream engine commits from GitHub (seedds/nxnative)...")
+            _ = self.ensureOfficialRemote(in: nxnativePath, reportProgress: reportProgress)
+            let fetchRes = self.runGitWithStatus(["fetch", "upstream", "main"], in: nxnativePath, timeout: 20.0)
+            if fetchRes.exitCode != 0 {
+                self.isUpdating = false
+                let err = fetchRes.output.trimmingCharacters(in: .whitespacesAndNewlines)
+                DispatchQueue.main.async {
+                    completion(false, "Failed to reach upstream GitHub: \(err.isEmpty ? "Network error" : err)")
+                }
+                return
+            }
+            
+            let countStr = self.runGit(["rev-list", "--count", "HEAD..upstream/main"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
+            let count = Int(countStr) ?? 0
+            if count == 0 {
+                self.isUpdating = false
+                reportProgress("✅ Core engine is already 100% up to date with seedds/nxnative (GitHub)!")
+                DispatchQueue.main.async {
+                    completion(true, "Core engine is already up to date with seedds/nxnative.")
+                }
+                return
+            }
+            
+            reportProgress("==> Merging \(count) upstream commits from seedds/nxnative...")
+            let mergeRes = self.runGitWithStatus(["merge", "upstream/main", "--no-edit", "-m", "chore(sync): merge upstream updates from seedds/nxnative"], in: nxnativePath, timeout: 20.0)
+            
+            let isMergeSuccess = (mergeRes.exitCode == 0) &&
+                !mergeRes.output.localizedCaseInsensitiveContains("fatal:") &&
+                !mergeRes.output.localizedCaseInsensitiveContains("Automatic merge failed") &&
+                !mergeRes.output.localizedCaseInsensitiveContains("CONFLICT")
+            
+            if !isMergeSuccess {
+                _ = self.runGitWithStatus(["merge", "--abort"], in: nxnativePath)
+                self.isUpdating = false
+                reportProgress("⚠️ Merge conflict detected when syncing upstream. Aborted to protect local customizations.")
+                DispatchQueue.main.async {
+                    completion(false, "Merge conflict detected while syncing upstream. Aborted to safeguard local code.")
+                }
+                return
+            }
+            
+            reportProgress("==> Verifying & re-applying engine compatibility patches...")
+            _ = PatchService.shared.applyPatchesIfNeeded(nxnativePath: nxnativePath)
+            
+            if rebuildLauncher {
+                let buildScript = URL(fileURLWithPath: nxnativePath).appendingPathComponent("scripts/build_gui.sh").path
+                if FileManager.default.fileExists(atPath: buildScript) {
+                    reportProgress("==> Compiling & reinstalling updated NxNative Launcher (.app)...")
+                    let buildRes = self.runShellScript(buildScript, workingDir: nxnativePath) { line in
+                        reportProgress(line)
+                    }
+                    if buildRes != 0 {
+                        self.isUpdating = false
+                        DispatchQueue.main.async {
+                            completion(false, "Upstream synced, but compiling launcher failed (code \(buildRes)).")
+                        }
+                        return
+                    }
+                    self.syncUpdatedBundleToRunningAppIfNeeded(nxnativePath: nxnativePath, reportProgress: reportProgress)
+                }
+            }
+            
+            let newHead = self.runGit(["rev-parse", "--short", "HEAD"], in: nxnativePath).trimmingCharacters(in: .whitespacesAndNewlines)
+            self.isUpdating = false
+            DispatchQueue.main.async {
+                completion(true, "Successfully merged \(count) upstream commits from seedds/nxnative (commit [\(newHead)])!")
             }
         }
     }

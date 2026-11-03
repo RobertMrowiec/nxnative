@@ -31,6 +31,34 @@ extension AppViewModel {
                     window.miniwindowImage = img
                     window.miniwindowTitle = "NxNative Launcher"
                 }
+
+                // Persist custom icon permanently on disk to the .app bundle
+                let bundleURL = Bundle.main.bundleURL
+                let appBundlePath: String? = {
+                    if bundleURL.pathExtension == "app" {
+                        return bundleURL.path
+                    }
+                    let candidates = [
+                        "/Volumes/SSD FN501 PRO/Emulations/NativePort/NxNative_Launcher.app",
+                        "/Applications/NxNative_Launcher.app"
+                    ]
+                    return candidates.first { FileManager.default.fileExists(atPath: $0) }
+                }()
+
+                if let targetPath = appBundlePath {
+                    let mode = self.iconAppearanceMode
+                    DispatchQueue.global(qos: .utility).async {
+                        if mode == .default {
+                            NSWorkspace.shared.setIcon(nil, forFile: targetPath, options: [])
+                        } else {
+                            NSWorkspace.shared.setIcon(img, forFile: targetPath, options: [])
+                        }
+                        let p = Process()
+                        p.executableURL = URL(fileURLWithPath: "/usr/bin/touch")
+                        p.arguments = [targetPath]
+                        try? p.run()
+                    }
+                }
             }
         }
     }

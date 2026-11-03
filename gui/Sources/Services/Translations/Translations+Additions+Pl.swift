@@ -114,6 +114,11 @@ extension Translations {
         "system.add_nonswitch_single_app": "Dodaj grę (.app)",
         "system.select_nonswitch_folder_message": "Wybierz foldery zawierające Twoje natywne gry macOS (.app).",
         "system.select_nonswitch_app_message": "Wybierz aplikacje natywnych gier macOS (.app), aby dodać je do biblioteki.",
-        "system.nonswitch_dirs_help": "Foldery przeszukiwane rekurencyjnie w poszukiwaniu natywnych gier Mac (.app) do zunifikowanej biblioteki."
+        "system.nonswitch_dirs_help": "Foldery przeszukiwane rekurencyjnie w poszukiwaniu natywnych gier Mac (.app) do zunifikowanej biblioteki.",
+        "port_modal.coming_soon": "Wkrótce",
+        "compatibility.switch_all": "Wszystkie Switch",
+        "compatibility.switch1": "Nintendo Switch 1",
+        "compatibility.switch2": "Nintendo Switch 2",
+        "compatibility.my_device": "Mój Mac"
     ]
 }

@@ -7,6 +7,38 @@ extension AppViewModel {
         GameControllerService.shared.onAction = { [weak self] action in
             self?.handleGamepadAction(action)
         }
+        GameControllerService.shared.onRightStickScroll = { [weak self] delta in
+            self?.scrollActiveView(delta: delta)
+        }
+    }
+
+    public func scrollActiveView(delta: CGFloat) {
+        guard !isAnyModalPresented else { return }
+        guard let window = NSApp.keyWindow, let contentView = window.contentView else { return }
+        if let sv = findScrollableView(in: contentView) {
+            let clipView = sv.contentView
+            var origin = clipView.bounds.origin
+            origin.y -= delta
+            let maxHeight = max(0, (sv.documentView?.bounds.height ?? 0) - clipView.bounds.height)
+            origin.y = max(0, min(origin.y, maxHeight))
+            clipView.scroll(to: origin)
+            sv.reflectScrolledClipView(clipView)
+        }
+    }
+
+    private func findScrollableView(in view: NSView?) -> NSScrollView? {
+        guard let root = view else { return nil }
+        var queue: [NSView] = [root]
+        while !queue.isEmpty {
+            let current = queue.removeFirst()
+            if let sv = current as? NSScrollView {
+                if sv.hasVerticalScroller || (sv.documentView?.bounds.height ?? 0) > sv.bounds.height {
+                    return sv
+                }
+            }
+            queue.append(contentsOf: current.subviews)
+        }
+        return nil
     }
     
     public func handleGamepadAction(_ action: GamepadAction) {
@@ -82,7 +114,14 @@ extension AppViewModel {
     func handleNavigateLeft() {
         switch selectedTab {
         case 0:
-            handleLibraryNavigateLeft()
+            if isFocusOnHeroBar {
+                if heroActionFocusIndex > 0 {
+                    heroActionFocusIndex -= 1
+                    SoundEffectService.shared.play(.focus)
+                }
+            } else {
+                handleLibraryNavigateLeft()
+            }
         case 1:
             handleCompatibilityNavigateLeft()
         default: break
@@ -92,7 +131,14 @@ extension AppViewModel {
     func handleNavigateRight() {
         switch selectedTab {
         case 0:
-            handleLibraryNavigateRight()
+            if isFocusOnHeroBar {
+                if heroActionFocusIndex < 3 {
+                    heroActionFocusIndex += 1
+                    SoundEffectService.shared.play(.focus)
+                }
+            } else {
+                handleLibraryNavigateRight()
+            }
         case 1:
             handleCompatibilityNavigateRight()
         default: break
@@ -102,6 +148,9 @@ extension AppViewModel {
     func handleNavigateUp() {
         switch selectedTab {
         case 0:
+            if isFocusOnHeroBar {
+                return
+            }
             handleLibraryNavigateUp()
         case 1:
             handleCompatibilityNavigateUp()
@@ -114,7 +163,12 @@ extension AppViewModel {
     func handleNavigateDown() {
         switch selectedTab {
         case 0:
-            handleLibraryNavigateDown()
+            if isFocusOnHeroBar {
+                isFocusOnHeroBar = false
+                SoundEffectService.shared.play(.focus)
+            } else {
+                handleLibraryNavigateDown()
+            }
         case 1:
             handleCompatibilityNavigateDown()
         default: break
@@ -127,47 +181,14 @@ extension AppViewModel {
             if isGameActionMenuPresented {
                 SoundEffectService.shared.play(.click)
                 executeFocusedGameAction()
-            } else if activeGroupFilter == .all {
-                let items = unifiedItems(for: libraryGames)
-                if focusedUnifiedIndex == items.count {
-                    SoundEffectService.shared.play(.click)
-                    selectAdditionalGameFolder()
-                } else if items.indices.contains(focusedUnifiedIndex) {
-                    let item = items[focusedUnifiedIndex]
-                    switch item {
-                    case .ported(let game):
-                        if game.platform == .macApp || game.platform == .nonSwitch {
-                            launchGame(game)
-                        } else {
-                            SoundEffectService.shared.play(.click)
-                            gameForSettingsSheet = game
-                        }
-                    case .unported(let unported):
-                        SoundEffectService.shared.play(.click)
-                        selectedGame = unported
-                        gameForPortModal = unported
-                    }
-                }
-            } else if activeLibraryShelf == .unportedSwitch, let unported = focusedUnportedGame {
-                if isBuilding && (buildingGameId == unported.id || selectedGame?.id == unported.id) {
-                    SoundEffectService.shared.play(.click)
-                    cancelBuild()
-                } else {
-                    SoundEffectService.shared.play(.click)
-                    selectedGame = unported
-                    gameForPortModal = unported
-                }
-            } else if let game = currentFocusedGame {
-                if game.platform == .macApp || game.platform == .nonSwitch {
-                    launchGame(game)
-                } else {
-                    SoundEffectService.shared.play(.click)
-                    gameForSettingsSheet = game
-                }
-            } else if let unported = unportedGames.first {
+            } else if isFocusOnHeroBar {
                 SoundEffectService.shared.play(.click)
-                selectedGame = unported
-                gameForPortModal = unported
+                executeFocusedHeroBarAction()
+            } else {
+                // Focus moves to Hero Bar! User clicks "Jogar" on Hero Bar to start game
+                isFocusOnHeroBar = true
+                heroActionFocusIndex = 0
+                SoundEffectService.shared.play(.click)
             }
         case 1:
             handleCompatibilityConfirm()
@@ -184,6 +205,44 @@ extension AppViewModel {
             break
         }
     }
+
+    public func executeFocusedHeroBarAction() {
+        if let g = currentFocusedGame {
+            switch heroActionFocusIndex {
+            case 0:
+                if g.isPlayableLocally {
+                    launchGame(g)
+                } else {
+                    gameForSettingsSheet = g
+                }
+            case 1:
+                if g.platform == .macApp {
+                    showControlsGuideSheet = true
+                } else {
+                    DeviceDeploymentService.shared.shareViaAirDrop(fileURL: g.url)
+                }
+            case 2:
+                gameForSettingsSheet = g
+            case 3:
+                let profile = GameDetailsProfile.inspect(for: g)
+                revealSaveFolder(profile.saveDirectory)
+            default:
+                break
+            }
+        } else if let u = focusedUnportedGame ?? unportedGames.first {
+            switch heroActionFocusIndex {
+            case 0:
+                selectedGame = u
+                gameForPortModal = u
+            case 1:
+                if let base = u.baseFile {
+                    NSWorkspace.shared.activateFileViewerSelecting([base.url])
+                }
+            default:
+                break
+            }
+        }
+    }
     
     func handleCancel() {
         if gameForSettingsSheet != nil {
@@ -193,6 +252,11 @@ extension AppViewModel {
         }
         switch selectedTab {
         case 0:
+            if isFocusOnHeroBar {
+                isFocusOnHeroBar = false
+                SoundEffectService.shared.play(.click)
+                return
+            }
             if isGameActionMenuPresented {
                 SoundEffectService.shared.play(.click)
                 withAnimation(.easeInOut(duration: 0.18)) { isGameActionMenuPresented = false }

@@ -114,6 +114,11 @@ extension Translations {
         "system.add_nonswitch_single_app": "Lägg till spel (.app)",
         "system.select_nonswitch_folder_message": "Välj mappar som innehåller dina inbyggda macOS-spel (.app).",
         "system.select_nonswitch_app_message": "Välj inbyggda macOS-spelapplikationer (.app) att lägga till i biblioteket.",
-        "system.nonswitch_dirs_help": "Mappar som söks igenom rekursivt efter inbyggda Mac-spel (.app) för ditt enhetliga bibliotek."
+        "system.nonswitch_dirs_help": "Mappar som söks igenom rekursivt efter inbyggda Mac-spel (.app) för ditt enhetliga bibliotek.",
+        "port_modal.coming_soon": "Kommer snart",
+        "compatibility.switch_all": "Alla Switch",
+        "compatibility.switch1": "Nintendo Switch 1",
+        "compatibility.switch2": "Nintendo Switch 2",
+        "compatibility.my_device": "Min Mac"
     ]
 }

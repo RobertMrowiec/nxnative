@@ -276,10 +276,16 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var compatibilityFilter: String = "All"
     @Published public var compatibilityRamFilter: Int? = nil
     @Published public var compatibilityChipFilter: IphoneChipTier? = nil
+    @Published public var compatibilityGenerationFilter: SwitchGenerationFilter = .all
+    @Published public var compatibilityOnlyMyDevice: Bool = false
     @Published public var compatibilityNameFilter: String = "All"
     @Published public var compatibilitySearchText: String = ""
     @Published public var compatibilityLastUpdated: Date? = nil
     @Published public var isCompatibilityFromOnline: Bool = false
+
+    public var macPhysicalMemoryGB: Int {
+        Int(ProcessInfo.processInfo.physicalMemory / (1024 * 1024 * 1024))
+    }
     @Published public var compatibilityDisplayMode: CompatibilityDisplayMode = .list {
         didSet {
             UserDefaults.standard.set(compatibilityDisplayMode.rawValue, forKey: StorageKeys.savedCompatibilityDisplayMode)
@@ -309,6 +315,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var isApplyingUpdate: Bool = false
     @Published public var updateInstallLogs: [String] = []
     @Published public var updateCompletedReadyToRelaunch: Bool = false
+    @Published public var isSyncingUpstream: Bool = false
     @Published public var updateSuccessBanner: String? = nil
     @Published public var updateErrorBanner: String? = nil
     
@@ -506,6 +513,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var unifiedGridColumnsCount: Int = 4
     @Published public var activeLibraryShelf: LibraryShelfFocus = .mac
     @Published public var focusedUnportedGameIndex: Int = 0
+    @Published public var isFocusOnHeroBar: Bool = false
+    @Published public var heroActionFocusIndex: Int = 0
     @Published public var portModalFocusIndex: Int = 0
     @Published public var isPortAdvancedExpanded: Bool = false
     @Published public var showRyujinxNotFoundSheet: Bool = false

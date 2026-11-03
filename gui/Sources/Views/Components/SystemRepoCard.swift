@@ -73,40 +73,84 @@ public struct SystemRepoCard: View {
                 
                 Divider().opacity(0.2)
                 
-                // GitHub Upstream Information & Live Update Check
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(viewModel.tr("system.repo_label"))
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(NXTheme.textSecondary)
-                        if let update = viewModel.updateInfo {
-                            Text(viewModel.tr("system.local_remote_commit", update.localCommit, update.remoteCommit))
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(NXTheme.textMuted)
+                // GitLab Launcher & GitHub Upstream Information
+                VStack(spacing: 10) {
+                    // 1. GitLab Launcher Update Check
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.tr("system.repo_label"))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(NXTheme.textSecondary)
+                            if let update = viewModel.updateInfo {
+                                Text(viewModel.tr("system.local_remote_commit", update.localCommit, update.remoteCommit))
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(NXTheme.textMuted)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        if viewModel.isApplyingUpdate {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(viewModel.tr("common.updating"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(NXTheme.primary)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                        } else if let update = viewModel.updateInfo, update.hasUpdate {
+                            Button(viewModel.tr("system.update_install_now")) {
+                                viewModel.openUpdateCheckerAndAutoInstall()
+                            }
+                            .buttonStyle(NXPrimaryButtonStyle())
+                        } else {
+                            Button(viewModel.tr("system.check_updates")) {
+                                viewModel.openUpdateCheckerAndAutoInstall()
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
                         }
                     }
                     
-                    Spacer()
+                    Divider().opacity(0.15)
                     
-                    if viewModel.isApplyingUpdate {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text(viewModel.tr("common.updating"))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(NXTheme.primary)
+                    // 2. Upstream Core Engine (seedds/nxnative on GitHub)
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.tr("system.upstream_repo_label"))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(NXTheme.textSecondary)
+                            if let update = viewModel.updateInfo {
+                                if update.upstreamBehindCount > 0 {
+                                    Text(viewModel.tr("system.upstream_commits_available", update.upstreamBehindCount))
+                                        .font(.system(size: 10.5, weight: .semibold, design: .monospaced))
+                                        .foregroundColor(Color.orange)
+                                } else {
+                                    Text(viewModel.tr("system.upstream_up_to_date"))
+                                        .font(.system(size: 10.5, design: .monospaced))
+                                        .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                                }
+                            }
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                    } else if let update = viewModel.updateInfo, update.hasUpdate {
-                        Button(viewModel.tr("system.update_install_now")) {
-                            viewModel.openUpdateCheckerAndAutoInstall()
+                        
+                        Spacer()
+                        
+                        if viewModel.isSyncingUpstream {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(viewModel.tr("common.syncing"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(NXTheme.primary)
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                        } else if let update = viewModel.updateInfo, update.upstreamBehindCount > 0 {
+                            Button(viewModel.tr("system.sync_upstream")) {
+                                viewModel.syncUpstreamEngine()
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                            .disabled(viewModel.isBuilding)
                         }
-                        .buttonStyle(NXPrimaryButtonStyle())
-                    } else {
-                        Button(viewModel.tr("system.check_updates")) {
-                            viewModel.openUpdateCheckerAndAutoInstall()
-                        }
-                        .buttonStyle(NXSecondaryButtonStyle())
                     }
                 }
                 

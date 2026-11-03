@@ -58,13 +58,11 @@ public struct PortedCategoryShelfView: View {
                                 onSelect: {
                                     guard !viewModel.isAnyModalPresented else { return }
                                     if isFocused {
-                                        if game.platform == .macApp || game.platform == .nonSwitch {
-                                            viewModel.launchGame(game)
-                                        } else {
-                                            SoundEffectService.shared.play(.click)
-                                            viewModel.gameForSettingsSheet = game
-                                        }
+                                        viewModel.isFocusOnHeroBar = true
+                                        viewModel.heroActionFocusIndex = 0
+                                        SoundEffectService.shared.play(.click)
                                     } else {
+                                        viewModel.isFocusOnHeroBar = false
                                         if shelf == .mac {
                                             viewModel.selectMacGame(at: idx)
                                         } else if shelf == .switch2 {

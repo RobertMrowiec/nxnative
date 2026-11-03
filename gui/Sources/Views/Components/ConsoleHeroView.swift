@@ -94,49 +94,65 @@ public struct ConsoleHeroView: View {
             .allowsHitTesting(false)
 
             // MARK: - Game Metadata & Liquid Glass Console Action Buttons
-            VStack(alignment: .leading, spacing: 12) {
-                // Console Runtime Status Indicators
-                NXGlassContainer(spacing: 6) {
-                    HStack(spacing: 8) {
-                        if let g = game {
-                            if g.platform == .macApp {
-                                statusPill(title: config.enable60FPS ? "60 FPS" : "30 FPS", active: config.enable60FPS)
-                                statusPill(title: config.isDockedMode ? "Docked" : "Handheld", active: true)
-                                if config.enableGameMode {
-                                    statusPill(title: "Game Mode", active: true)
-                                }
-                                if config.enableMetalFXUpscale {
-                                    statusPill(title: "MetalFX", active: true)
-                                }
-                                statusPill(title: "macOS Native", active: false)
-                            } else {
-                                statusPill(title: "iOS IPA Port", active: true)
-                                statusPill(title: "Handheld", active: false)
-                                if deviceService.activeDeployment.isRunning {
-                                    statusPill(title: "Deploying (\(Int(deviceService.activeDeployment.progressFraction * 100))%)", active: true)
-                                } else {
-                                    statusPill(title: "iPhone & iPad", active: false)
-                                }
-                            }
-                        } else if let u = unportedGame {
-                            statusPill(title: "Nintendo Switch", active: true)
-                            statusPill(title: u.formattedSize, active: false)
-                            if u.updateCount > 0 {
-                                statusPill(title: "+\(u.updateCount) Updates", active: true)
-                            }
-                            if u.dlcCount > 0 {
-                                statusPill(title: "+\(u.dlcCount) DLCs", active: true)
-                            }
-                        }
-                    }
-                }
-
+            VStack(alignment: .leading, spacing: 8) {
                 // Clean Game Title
                 Text(game?.name ?? unportedGame?.name ?? "")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .foregroundColor(NXTheme.textPrimary)
                     .lineLimit(2)
                     .shadow(color: Color.black.opacity(0.8), radius: 10, x: 0, y: 3)
+
+                // Console Runtime Status Metadata (clean text with shadow below title)
+                HStack(spacing: 8) {
+                    if let g = game {
+                        if g.platform == .macApp {
+                            statusText(config.enable60FPS ? "60 FPS" : "30 FPS")
+                            statusSeparator()
+                            statusText(config.isDockedMode ? "Docked" : "Handheld")
+                            if config.enableGameMode {
+                                statusSeparator()
+                                statusText("Game Mode")
+                            }
+                            if config.enableMetalFXUpscale {
+                                statusSeparator()
+                                statusText("MetalFX")
+                            }
+                            statusSeparator()
+                            statusText(g.isSwitch2 ? "Nintendo Switch 2" : "macOS Native")
+                        } else if g.platform == .nonSwitch {
+                            statusText(viewModel.tr("shelf.non_switch_title"))
+                            statusSeparator()
+                            statusText(g.formattedSize)
+                            if config.enableGameMode {
+                                statusSeparator()
+                                statusText("Game Mode")
+                            }
+                        } else {
+                            statusText("iOS IPA Port")
+                            statusSeparator()
+                            statusText("Handheld")
+                            statusSeparator()
+                            if deviceService.activeDeployment.isRunning {
+                                statusText("Deploying (\(Int(deviceService.activeDeployment.progressFraction * 100))%)")
+                            } else {
+                                statusText("iPhone & iPad")
+                            }
+                        }
+                    } else if let u = unportedGame {
+                        statusText(u.isSwitch2 ? "Nintendo Switch 2" : "Nintendo Switch")
+                        statusSeparator()
+                        statusText(u.formattedSize)
+                        if u.updateCount > 0 {
+                            statusSeparator()
+                            statusText("+\(u.updateCount) Updates")
+                        }
+                        if u.dlcCount > 0 {
+                            statusSeparator()
+                            statusText("+\(u.dlcCount) DLCs")
+                        }
+                    }
+                }
+                .padding(.bottom, 4)
 
                 // Interactive Liquid Glass Action Bar
                 NXGlassContainer(spacing: 12) {

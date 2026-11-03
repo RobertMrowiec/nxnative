@@ -7,6 +7,9 @@ public struct UpdateInfo {
     public let commitMessages: [String]
     public let checkDate: Date
     public let repoURL: String
+    public let upstreamBehindCount: Int
+    public let upstreamCommitMessages: [String]
+    public let upstreamRepoURL: String
 
     public init(
         hasUpdate: Bool,
@@ -14,7 +17,10 @@ public struct UpdateInfo {
         remoteCommit: String,
         commitMessages: [String],
         checkDate: Date,
-        repoURL: String
+        repoURL: String,
+        upstreamBehindCount: Int = 0,
+        upstreamCommitMessages: [String] = [],
+        upstreamRepoURL: String = "https://github.com/seedds/nxnative.git"
     ) {
         self.hasUpdate = hasUpdate
         self.localCommit = localCommit
@@ -22,6 +28,9 @@ public struct UpdateInfo {
         self.commitMessages = commitMessages
         self.checkDate = checkDate
         self.repoURL = repoURL
+        self.upstreamBehindCount = upstreamBehindCount
+        self.upstreamCommitMessages = upstreamCommitMessages
+        self.upstreamRepoURL = upstreamRepoURL
     }
 }
 

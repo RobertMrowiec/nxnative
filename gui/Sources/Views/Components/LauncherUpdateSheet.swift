@@ -53,14 +53,14 @@ public struct LauncherUpdateSheet: View {
                 }
                 .padding(16)
                 .nxGlassCard(cornerRadius: 12)
-            } else if viewModel.isApplyingUpdate {
+            } else if viewModel.isApplyingUpdate || viewModel.isSyncingUpstream {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         ProgressView()
                             .controlSize(.small)
-                        Text(viewModel.tr("update_modal.downloading"))
+                        Text(viewModel.isSyncingUpstream ? viewModel.tr("update_modal.syncing_upstream") : viewModel.tr("update_modal.downloading"))
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(NXTheme.secondary)
+                            .foregroundColor(viewModel.isSyncingUpstream ? Color.orange : NXTheme.secondary)
                         Spacer()
                     }
                     
@@ -158,6 +158,55 @@ public struct LauncherUpdateSheet: View {
                     .padding(14)
                     .nxGlassCard(cornerRadius: 12)
                 }
+                
+                // MARK: - Upstream Core Engine (seedds/nxnative) Status
+                if info.upstreamBehindCount > 0 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Label(viewModel.tr("update_modal.upstream_section"), systemImage: "arrow.triangle.merge")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundColor(.orange)
+                            Spacer()
+                            Text(viewModel.tr("system.upstream_commits_available", info.upstreamBehindCount))
+                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.orange.opacity(0.35))
+                                .cornerRadius(4)
+                        }
+                        
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 3) {
+                                ForEach(info.upstreamCommitMessages, id: \.self) { msg in
+                                    Text("• \(msg)")
+                                        .font(.system(size: 10.5, design: .monospaced))
+                                        .foregroundColor(NXTheme.textSecondary)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .frame(maxHeight: 70)
+                        .padding(8)
+                        .nxGlassCard(cornerRadius: 8)
+                        
+                        if !viewModel.isApplyingUpdate && !viewModel.isSyncingUpstream {
+                            Button(action: {
+                                viewModel.syncUpstreamEngine()
+                            }) {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "arrow.triangle.merge")
+                                    Text(viewModel.tr("update_modal.upstream_sync_btn"))
+                                }
+                            }
+                            .buttonStyle(NXSecondaryButtonStyle())
+                            .controlSize(.small)
+                            .disabled(viewModel.isBuilding)
+                        }
+                    }
+                    .padding(12)
+                    .nxGlassCard(cornerRadius: 10, tint: Color.orange.opacity(0.12))
+                }
             } else {
                 HStack(spacing: 10) {
                     Image(systemName: "wifi.exclamationmark")
@@ -192,7 +241,7 @@ public struct LauncherUpdateSheet: View {
             // MARK: - Footer Buttons
             NXGlassContainer(spacing: 10) {
                 HStack(spacing: 10) {
-                    if !viewModel.isCheckingUpdate && !viewModel.isApplyingUpdate {
+                    if !viewModel.isCheckingUpdate && !viewModel.isApplyingUpdate && !viewModel.isSyncingUpstream {
                         Button(action: {
                             viewModel.openUpdateCheckerAndAutoInstall()
                         }) {
@@ -229,7 +278,7 @@ public struct LauncherUpdateSheet: View {
                             }
                         }
                         .buttonStyle(NXPrimaryButtonStyle())
-                    } else if let info = viewModel.updateInfo, info.hasUpdate, !viewModel.isApplyingUpdate {
+                    } else if let info = viewModel.updateInfo, info.hasUpdate, !viewModel.isApplyingUpdate && !viewModel.isSyncingUpstream {
                         Button(action: {
                             viewModel.applyUpdate(autoRelaunch: true)
                         }) {
@@ -242,7 +291,7 @@ public struct LauncherUpdateSheet: View {
                         .disabled(viewModel.isBuilding)
                     }
                     
-                    if !viewModel.isApplyingUpdate {
+                    if !viewModel.isApplyingUpdate && !viewModel.isSyncingUpstream {
                         Button(viewModel.tr("common.close")) {
                             dismiss()
                         }

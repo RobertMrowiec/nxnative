@@ -114,6 +114,11 @@ extension Translations {
         "system.add_nonswitch_single_app": "添加游戏 (.app)",
         "system.select_nonswitch_folder_message": "选择包含原生 macOS 游戏应用程序 (.app) 的文件夹。",
         "system.select_nonswitch_app_message": "选择要添加到游戏库的原生 macOS 游戏应用程序 (.app)。",
-        "system.nonswitch_dirs_help": "递归扫描原生 Mac 游戏 (.app) 以组织您统一游戏库的文件夹。"
+        "system.nonswitch_dirs_help": "递归扫描原生 Mac 游戏 (.app) 以组织您统一游戏库的文件夹。",
+        "port_modal.coming_soon": "即将推出",
+        "compatibility.switch_all": "所有Switch",
+        "compatibility.switch1": "Nintendo Switch 1",
+        "compatibility.switch2": "Nintendo Switch 2",
+        "compatibility.my_device": "我的Mac"
     ]
 }

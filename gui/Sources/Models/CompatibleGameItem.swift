@@ -46,8 +46,16 @@ public struct CompatibleGameItem: Identifiable, Hashable {
     public let storageReq: String
     public let minRamGB: Int
     public let minChipTier: IphoneChipTier
-    public let isNew: Bool
+    public var isNew: Bool
     public let addedTimestamp: TimeInterval
+
+    public var isSwitch2: Bool {
+        titleId.uppercased().hasPrefix("0400")
+    }
+
+    public var isSwitch1: Bool {
+        !isSwitch2
+    }
     
     public init(
         title: String,

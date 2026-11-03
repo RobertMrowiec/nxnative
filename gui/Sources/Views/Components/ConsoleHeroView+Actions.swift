@@ -4,6 +4,7 @@ import AppKit
 extension ConsoleHeroView {
     @ViewBuilder
     internal func portedActionBar(for g: PortedGame) -> some View {
+        let isPlayFocused = viewModel.isFocusOnHeroBar && viewModel.heroActionFocusIndex == 0
         if g.isPlayableLocally {
             // Play Button Pill for Mac Apps & Mac Native Games
             Button(action: {
@@ -34,6 +35,15 @@ extension ConsoleHeroView {
                     fallbackFill: NXTheme.primary,
                     fallbackSelectedFill: NXTheme.primary
                 )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(
+                            isPlayFocused ? AnyShapeStyle(LinearGradient(colors: [Color.white, NXTheme.primary], startPoint: .topLeading, endPoint: .bottomTrailing)) : AnyShapeStyle(Color.clear),
+                            lineWidth: isPlayFocused ? 2.5 : 0
+                        )
+                )
+                .scaleEffect(isPlayFocused ? 1.05 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.72), value: isPlayFocused)
             }
             .buttonStyle(NXPressableButtonStyle())
             .disabled(isLaunching)
@@ -43,7 +53,8 @@ extension ConsoleHeroView {
             if g.platform == .macApp {
                 heroSecondaryButton(
                     icon: "gamecontroller.fill",
-                    title: viewModel.tr("controls.guide_title")
+                    title: viewModel.tr("controls.guide_title"),
+                    index: 1
                 ) {
                     SoundEffectService.shared.play(.click)
                     viewModel.showControlsGuideSheet = true
@@ -87,6 +98,12 @@ extension ConsoleHeroView {
                     fallbackFill: ((IosDeploymentTracker.shared.deploymentRecord(for: g)?.isExpired ?? false) ? Color.red : NXTheme.primary),
                     fallbackSelectedFill: ((IosDeploymentTracker.shared.deploymentRecord(for: g)?.isExpired ?? false) ? Color.red : NXTheme.primary)
                 )
+                .overlay(
+                    Capsule()
+                        .strokeBorder(isPlayFocused ? Color.white : Color.clear, lineWidth: isPlayFocused ? 2.5 : 0)
+                )
+                .scaleEffect(isPlayFocused ? 1.05 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.72), value: isPlayFocused)
             }
             .buttonStyle(NXPressableButtonStyle())
             .nxNoFocusRing()
@@ -94,7 +111,8 @@ extension ConsoleHeroView {
             // AirDrop Button for iOS
             heroSecondaryButton(
                 icon: "airdrop",
-                title: viewModel.tr("common.airdrop")
+                title: viewModel.tr("common.airdrop"),
+                index: 1
             ) {
                 SoundEffectService.shared.play(.click)
                 DeviceDeploymentService.shared.shareViaAirDrop(fileURL: g.url)
@@ -104,7 +122,8 @@ extension ConsoleHeroView {
             // Reveal in Finder Button for iOS
             heroSecondaryButton(
                 icon: "folder.fill",
-                title: viewModel.tr("console.reveal_ipa")
+                title: viewModel.tr("console.reveal_ipa"),
+                index: 4
             ) {
                 SoundEffectService.shared.play(.click)
                 NSWorkspace.shared.activateFileViewerSelecting([g.url])
@@ -114,7 +133,8 @@ extension ConsoleHeroView {
         // Options Button
         heroSecondaryButton(
             icon: "slider.horizontal.3",
-            title: viewModel.tr("console.options")
+            title: viewModel.tr("console.options"),
+            index: 2
         ) {
             SoundEffectService.shared.play(.click)
             viewModel.gameForSettingsSheet = g
@@ -123,7 +143,8 @@ extension ConsoleHeroView {
         // Saves Folder Button
         heroSecondaryButton(
             icon: "folder.fill",
-            title: viewModel.tr("console.saves")
+            title: viewModel.tr("console.saves"),
+            index: 3
         ) {
             SoundEffectService.shared.play(.click)
             let profile = GameDetailsProfile.inspect(for: g)
@@ -133,6 +154,7 @@ extension ConsoleHeroView {
 
     @ViewBuilder
     internal func unportedActionBar(for u: SelectableGame) -> some View {
+        let isPortFocused = viewModel.isFocusOnHeroBar && viewModel.heroActionFocusIndex == 0
         Button(action: {
             SoundEffectService.shared.play(.click)
             viewModel.selectedGame = u
@@ -163,34 +185,48 @@ extension ConsoleHeroView {
                 fallbackFill: NXTheme.primary,
                 fallbackSelectedFill: NXTheme.primary
             )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isPortFocused ? Color.white : Color.clear, lineWidth: isPortFocused ? 2.5 : 0)
+            )
+            .scaleEffect(isPortFocused ? 1.05 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.72), value: isPortFocused)
         }
         .buttonStyle(NXPressableButtonStyle())
         .disabled(isUnportedBuilding)
         .nxNoFocusRing()
 
         if let base = u.baseFile {
-            heroSecondaryButton(icon: "folder.fill", title: viewModel.tr("actions.app_files")) {
+            heroSecondaryButton(icon: "folder.fill", title: viewModel.tr("actions.app_files"), index: 1) {
                 SoundEffectService.shared.play(.click)
                 NSWorkspace.shared.activateFileViewerSelecting([base.url])
             }
         }
     }
 
-    internal func heroSecondaryButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+    internal func heroSecondaryButton(icon: String, title: String, index: Int, action: @escaping () -> Void) -> some View {
+        let isFocused = viewModel.isFocusOnHeroBar && viewModel.heroActionFocusIndex == index
+        return Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
                 Text(title)
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
             }
-            .foregroundColor(NXTheme.textPrimary)
+            .foregroundColor(isFocused ? .white : NXTheme.textPrimary)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
             .contentShape(Capsule())
             .nxGlassInteractive(
                 in: Capsule(),
-                fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.85)
+                isSelected: isFocused,
+                fallbackFill: isFocused ? NXTheme.primary.opacity(0.85) : NXTheme.glassSurfaceElevated.opacity(0.85)
             )
+            .overlay(
+                Capsule()
+                    .strokeBorder(isFocused ? Color.white : Color.clear, lineWidth: isFocused ? 2 : 0)
+            )
+            .scaleEffect(isFocused ? 1.05 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.72), value: isFocused)
         }
         .buttonStyle(NXPressableButtonStyle())
         .nxNoFocusRing()
@@ -208,5 +244,19 @@ extension ConsoleHeroView {
                 fallbackFill: active ? NXTheme.primary.opacity(0.35) : NXTheme.textMuted.opacity(0.24),
                 fallbackStroke: active ? NXTheme.secondary.opacity(0.45) : Color.white.opacity(0.12)
             )
+    }
+
+    internal func statusText(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(.white)
+            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
+    }
+
+    internal func statusSeparator() -> some View {
+        Text("|")
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(.white.opacity(0.50))
+            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
     }
 }

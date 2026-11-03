@@ -41,13 +41,11 @@ public struct UnifiedConsoleGridView: View {
                             onSelect: {
                                 guard !viewModel.isAnyModalPresented else { return }
                                 if isFocused {
-                                    if game.platform == .macApp || game.platform == .nonSwitch {
-                                        viewModel.launchGame(game)
-                                    } else {
-                                        SoundEffectService.shared.play(.click)
-                                        viewModel.gameForSettingsSheet = game
-                                    }
+                                    viewModel.isFocusOnHeroBar = true
+                                    viewModel.heroActionFocusIndex = 0
+                                    SoundEffectService.shared.play(.click)
                                 } else {
+                                    viewModel.isFocusOnHeroBar = false
                                     viewModel.selectUnifiedItem(at: idx, items: items)
                                 }
                             }
@@ -80,10 +78,11 @@ public struct UnifiedConsoleGridView: View {
                             onSelect: {
                                 guard !viewModel.isAnyModalPresented else { return }
                                 if isFocused {
+                                    viewModel.isFocusOnHeroBar = true
+                                    viewModel.heroActionFocusIndex = 0
                                     SoundEffectService.shared.play(.click)
-                                    viewModel.selectedGame = unported
-                                    viewModel.gameForPortModal = unported
                                 } else {
+                                    viewModel.isFocusOnHeroBar = false
                                     viewModel.selectUnifiedItem(at: idx, items: items)
                                 }
                             }

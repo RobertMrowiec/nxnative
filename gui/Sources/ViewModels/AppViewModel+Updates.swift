@@ -3,7 +3,7 @@ import AppKit
 import SwiftUI
 
 extension AppViewModel {
-    // MARK: - GitHub Updates & Auto-Installer
+    // MARK: - GitLab Updates & Auto-Installer
     public func checkForUpdates() {
         guard isNxnativeValid, !nxnativePath.isEmpty else { return }
         isCheckingUpdate = true
@@ -14,7 +14,7 @@ extension AppViewModel {
     }
     
     /// Triggered from the macOS Menu Bar ("Check for Updates...") or Settings tab:
-    /// Opens the Update modal, checks GitHub (rennan101/nxnative_Launcher), and if a new version is found, downloads & installs it automatically.
+    /// Opens the Update modal, checks GitLab (rennan-group2/nxnative_Launcher), and if a new version is found, downloads & installs it automatically.
     public func openUpdateCheckerAndAutoInstall() {
         showUpdateSheet = true
         updateErrorBanner = nil
@@ -97,6 +97,43 @@ extension AppViewModel {
     
     public func relaunchUpdatedLauncher() {
         updateChecker.relaunchLauncher(nxnativePath: nxnativePath)
+    }
+    
+    /// Syncs upstream engine updates from seedds/nxnative (GitHub) into the local repository
+    public func syncUpstreamEngine() {
+        guard !isBuilding else {
+            let msg = tr("build.update_locked_during_build")
+            self.updateErrorBanner = msg
+            self.logs.append(LogEntry(level: .warning, message: "[Sync] \(msg)"))
+            return
+        }
+        guard isNxnativeValid, !nxnativePath.isEmpty else { return }
+        isSyncingUpstream = true
+        updateErrorBanner = nil
+        updateSuccessBanner = nil
+        
+        updateChecker.syncUpstream(
+            nxnativePath: nxnativePath,
+            rebuildLauncher: true,
+            progressHandler: { [weak self] line in
+                self?.updateInstallLogs.append(line)
+                self?.logs.append(LogEntry(level: .info, message: line))
+            },
+            completion: { [weak self] success, message in
+                guard let self = self else { return }
+                self.isSyncingUpstream = false
+                if success {
+                    self.updateSuccessBanner = message
+                    self.checkForUpdates()
+                    self.refreshEnginePatches()
+                    self.refreshPrerequisites()
+                    self.logs.append(LogEntry(level: .success, message: message))
+                } else {
+                    self.updateErrorBanner = message
+                    self.logs.append(LogEntry(level: .error, message: message))
+                }
+            }
+        )
     }
     
     // MARK: - Delegate Implementations
