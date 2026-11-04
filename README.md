@@ -16,7 +16,7 @@ Switch 2 games have started too: [Donkey Kong Bananza](dm/games/040074A01BF12000
 
 ### The Definitive Native Game Porting & Playback Suite for Apple Silicon
 
-[![GitLab Release](https://img.shields.io/badge/Release-v1.9.1-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
+[![GitLab Release](https://img.shields.io/badge/Release-v1.9.2-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
 [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B%20%7C%20iOS%2018%2B-blue.svg)](https://apple.com/macos)
@@ -34,7 +34,7 @@ Switch 2 games are built from one `.nup` file or a folder of their files, not fr
 <p align="center">
   <a href="#-table-of-contents--índice-rápido"><b>🇺🇸 English Documentation</b></a> • 
   <a href="#-guia-rápido-em-português-pt-br"><b>🇧🇷 Guia em Português (PT-BR)</b></a> •
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>💾 Download Latest .DMG (v1.9.1)</b></a> •
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>💾 Download Latest .DMG (v1.9.2)</b></a> •
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games List (130+ Titles)</b></a>
 </p>
 
