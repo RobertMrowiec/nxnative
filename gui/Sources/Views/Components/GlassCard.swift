@@ -23,6 +23,7 @@ public struct GlassCard<Content: View>: View {
     
     public var body: some View {
         content
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(padding)
             .nxGlassCard(cornerRadius: cornerRadius, tint: tint, isNested: isNested)
     }
@@ -42,6 +43,7 @@ public struct GlassGroupBoxStyle: GroupBoxStyle {
                 .foregroundColor(NXTheme.textPrimary)
             configuration.content
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .nxGlassCard(cornerRadius: 14, isNested: isNested)
     }

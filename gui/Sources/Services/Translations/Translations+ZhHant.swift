@@ -452,7 +452,7 @@ extension Translations {
         "build.opt_romfs_separate_help": "將大型遊戲檔案保留在 IPA 外部。為 AltStore、Sideloadly 或 Kravasign 產生輕量級 (<100 MB) IPA。",
         "build.romfs_split_recommendation": "偵測到大型遊戲 (~%@)：側載工具通常在超大 IPA 上失敗。強烈建議啟用 RomFS 分離。",
         "common.enable": "啟用",
-        "compatibility.iphone_chip_filter": "iPhone 晶片：",
+        "compatibility.iphone_chip_filter": "iPhone / iPad：",
         "compatibility.new": "新增",
         "compatibility.new_badge": "最新",
         "controls.mouse_invert_x": "反轉水平 X 軸",

@@ -21,6 +21,11 @@ public struct PortGameModalView: View {
                     // Game Identity Card
                     gameIdentityCard
                     
+                    // Prerequisite Warning Card (shown when port button cannot start)
+                    if !viewModel.canStartBuild {
+                        prerequisitesWarningCard
+                    }
+                    
                     // Hardware-Based Porting Time Estimate Card
                     hardwareEstimateCard
                     
@@ -55,6 +60,9 @@ public struct PortGameModalView: View {
         .onAppear {
             viewModel.portModalFocusIndex = 0
             viewModel.selectedGame = game
+            if viewModel.selectedGameFolder == nil, let fileDir = game.files.first?.url.deletingLastPathComponent() {
+                viewModel.selectedGameFolder = fileDir
+            }
             if game.isSwitch2 {
                 viewModel.platform = .macApp
             }
@@ -188,7 +196,7 @@ public struct PortGameModalView: View {
                         .font(.system(size: 18, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                     
-                    // Badge: e.g. ⚡ Rebuild Instantâneo, 🟣 Extenso, 🟢 Rápido
+                    // Badge: e.g. Instant Rebuild, Extensive, Fast
                     HStack(spacing: 4) {
                         Circle()
                             .fill(estimate.speedCategory.color)
@@ -277,6 +285,86 @@ public struct PortGameModalView: View {
         }
     }
     
+    // MARK: - Prerequisites Warning Card
+    private var prerequisitesWarningCard: some View {
+        GlassCard(padding: 12) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 13, weight: .bold))
+                    Text(viewModel.tr("port_modal.requirements_needed"))
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                
+                if !viewModel.isNxnativeValid {
+                    HStack(spacing: 8) {
+                        Image(systemName: "folder.badge.questionmark")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.tr("system.repo_missing_badge"))
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(NXTheme.textPrimary)
+                            Text(viewModel.tr("build.core_repo_missing_desc"))
+                                .font(.system(size: 10))
+                                .foregroundColor(NXTheme.textSecondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(8)
+                    .background(NXTheme.glassSurfaceElevated.opacity(0.8))
+                    .cornerRadius(8)
+                }
+                
+                if !viewModel.isProdKeysValid && !game.isSwitch2 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "key.fill")
+                            .foregroundColor(.orange)
+                            .font(.system(size: 12))
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.tr("system.keys_missing_badge"))
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(NXTheme.textPrimary)
+                            Text(viewModel.tr("system.keys_missing_desc"))
+                                .font(.system(size: 10))
+                                .foregroundColor(NXTheme.textSecondary)
+                        }
+                        Spacer()
+                        Button(action: {
+                            SoundEffectService.shared.play(.click)
+                            viewModel.selectProdKeysFile()
+                        }) {
+                            Text(viewModel.tr("common.choose"))
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        .controlSize(.small)
+                    }
+                    .padding(8)
+                    .background(NXTheme.glassSurfaceElevated.opacity(0.8))
+                    .cornerRadius(8)
+                }
+                
+                if viewModel.isDiskSpaceLow {
+                    HStack(spacing: 8) {
+                        Image(systemName: "internaldrive.fill")
+                            .foregroundColor(.red)
+                            .font(.system(size: 12))
+                        Text(viewModel.tr("build.disk_space_low"))
+                            .font(.system(size: 11))
+                            .foregroundColor(NXTheme.textPrimary)
+                        Spacer()
+                    }
+                    .padding(8)
+                    .background(NXTheme.glassSurfaceElevated.opacity(0.8))
+                    .cornerRadius(8)
+                }
+            }
+        }
+    }
+    
     // MARK: - Footer Bar
     private var footerBar: some View {
         HStack {
@@ -293,6 +381,18 @@ public struct PortGameModalView: View {
             .shadow(color: isCancelFocused ? NXTheme.secondary.opacity(0.6) : Color.clear, radius: 6)
             
             Spacer()
+            
+            if !viewModel.canStartBuild {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .foregroundColor(.orange)
+                        .font(.system(size: 11))
+                    Text(viewModel.tr("port_modal.requirements_needed"))
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundColor(NXTheme.textSecondary)
+                }
+                .padding(.trailing, 4)
+            }
             
             let isStartFocused = viewModel.portModalFocusIndex == 11
             Button(action: {

@@ -39,8 +39,7 @@ public struct PortedCategoryShelfView: View {
             ScrollViewReader { horizontalProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .center, spacing: cardSpacing) {
-                        ForEach(items.indices, id: \.self) { idx in
-                            let game = items[idx]
+                        ForEach(Array(items.enumerated()), id: \.element.stableId) { idx, game in
                             let isFocused = (viewModel.activeLibraryShelf == shelf) &&
                                             (shelf == .mac ? viewModel.focusedMacIndex == idx :
                                              (shelf == .switch2 ? viewModel.focusedSwitch2Index == idx :
@@ -57,7 +56,14 @@ public struct PortedCategoryShelfView: View {
                                 baseSize: baseCardSize,
                                 onSelect: {
                                     guard !viewModel.isAnyModalPresented else { return }
-                                    if isFocused {
+                                    viewModel.draggedGame = nil
+                                    hoveredTargetGamePath = nil
+                                    let targetPath = game.url.standardizedFileURL.path
+                                    let wasAlreadySelectedAndSynced =
+                                        isFocused &&
+                                        viewModel.currentFocusedGame?.url.standardizedFileURL.path == targetPath
+                                    if wasAlreadySelectedAndSynced {
+                                        viewModel.syncFocusedGameIndex()
                                         viewModel.isFocusOnHeroBar = true
                                         viewModel.heroActionFocusIndex = 0
                                         SoundEffectService.shared.play(.click)
@@ -76,7 +82,7 @@ public struct PortedCategoryShelfView: View {
                                 }
                             )
                             .zIndex(isFocused ? 10 : (isDropTarget ? 8 : 1))
-                            .id("card_\(shelf.rawValue)_\(idx)")
+                            .id(game.stableId)
                             .onDrag {
                                 viewModel.draggedGame = game
                                 return NSItemProvider(object: game.url.standardized.path as NSString)
@@ -93,10 +99,10 @@ public struct PortedCategoryShelfView: View {
                     .padding(.vertical, verticalPadding)
                 }
                 .onChange(of: shelf == .mac ? viewModel.focusedMacIndex : (shelf == .switch2 ? viewModel.focusedSwitch2Index : (shelf == .ios ? viewModel.focusedIosIndex : viewModel.focusedNonSwitchIndex))) { newIdx in
-                    guard viewModel.activeLibraryShelf == shelf else { return }
+                    guard viewModel.activeLibraryShelf == shelf, items.indices.contains(newIdx) else { return }
                     withAnimation(.easeOut(duration: 0.16)) {
                         let anchor: UnitPoint = newIdx == 0 ? .leading : (newIdx >= items.count - 1 ? .trailing : .center)
-                        horizontalProxy.scrollTo("card_\(shelf.rawValue)_\(newIdx)", anchor: anchor)
+                        horizontalProxy.scrollTo(items[newIdx].stableId, anchor: anchor)
                     }
                 }
             }

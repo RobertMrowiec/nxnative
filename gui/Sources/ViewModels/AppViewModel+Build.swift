@@ -3,9 +3,15 @@ import AppKit
 
 extension AppViewModel {
     // MARK: - Build Actions
+    public var effectiveGameFolder: URL? {
+        if let folder = selectedGameFolder { return folder }
+        if let fileURL = selectedGame?.files.first?.url { return fileURL.deletingLastPathComponent() }
+        return gameFolders.first
+    }
+    
     public var canStartBuild: Bool {
         !isBuilding &&
-        selectedGameFolder != nil &&
+        effectiveGameFolder != nil &&
         selectedGame != nil &&
         (isProdKeysValid || selectedGame?.isSwitch2 == true) &&
         isNxnativeValid &&
@@ -25,7 +31,10 @@ extension AppViewModel {
     }
     
     public func startBuild() {
-        guard canStartBuild, let gameDir = selectedGameFolder, let sel = selectedGame else { return }
+        guard canStartBuild, let sel = selectedGame, let gameDir = effectiveGameFolder else { return }
+        if selectedGameFolder == nil {
+            selectedGameFolder = gameDir
+        }
         
         buildWizardStep = 3
         isBuilding = true

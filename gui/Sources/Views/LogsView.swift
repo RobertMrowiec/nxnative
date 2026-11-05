@@ -63,7 +63,9 @@ public struct LogsView: View {
                     }
                 }
                 .padding(.vertical, 12)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .nxScrollEdgeEffect(edges: [.top, .bottom])
             .safeAreaInset(edge: .top, spacing: 0) {
                 logsToolbar

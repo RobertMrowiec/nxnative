@@ -441,7 +441,7 @@ extension Translations {
         "build.opt_romfs_separate_help": "Lämnar stora spelfiler utanför IPA-filen. Skapar en lätt IPA (<100 MB) för AltStore eller Sideloadly.",
         "build.romfs_split_recommendation": "Stort spel upptäckt (~%@): Sidladdningsverktyg misslyckas ofta med enorma IPA-filer. Separat RomFS rekommenderas starkt.",
         "common.enable": "Aktivera",
-        "compatibility.iphone_chip_filter": "iPhone-chip:",
+        "compatibility.iphone_chip_filter": "iPhone / iPad:",
         "compatibility.new": "Nytt",
         "compatibility.new_badge": "NYTT",
         "controls.mouse_invert_x": "Invertera horisontell X-axel",

@@ -11,6 +11,7 @@ app_category	public.app-category.games
 
 # ---- Versions ----
 build	v65536	1.0.1	main=5441af3c89f97e1d25a8ccf14c742bf8	subsdk0=4dd097b435891c5e0e15a65dbe47124f	subsdk1=535249a546887cac875a099e9c8ef367	sdk=b39add63421be525d352e576dab438d3
+build	v0	1.0.0	main=d824d4b1bbd45d03668380d6d041ba4c	subsdk0=4dd097b435891c5e0e15a65dbe47124f	subsdk1=535249a546887cac875a099e9c8ef367	sdk=b39add63421be525d352e576dab438d3
 package	v65536
 shader_versions	v65536
 

@@ -452,7 +452,7 @@ extension Translations {
         "build.opt_romfs_separate_help": "Lascia i file di grandi dimensioni fuori dall'IPA. Genera un IPA leggero (<100 MB) per AltStore, Sideloadly o Kravasign.",
         "build.romfs_split_recommendation": "Rilevato gioco di grandi dimensioni (~%@): Gli strumenti di sideloading spesso falliscono con IPA enormi. Si consiglia vivamente di attivare RomFS separato.",
         "common.enable": "Attiva",
-        "compatibility.iphone_chip_filter": "Chip iPhone:",
+        "compatibility.iphone_chip_filter": "iPhone / iPad:",
         "compatibility.new": "Nuovo",
         "compatibility.new_badge": "NUOVO",
         "controls.mouse_invert_x": "Inverti asse X orizzontale",

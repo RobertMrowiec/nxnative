@@ -25,11 +25,11 @@ extension Translations {
         "port_modal.estimate_chip_cores": "%@ (%d núcleos)",
         "port_modal.estimate_cold_build_note": "Estimativa para primeiro port no seu Mac. Portings seguintes levarão ~30s via cache.",
         "port_modal.estimate_cached_note": "Shaders já compilados em cache! Criação de aplicativo quase instantânea.",
-        "port_modal.badge_cached": "⚡ Rebuild Instantâneo",
-        "port_modal.badge_fast": "🟢 Rápido",
-        "port_modal.badge_moderate": "🟡 Moderado",
-        "port_modal.badge_heavy": "🟠 Demorado",
-        "port_modal.badge_very_heavy": "🟣 Extenso",
+        "port_modal.badge_cached": "Rebuild Instantâneo",
+        "port_modal.badge_fast": "Rápido",
+        "port_modal.badge_moderate": "Moderado",
+        "port_modal.badge_heavy": "Demorado",
+        "port_modal.badge_very_heavy": "Extenso",
         "settings.icloud_sync_ios_desc": "No iPhone, selecione a pasta 'nxnative_launcher' no iCloud Drive nas opções do jogo. Os saves sincronizam automaticamente em segundo plano via save.dmsync!",
         "settings.icloud_sync_ios_title": "Sincronização com iPhone (iCloud Cross-Save)",
         "settings.ios_custom_cert_desc": "Importe Certificado de Desenvolvedor externo (.p12) e Perfil de Provisionamento (.mobileprovision) para sideloading ou contas de terceiros.",
@@ -46,6 +46,10 @@ extension Translations {
         "compatibility.switch_all": "Todos os Switches",
         "compatibility.switch1": "Nintendo Switch 1",
         "compatibility.switch2": "Nintendo Switch 2",
-        "compatibility.my_device": "Meu Mac"
+        "compatibility.my_device": "Meu Mac",
+        "port_modal.requirements_needed": "Ação Necessária para Portar o Jogo",
+        "port_modal.open_system_settings": "Abrir Configurações",
+        "library.rescan_tooltip": "Re-escanear Pastas e Subpastas de Jogos",
+        "library.rescan_now": "Escanear Biblioteca"
     ]
 }

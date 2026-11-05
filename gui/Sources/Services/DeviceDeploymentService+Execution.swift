@@ -49,7 +49,26 @@ extension DeviceDeploymentService {
             handleOutputData(handle.availableData)
         }
 
+        let appSize = fileSize(of: targetAppURL)
+        let timeoutSeconds = max(180.0, (Double(appSize) / (15.0 * 1024.0 * 1024.0)) + 120.0)
+
+        let watchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+        watchdog.schedule(deadline: .now() + timeoutSeconds)
+        watchdog.setEventHandler { [weak process, weak self] in
+            guard let proc = process, proc.isRunning else { return }
+            proc.terminate()
+            DispatchQueue.main.async {
+                self?.failDeployment(
+                    category: .deviceDisconnected,
+                    title: "Tempo Limite Excedido (Watchdog)",
+                    detail: "A instalação do app excedeu o tempo limite (\(Int(timeoutSeconds))s).\n1. Desbloqueie o iPhone com o código de acesso.\n2. Se solicitado, toque em 'Confiar neste Computador'.\n3. Verifique o cabo USB e tente novamente."
+                )
+            }
+        }
+        watchdog.resume()
+
         process.terminationHandler = { [weak self] proc in
+            watchdog.cancel()
             pipeOut.fileHandleForReading.readabilityHandler = nil
             pipeErr.fileHandleForReading.readabilityHandler = nil
 
@@ -250,7 +269,26 @@ extension DeviceDeploymentService {
         pipeOut.fileHandleForReading.readabilityHandler = { handle in handleOutputData(handle.availableData) }
         pipeErr.fileHandleForReading.readabilityHandler = { handle in handleOutputData(handle.availableData) }
 
+        let romfsSize = fileSize(of: romfsURL)
+        let romfsTimeoutSeconds = max(180.0, (Double(romfsSize) / (15.0 * 1024.0 * 1024.0)) + 120.0)
+
+        let watchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+        watchdog.schedule(deadline: .now() + romfsTimeoutSeconds)
+        watchdog.setEventHandler { [weak process, weak self] in
+            guard let proc = process, proc.isRunning else { return }
+            proc.terminate()
+            DispatchQueue.main.async {
+                self?.failDeployment(
+                    category: .deviceDisconnected,
+                    title: "Tempo Limite Excedido (Watchdog)",
+                    detail: "A transferência do RomFS excedeu o tempo limite (\(Int(romfsTimeoutSeconds))s).\n1. Desbloqueie o iPhone com o código de acesso.\n2. Verifique o cabo USB e a conexão com o dispositivo."
+                )
+            }
+        }
+        watchdog.resume()
+
         process.terminationHandler = { [weak self] proc in
+            watchdog.cancel()
             pipeOut.fileHandleForReading.readabilityHandler = nil
             pipeErr.fileHandleForReading.readabilityHandler = nil
             let remOut = pipeOut.fileHandleForReading.readDataToEndOfFile()

@@ -58,6 +58,36 @@ public enum EnginePatchRegistry {
             }
         ),
         
+        // 2. Zelda Skyward Sword HD v0 build definition in game.tsv
+        EnginePatchDefinition(
+            id: "skyward_sword_v0_game_tsv",
+            name: "Zelda Skyward Sword HD v0 Metadata",
+            summary: "Registers v1.0.0 (v0) package and module hashes in game.tsv for Zelda: Skyward Sword HD",
+            relativePath: "dm/games/01002DA013484000/game.tsv",
+            checkToken: "d824d4b1bbd45d03668380d6d041ba4c",
+            applyTransform: { content in
+                let target = "build\tv65536\t1.0.1\tmain=5441af3c89f97e1d25a8ccf14c742bf8\tsubsdk0=4dd097b435891c5e0e15a65dbe47124f\tsubsdk1=535249a546887cac875a099e9c8ef367\tsdk=b39add63421be525d352e576dab438d3"
+                let insert = "\nbuild\tv0\t1.0.0\tmain=d824d4b1bbd45d03668380d6d041ba4c\tsubsdk0=4dd097b435891c5e0e15a65dbe47124f\tsubsdk1=535249a546887cac875a099e9c8ef367\tsdk=b39add63421be525d352e576dab438d3"
+                guard content.contains(target) else { return nil }
+                return content.replacingOccurrences(of: target, with: target + insert)
+            }
+        ),
+        
+        // 1b. Zelda Skyward Sword HD v0 build definition in game.tsv
+        EnginePatchDefinition(
+            id: "skyward_sword_v0_game_tsv",
+            name: "Zelda Skyward Sword HD v0 Metadata",
+            summary: "Registers v1.0.0 (v0) package and build hashes in game.tsv",
+            relativePath: "dm/games/01002DA013484000/game.tsv",
+            checkToken: "d824d4b1bbd45d03668380d6d041ba4c",
+            applyTransform: { content in
+                let target = "build\tv65536\t1.0.1\tmain=5441af3c89f97e1d25a8ccf14c742bf8\tsubsdk0=4dd097b435891c5e0e15a65dbe47124f\tsubsdk1=535249a546887cac875a099e9c8ef367\tsdk=b39add63421be525d352e576dab438d3"
+                let insert = "\nbuild\tv0\t1.0.0\tmain=d824d4b1bbd45d03668380d6d041ba4c\tsubsdk0=4dd097b435891c5e0e15a65dbe47124f\tsubsdk1=535249a546887cac875a099e9c8ef367\tsdk=b39add63421be525d352e576dab438d3"
+                guard content.contains(target) else { return nil }
+                return content.replacingOccurrences(of: target, with: target + insert)
+            }
+        ),
+        
         // 2. Dynamic Unreal Engine FMallocBinned3 allocator cut
         EnginePatchDefinition(
             id: "ue_allocator_support",
@@ -188,18 +218,42 @@ static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_l
             }
         ),
         
-        // 8. Global 30→60 FPS Normal Speed Pacer (hle_fpslock.c)
+        // 9. Global 30→60 FPS Normal Speed Pacer & Host Limiter Declaration (hle_fpslock.c)
         EnginePatchDefinition(
             id: "global_fps_pacing_sync",
             name: "Global 30→60 FPS Speed Sync & Pacer",
-            summary: "Paces native 30 FPS titles (Pokémon, Zelda) on 60 Hz displays while strictly preserving 1.0x normal game speed without 2x fast-forward turbo.",
+            summary: "Paces native 30 FPS titles on 60 Hz displays while strictly preserving 1.0x normal game speed and declaring required host limiter variables.",
             relativePath: "dm/host/hle_fpslock.c",
-            checkToken: "k_trinity_builds",
+            checkToken: "trinity, ue_missing",
             applyTransform: { content in
-                let target = "static int state = -2, rows[NLOCKS], nrow, nlog[NLOCKS], target, nier; static uint8_t *base; static const char *src; static uint32_t display;"
-                let repl = "static int state = -2, rows[NLOCKS], nrow, nlog[NLOCKS], target, nier, trinity; static uint8_t *base; static const char *src; static uint32_t display;"
-                guard content.contains(target) else { return nil }
-                return content.replacingOccurrences(of: target, with: repl)
+                let target = "static int nrow, nier, ue_missing;"
+                let repl = "static int nrow, nier, trinity, ue_missing;"
+                if content.contains(target) {
+                    return content.replacingOccurrences(of: target, with: repl)
+                }
+                let oldTarget = "static int state = -2, rows[NLOCKS], nrow, nlog[NLOCKS], target, nier; static uint8_t *base; static const char *src; static uint32_t display;"
+                let oldRepl = "static int state = -2, rows[NLOCKS], nrow, nlog[NLOCKS], target, nier, trinity; static uint8_t *base; static const char *src; static uint32_t display;"
+                if content.contains(oldTarget) {
+                    return content.replacingOccurrences(of: oldTarget, with: oldRepl)
+                }
+                return nil
+            }
+        ),
+        
+        // 10. Mac Host Mouse Button Signature Fix (front_mac.m)
+        EnginePatchDefinition(
+            id: "mac_host_on_mouse_button",
+            name: "Mac Host Mouse Button Support (front_mac.m)",
+            summary: "Ensures on_mouse_button is properly declared and defined for custom button bindings.",
+            relativePath: "dm/host/front_mac.m",
+            checkToken: "static void on_mouse_button(int buttonCode, int down)",
+            applyTransform: { content in
+                let corruptTarget = "static void on_key(NSEvent *e, int down) {\n    if (!g_input_on) return;\n    load_custom_input_mapping();\n    int b = key_bit((unsigned short)buttonCode);"
+                let fixedRepl = "static void on_mouse_button(int buttonCode, int down) {\n    if (!g_input_on) return;\n    load_custom_input_mapping();\n    int b = key_bit((unsigned short)buttonCode);"
+                if content.contains(corruptTarget) {
+                    return content.replacingOccurrences(of: corruptTarget, with: fixedRepl)
+                }
+                return nil
             }
         )
     ]

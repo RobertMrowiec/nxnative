@@ -178,16 +178,16 @@ public struct CompactConsoleActionSheetView: View {
                         }
                         
                         if game.platform == .ios {
-                            // Option 2: AirDrop for iOS
+                            // Option 2: Install / Settings for iOS
                             menuActionRow(
                                 index: 2,
-                                title: viewModel.tr("actions.share_airdrop"),
-                                subtitle: viewModel.tr("actions.share_airdrop_subtitle"),
-                                icon: "airdrop",
+                                title: "Instalar no iPhone / iPad",
+                                subtitle: "Configurações de instalação e envio para o NxN Launcher",
+                                icon: "iphone.badge.play",
                                 isPrimary: false
                             ) {
                                 onDismiss()
-                                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: game.url)
+                                viewModel.gameForSettingsSheet = game
                             }
                         } else {
                             // Option 2: Reveal App Files

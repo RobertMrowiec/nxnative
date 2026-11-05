@@ -66,46 +66,153 @@ public final class ArtworkStore: ObservableObject {
             return cached
         }
 
-        // 1. User custom cover art has absolute top priority
+        // 0. User custom cover art has absolute top priority
         if GameCoverService.shared.hasCustomCover(for: game) {
             let customFile = GameCoverService.shared.customCoverURL(for: game)
-            if let img = ImageDownsampler.downsample(url: customFile, maxPixelSize: 320) ?? NSImage(contentsOf: customFile) {
+            if let img = ImageDownsampler.downsample(url: customFile, maxPixelSize: 1024) ?? NSImage(contentsOf: customFile) {
                 cacheImage(img, forKey: cacheKey)
                 return img
             }
         }
 
-        // 2. Original game bundle icon from the app shortcut (macOS .app bundle)
-        let isAppBundle = game.url.pathExtension.lowercased() == "app" || fileManager.fileExists(atPath: game.url.path)
-        if isAppBundle {
-            let res = game.url.appendingPathComponent("Contents/Resources")
-            for name in ["AppIcon.icns", "icon.png", "icon.icns"] {
-                let target = res.appendingPathComponent(name)
-                if fileManager.fileExists(atPath: target.path),
-                   let img = ImageDownsampler.downsample(url: target, maxPixelSize: 512) ?? NSImage(contentsOf: target),
-                   img.isValid {
-                    cacheImage(img, forKey: cacheKey)
-                    return img
+        // 1. Non-Switch games MUST use the artwork of their own app icon
+        if game.platform == .nonSwitch {
+            if let icon = extractAppBundleIcon(from: game.url) {
+                cacheImage(icon, forKey: cacheKey)
+                return icon
+            }
+        }
+
+        // 2. Switch 1 games (Mac app ports: platform == .macApp && !isSwitch2) MUST use their app icon
+        if game.platform == .macApp && !game.isSwitch2 {
+            if let icon = extractAppBundleIcon(from: game.url) {
+                cacheImage(icon, forKey: cacheKey)
+                return icon
+            }
+        }
+
+        // 3. Ported iPhone / iPad games (platform == .ios / .ipa) MUST use their app icon
+        if game.platform == .ios {
+            if let ipaIcon = extractIpaIcon(from: game.url) {
+                cacheImage(ipaIcon, forKey: cacheKey)
+                return ipaIcon
+            }
+        }
+
+        // 4. Switch 2 games (isSwitch2 == true) MUST have their cover found on the internet (not restricted to GameTDB),
+        // strictly free of any Nintendo, Switch, or eShop marks or logos.
+        if game.isSwitch2 {
+            if let cover = GameCoverService.shared.coverImage(for: game) {
+                if !GameCoverService.shared.containsForbiddenStoreBranding(in: cover) {
+                    cacheImage(cover, forKey: cacheKey)
+                    return cover
                 }
             }
-            let wsIcon = NSWorkspace.shared.icon(forFile: game.url.path)
-            if wsIcon.isValid {
-                wsIcon.size = NSSize(width: 512, height: 512)
-                cacheImage(wsIcon, forKey: cacheKey)
-                return wsIcon
-            }
         }
 
-        // 3. Clean Steam / Playnite / RetroArch style cover from GameCoverService (no console headers, no eShop badges)
-        if let cover = GameCoverService.shared.coverImage(for: game) {
-            cacheImage(cover, forKey: cacheKey)
-            return cover
-        }
-
-        // 4. Fallback system workspace icon
+        // 5. Fallback for any unhandled state: system workspace icon
         let wsIcon = NSWorkspace.shared.icon(forFile: game.url.path)
         wsIcon.size = NSSize(width: 512, height: 512)
         cacheImage(wsIcon, forKey: cacheKey)
+        return wsIcon
+    }
+
+    private func extractAppBundleIcon(from url: URL) -> NSImage? {
+        guard url.pathExtension.lowercased() == "app" else { return nil }
+        let fm = FileManager.default
+        let res = url.appendingPathComponent("Contents/Resources")
+        
+        // 1. Check Info.plist CFBundleIconFile / CFBundleIconName
+        let infoPlist = url.appendingPathComponent("Contents/Info.plist")
+        if let data = try? Data(contentsOf: infoPlist),
+           let plist = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any] {
+            if var iconFile = (plist["CFBundleIconFile"] as? String) ?? (plist["CFBundleIconName"] as? String) {
+                if !iconFile.hasSuffix(".icns") && !iconFile.hasSuffix(".png") {
+                    iconFile += ".icns"
+                }
+                let target = res.appendingPathComponent(iconFile)
+                if fm.fileExists(atPath: target.path),
+                   let img = ImageDownsampler.downsample(url: target, maxPixelSize: 1024) ?? NSImage(contentsOf: target),
+                   img.isValid {
+                    img.size = NSSize(width: 512, height: 512)
+                    return img
+                }
+            }
+        }
+        
+        // 2. Check standard application icon files in Contents/Resources
+        for name in ["AppIcon.icns", "icon.icns", "AppIcon.png", "icon.png"] {
+            let target = res.appendingPathComponent(name)
+            if fm.fileExists(atPath: target.path),
+               let img = ImageDownsampler.downsample(url: target, maxPixelSize: 1024) ?? NSImage(contentsOf: target),
+               img.isValid {
+                img.size = NSSize(width: 512, height: 512)
+                return img
+            }
+        }
+        
+        // 3. Fallback to NSWorkspace high-resolution file icon
+        let wsIcon = NSWorkspace.shared.icon(forFile: url.path)
+        wsIcon.size = NSSize(width: 512, height: 512)
+        return wsIcon
+    }
+
+    private func extractIpaIcon(from url: URL) -> NSImage? {
+        guard url.pathExtension.lowercased() == "ipa" else { return nil }
+        
+        // Fast listing of files inside the IPA archive (< 15ms)
+        let listProc = Process()
+        listProc.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+        listProc.arguments = ["-Z1", url.path]
+        let listPipe = Pipe()
+        listProc.standardOutput = listPipe
+        listProc.standardError = Pipe()
+        guard (try? listProc.run()) != nil else { return nil }
+        let listData = listPipe.fileHandleForReading.readDataToEndOfFile()
+        listProc.waitUntilExit()
+        guard !listData.isEmpty, let listing = String(data: listData, encoding: .utf8) else { return nil }
+        
+        let lines = listing.components(separatedBy: "\n")
+        let candidates = lines.filter { line in
+            let l = line.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            return (l.hasPrefix("payload/") && (l.hasSuffix(".png") || l.hasSuffix(".jpg")) && (l.contains("appicon") || l.contains("icon")))
+                || l.contains("itunesartwork")
+        }
+        
+        // Prioritize higher-resolution icon entries
+        let sorted = candidates.sorted { a, b in
+            func score(_ s: String) -> Int {
+                let l = s.lowercased()
+                if l.contains("76x76@2x") || l.contains("83.5x83.5") || l.contains("1024") { return 100 }
+                if l.contains("@3x") { return 90 }
+                if l.contains("@2x") { return 80 }
+                if l.contains("itunesartwork") { return 70 }
+                return 10
+            }
+            return score(a) > score(b)
+        }
+        
+        for iconPath in sorted {
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
+            proc.arguments = ["-p", url.path, iconPath]
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = Pipe()
+            if (try? proc.run()) != nil {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                proc.waitUntilExit()
+                if !data.isEmpty,
+                   let img = ImageDownsampler.downsample(data: data, maxPixelSize: 1024) ?? NSImage(data: data),
+                   img.isValid {
+                    img.size = NSSize(width: 512, height: 512)
+                    return img
+                }
+            }
+        }
+        
+        let wsIcon = NSWorkspace.shared.icon(forFile: url.path)
+        wsIcon.size = NSSize(width: 512, height: 512)
         return wsIcon
     }
 
@@ -250,7 +357,7 @@ public final class ArtworkStore: ObservableObject {
 
     /// On-demand lookup of TitleID entry from switch_titles_artwork.json using memory mapping.
     /// Does not materialize the 29,000-entry JSON into heap.
-    private func lookupTitleDbEntry(for titleId: String) -> [String: String]? {
+    public func lookupTitleDbEntry(for titleId: String) -> [String: String]? {
         let tidUpper = titleId.uppercased()
         lock.lock()
         if let cached = resolvedTitleEntries[tidUpper] {
@@ -330,7 +437,8 @@ public final class ArtworkStore: ObservableObject {
                 self.lock.unlock()
                 return
             }
-            let bannerUrlString = entry["banner"] ?? entry["screenshot"]
+            // Strict clean presentation: use official high-res promotional banner or clean key icon; NEVER random ingame screenshots
+            let bannerUrlString = entry["banner"] ?? entry["icon"]
             guard let urlStr = bannerUrlString, let url = URL(string: urlStr) else {
                 self.lock.lock()
                 self.inFlightDownloads.remove(flightKey)
@@ -368,7 +476,7 @@ public final class ArtworkStore: ObservableObject {
         let tid = titleId.uppercased()
         guard let entry = lookupTitleDbEntry(for: tid) else { return nil }
         let iconURL = entry["icon"].flatMap { URL(string: $0) }
-        let bannerURL = (entry["banner"] ?? entry["screenshot"]).flatMap { URL(string: $0) }
+        let bannerURL = (entry["banner"] ?? entry["icon"]).flatMap { URL(string: $0) }
         return (icon: iconURL, banner: bannerURL)
     }
 

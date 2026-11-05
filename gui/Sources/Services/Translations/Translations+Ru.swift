@@ -452,7 +452,7 @@ extension Translations {
         "build.opt_romfs_separate_help": "Оставляет крупные файлы вне IPA. Создает облегченный IPA (<100 МБ) для AltStore или Sideloadly.",
         "build.romfs_split_recommendation": "Обнаружена большая игра (~%@): Инструменты установки часто дают сбой на огромных IPA. Настоятельно рекомендуется отдельный RomFS.",
         "common.enable": "Включить",
-        "compatibility.iphone_chip_filter": "Чип iPhone:",
+        "compatibility.iphone_chip_filter": "iPhone / iPad:",
         "compatibility.new": "Новое",
         "compatibility.new_badge": "НОВОЕ",
         "controls.mouse_invert_x": "Инвертировать горизонтальную ось X",

@@ -108,6 +108,10 @@ extension AppViewModel {
             if selectedTab == 4 {
                 checkForUpdates()
             }
+        case "y":
+            if selectedTab == 4 {
+                handleSystemGamepadAction(.secondaryAction)
+            }
         case "space":
             if selectedTab == 2 {
                 var prof = InputProfileManager.shared.activeProfile

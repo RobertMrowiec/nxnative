@@ -24,10 +24,10 @@ public struct GameReorderDropDelegate: DropDelegate {
         guard let dragged = viewModel.draggedGame,
               dragged.url.standardized.path != target.url.standardized.path else { return }
 
-        hoveredTargetGamePath = target.url.standardized.path
         withAnimation(.spring(response: 0.28, dampingFraction: 0.80)) {
             move(dragged, target)
         }
+        hoveredTargetGamePath = nil
     }
 
     public func dropUpdated(info: DropInfo) -> DropProposal? {

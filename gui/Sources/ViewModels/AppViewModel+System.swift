@@ -3,7 +3,7 @@ import AppKit
 
 extension AppViewModel {
     // MARK: - Dynamic Dock & Minimized Taskbar Icon
-    public func updateDockIcon() {
+    public func updateDockIcon(userInitiated: Bool = false) {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             if !MenuBarManager.shared.isMinimizedToMenuBar {
@@ -11,6 +11,7 @@ extension AppViewModel {
             }
             
             let resName = self.iconAppearanceMode.resourceName
+            let mode = self.iconAppearanceMode
             
             let url = Bundle.main.url(forResource: resName, withExtension: "png")
                 ?? Bundle.main.url(forResource: resName, withExtension: "icns")
@@ -46,20 +47,93 @@ extension AppViewModel {
                 }()
 
                 if let targetPath = appBundlePath {
-                    let mode = self.iconAppearanceMode
+                    let targetResName = resName
+                    let isDefault = (mode == .default)
                     DispatchQueue.global(qos: .utility).async {
-                        if mode == .default {
-                            NSWorkspace.shared.setIcon(nil, forFile: targetPath, options: [])
-                        } else {
-                            NSWorkspace.shared.setIcon(img, forFile: targetPath, options: [])
-                        }
-                        let p = Process()
-                        p.executableURL = URL(fileURLWithPath: "/usr/bin/touch")
-                        p.arguments = [targetPath]
-                        try? p.run()
+                        Self.persistAppIconToDisk(
+                            appBundlePath: targetPath,
+                            resourceName: targetResName,
+                            iconImage: isDefault ? nil : img,
+                            restartDock: userInitiated
+                        )
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Permanent App Icon Persistence on macOS
+    private static func persistAppIconToDisk(
+        appBundlePath: String,
+        resourceName: String,
+        iconImage: NSImage?,
+        restartDock: Bool
+    ) {
+        let fm = FileManager.default
+        let bundleURL = URL(fileURLWithPath: appBundlePath)
+        let resourcesURL = bundleURL.appendingPathComponent("Contents/Resources")
+        guard fm.fileExists(atPath: resourcesURL.path) else { return }
+
+        let targetIcnsURL = resourcesURL.appendingPathComponent("AppIcon.icns")
+        let sourceIcnsURL = resourcesURL.appendingPathComponent("\(resourceName).icns")
+
+        // 1. Set the Finder custom icon via Apple's official API
+        DispatchQueue.main.async {
+            NSWorkspace.shared.setIcon(iconImage, forFile: appBundlePath, options: [])
+        }
+
+        // 2. Atomically update AppIcon.icns inside Contents/Resources
+        if fm.fileExists(atPath: sourceIcnsURL.path) {
+            do {
+                if fm.fileExists(atPath: targetIcnsURL.path) {
+                    try fm.removeItem(at: targetIcnsURL)
+                }
+                try fm.copyItem(at: sourceIcnsURL, to: targetIcnsURL)
+            } catch {}
+        }
+
+        // 3. Update timestamps on Info.plist and app bundle
+        let infoPlist = bundleURL.appendingPathComponent("Contents/Info.plist").path
+        runProcessWithTimeout(executable: "/usr/bin/touch", arguments: [infoPlist, appBundlePath], timeoutSeconds: 1.0)
+
+        // 4. Force LaunchServices to refresh registration for this bundle
+        let lsregisterPath = "/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+        if fm.fileExists(atPath: lsregisterPath) {
+            runProcessWithTimeout(executable: lsregisterPath, arguments: ["-f", appBundlePath], timeoutSeconds: 2.0)
+        }
+
+        // 5. Invalidate Finder file system cache
+        DispatchQueue.main.async {
+            NSWorkspace.shared.noteFileSystemChanged(appBundlePath)
+        }
+
+        // 6. Refresh macOS Dock icon cache if user actively changed the icon
+        if restartDock {
+            runProcessWithTimeout(executable: "/usr/bin/killall", arguments: ["Dock"], timeoutSeconds: 2.0)
+        }
+    }
+
+    @discardableResult
+    private static func runProcessWithTimeout(executable: String, arguments: [String], timeoutSeconds: Double = 2.0) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: executable)
+        process.arguments = arguments
+        process.standardOutput = Pipe()
+        process.standardError = Pipe()
+
+        do {
+            try process.run()
+            let deadline = DispatchTime.now() + timeoutSeconds
+            while process.isRunning && DispatchTime.now() < deadline {
+                usleep(25_000) // 25ms polling
+            }
+            if process.isRunning {
+                process.terminate()
+                return false
+            }
+            return process.terminationStatus == 0
+        } catch {
+            return false
         }
     }
     
@@ -130,6 +204,17 @@ extension AppViewModel {
         
         refreshEnginePatches()
         refreshPrerequisites()
+        detectMetalToolchain()
+    }
+    
+    public func detectMetalToolchain() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            let info = SystemDetector.shared.detectMetalToolchain(nxnativePath: self.nxnativePath)
+            DispatchQueue.main.async {
+                self.metalToolchainInfo = info
+            }
+        }
     }
     
     public func refreshEnginePatches() {
@@ -188,10 +273,13 @@ extension AppViewModel {
     }
     
     // MARK: - Tool Installer / Repair / Uninstall
-    public func installAllMissingDependencies() {
+    public func installAllMissingDependencies(openSheet: Bool? = nil) {
         let missing = prerequisites.missingList
         guard !missing.isEmpty else { return }
-        showInstallerSheet = true
+        let shouldOpenSheet = openSheet ?? (selectedTab != 4)
+        if shouldOpenSheet {
+            showInstallerSheet = true
+        }
         isInstallingDependency = true
         installerLogs.removeAll()
         installerLogs.append("Installing \(missing.count) missing dependencies...")

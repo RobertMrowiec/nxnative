@@ -1,3 +1,22 @@
 # The games gallery's table (dm/tools/docs_gallery.py writes README.md's gallery from it): a new game is a row at its end. README.md itself is not merged this way; after a
 # conflict in its gallery, run docs_gallery.py. test_docs fails on a game in the table twice
 docs/images/gallery.tsv merge=union
+
+# Protected NxNative Launcher customizations (always preserve local fork versions during upstream merges)
+gui/** merge=ours
+frontend-ios/** merge=ours
+GEMINI.md merge=ours
+.gitlab-ci.yml merge=ours
+.gitlab/** merge=ours
+.github/workflows/sync-upstream.yml merge=ours
+scripts/build_gui.sh merge=ours
+scripts/create_dmg.sh merge=ours
+scripts/gitlab_release.sh merge=ours
+scripts/sync_upstream.sh merge=ours
+dm/ios/Shell/** merge=ours
+dm/ios/framework/** merge=ours
+dm/ios/project-shell.yml merge=ours
+dm/ios/project-framework.yml merge=ours
+dm/ios/tools/build_shell.sh merge=ours
+dm/ios/Sources/FrameworkBootstrap.* merge=ours
+dm/ios/Sources/DataBookmark.* merge=ours

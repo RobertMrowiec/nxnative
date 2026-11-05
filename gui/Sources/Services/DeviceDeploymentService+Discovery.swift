@@ -1,17 +1,28 @@
 import Foundation
 import AppKit
 
-// MARK: - Device and Code Signing Discovery
+// MARK: - Device and Installed Apps Discovery
 extension DeviceDeploymentService {
     public func findBundleId(for titleId: String, gameName: String? = nil, on device: ConnectedAppleDevice) -> String? {
+        guard device.isAvailable else { return nil }
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
         process.arguments = ["devicectl", "device", "info", "apps", "--device", device.id, "--json-output", "-"]
         process.standardOutput = pipe
         process.standardError = Pipe()
+
         guard (try? process.run()) != nil else { return nil }
-        process.waitUntilExit()
+
+        let sema = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .utility).async {
+            process.waitUntilExit()
+            sema.signal()
+        }
+        if sema.wait(timeout: .now() + 3.0) == .timedOut {
+            process.terminate()
+            return nil
+        }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let out = String(decoding: data, as: UTF8.self)
@@ -32,7 +43,7 @@ extension DeviceDeploymentService {
                     }
                 }
             }
-            // 2. Match by normalized app display name (handles free Apple ID profile reuse where bundleIdentifier carries another game's Title ID)
+            // 2. Match by normalized app display name
             for app in apps {
                 guard let name = app["name"] as? String,
                       let bid = app["bundleIdentifier"] as? String else { continue }
@@ -43,7 +54,7 @@ extension DeviceDeploymentService {
             }
         }
 
-        // Fallback table parser: extract the bundle identifier token (contains "." and letters)
+        // Fallback table parser
         for line in out.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty || trimmed.hasPrefix("Apps") || trimmed.hasPrefix("Name") || trimmed.hasPrefix("---") || trimmed.hasPrefix("{") { continue }
@@ -78,8 +89,16 @@ extension DeviceDeploymentService {
         process.standardError = Pipe()
 
         guard (try? process.run()) != nil else { return [] }
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return [] }
+
+        let sema = DispatchSemaphore(value: 0)
+        DispatchQueue.global(qos: .utility).async {
+            process.waitUntilExit()
+            sema.signal()
+        }
+        if sema.wait(timeout: .now() + 3.0) == .timedOut {
+            process.terminate()
+            return []
+        }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let raw = String(decoding: data, as: UTF8.self)
@@ -114,13 +133,17 @@ extension DeviceDeploymentService {
 
             guard !udid.isEmpty else { continue }
 
+            let connState = ((d["connectionProperties"] as? [String: Any])?["tunnelState"] as? String) ?? (d["state"] as? String) ?? ""
+            let isAvailable = !connState.lowercased().contains("unavailable") && !connState.lowercased().contains("offline")
+
             results.append(
                 ConnectedAppleDevice(
                     id: udid,
                     name: name,
                     model: model,
                     osVersion: os,
-                    isPaired: true
+                    isPaired: true,
+                    isAvailable: isAvailable
                 )
             )
         }
@@ -144,121 +167,17 @@ extension DeviceDeploymentService {
                     break
                 }
             }
+            let isAvailable = !line.lowercased().contains("unavailable") && !line.lowercased().contains("offline")
             if !id.isEmpty {
-                devices.append(ConnectedAppleDevice(id: id, name: name, model: "Apple Device", osVersion: "iOS", isPaired: true))
+                devices.append(ConnectedAppleDevice(id: id, name: name, model: "Apple Device", osVersion: "iOS", isPaired: true, isAvailable: isAvailable))
             }
         }
         return devices
     }
 
-    internal func fetchSigningIdentities() -> [DeveloperSigningTeam] {
-        var keychainOutput = ""
-        let secProc = Process()
-        let secPipe = Pipe()
-        secProc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
-        secProc.arguments = ["find-identity", "-p", "codesigning", "-v"]
-        secProc.standardOutput = secPipe
-        if (try? secProc.run()) != nil {
-            secProc.waitUntilExit()
-            let data = secPipe.fileHandleForReading.readDataToEndOfFile()
-            keychainOutput = String(decoding: data, as: UTF8.self)
-        }
-
-        var teams: [DeveloperSigningTeam] = []
-        var seenTeamIDs = Set<String>()
-
-        // 1. Read teams configured in Xcode accounts (~/Library/Preferences/com.apple.dt.Xcode.plist)
-        let defProc = Process()
-        let defPipe = Pipe()
-        defProc.executableURL = URL(fileURLWithPath: "/usr/bin/defaults")
-        defProc.arguments = ["export", "com.apple.dt.Xcode", "-"]
-        defProc.standardOutput = defPipe
-        if (try? defProc.run()) != nil {
-            defProc.waitUntilExit()
-            let data = defPipe.fileHandleForReading.readDataToEndOfFile()
-            if let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
-               let teamsDict = plist["IDEProvisioningTeamByIdentifier"] as? [String: Any] {
-                for (_, list) in teamsDict {
-                    guard let arr = list as? [[String: Any]] else { continue }
-                    for item in arr {
-                        guard let tid = item["teamID"] as? String, !tid.isEmpty else { continue }
-                        if seenTeamIDs.contains(tid) { continue }
-                        seenTeamIDs.insert(tid)
-                        let tname = (item["teamName"] as? String) ?? tid
-                        let ttype = item["teamType"] as? String
-                        let isFree = (item["isFreeProvisioningTeam"] as? Bool) ?? (item["isFreeProvisioningTeam"] as? Int == 1)
-                        let hasCert = keychainOutput.contains(tid) || keychainOutput.contains(tname)
-                        teams.append(DeveloperSigningTeam(
-                            id: tid,
-                            name: tname,
-                            teamType: ttype,
-                            isFreeProvisioningTeam: isFree,
-                            hasCertificateInKeychain: hasCert
-                        ))
-                    }
-                }
-            }
-        }
-
-        // 2. Parse all valid Keychain signing identities
-        var validCertNames: [String] = []
-        for line in keychainOutput.components(separatedBy: .newlines) {
-            if line.contains("Apple Development:") || line.contains("iPhone Developer:") || line.contains("Apple Distribution:") || line.contains("iPhone Distribution:") || line.contains("iOS Development:") {
-                let parts = line.components(separatedBy: "\"")
-                if parts.count >= 2 {
-                    validCertNames.append(parts[1])
-                }
-            }
-        }
-
-        // Link valid certificates to Xcode teams if applicable
-        for i in 0..<teams.count {
-            let tid = teams[i].id
-            let tname = teams[i].name
-            if let matchingCert = validCertNames.first(where: { $0.contains(tid) || $0.contains(tname) }) {
-                teams[i] = DeveloperSigningTeam(
-                    id: teams[i].id,
-                    name: teams[i].name,
-                    teamType: teams[i].teamType,
-                    isFreeProvisioningTeam: teams[i].isFreeProvisioningTeam,
-                    hasCertificateInKeychain: true,
-                    signingIdentity: matchingCert
-                )
-            } else if let firstDev = validCertNames.first(where: { $0.contains("Development") || $0.contains("Developer") }) {
-                teams[i] = DeveloperSigningTeam(
-                    id: teams[i].id,
-                    name: teams[i].name,
-                    teamType: teams[i].teamType,
-                    isFreeProvisioningTeam: teams[i].isFreeProvisioningTeam,
-                    hasCertificateInKeychain: true,
-                    signingIdentity: firstDev
-                )
-            }
-        }
-
-        // 3. Also incorporate any Keychain signing identities that weren't captured by Xcode team IDs
-        for certName in validCertNames {
-            let isAlreadyIncluded = teams.contains { t in
-                t.signingIdentity == certName || certName.contains(t.id) || certName.contains(t.name)
-            }
-            if !isAlreadyIncluded {
-                teams.append(DeveloperSigningTeam(
-                    id: certName,
-                    name: certName,
-                    teamType: "Keychain",
-                    isFreeProvisioningTeam: false,
-                    hasCertificateInKeychain: true,
-                    signingIdentity: certName
-                ))
-            }
-        }
-
-        return teams
-    }
-
     // MARK: - Installed Apps Discovery & Auto-Sync
     public func syncInstalledApps(with games: [PortedGame], on device: ConnectedAppleDevice? = nil) {
-        guard let dev = device ?? selectedDevice ?? connectedDevices.first else { return }
+        guard let dev = device ?? selectedDevice ?? connectedDevices.first, dev.isAvailable else { return }
         DispatchQueue.global(qos: .utility).async { [weak self] in
             guard let self = self else { return }
             let apps = self.fetchInstalledAppsList(on: dev)
@@ -274,6 +193,7 @@ extension DeviceDeploymentService {
     }
 
     internal func fetchInstalledAppsList(on device: ConnectedAppleDevice) -> [[String: Any]] {
+        guard device.isAvailable else { return [] }
         let process = Process()
         let pipe = Pipe()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/xcrun")
@@ -292,7 +212,7 @@ extension DeviceDeploymentService {
             process.waitUntilExit()
             sema.signal()
         }
-        if sema.wait(timeout: .now() + 2.0) == .timedOut {
+        if sema.wait(timeout: .now() + 3.0) == .timedOut {
             process.terminate()
             return []
         }

@@ -19,92 +19,104 @@ public struct UnifiedConsoleGridView: View {
         let baseCardSize: CGFloat = 144 * CGFloat(viewModel.libraryCardScale)
         let cardSpacing: CGFloat = max(20, baseCardSize * 0.13)
         let verticalPadding: CGFloat = max(22, baseCardSize * 0.14)
-        let columns = [GridItem(.adaptive(minimum: baseCardSize, maximum: baseCardSize * 1.05), spacing: cardSpacing)]
+        let columns = [GridItem(.adaptive(minimum: baseCardSize, maximum: baseCardSize * 1.35), spacing: cardSpacing)]
 
         LazyVGrid(columns: columns, spacing: cardSpacing) {
-            ForEach(items.indices, id: \.self) { idx in
-                    let item = items[idx]
-                    let isFocused = viewModel.focusedUnifiedIndex == idx
-                    
-                    switch item {
-                    case .ported(let game):
-                        let isDropTarget = hoveredTargetPath == game.url.standardized.path &&
-                                           viewModel.draggedGame != nil &&
-                                           viewModel.draggedGame?.url.standardized.path != game.url.standardized.path
+            ForEach(Array(items.enumerated()), id: \.element.stableId) { idx, item in
+                let isFocused = viewModel.focusedUnifiedIndex == idx
 
-                        SquareGameCardView(
-                            game: game,
-                            viewModel: viewModel,
-                            isFocused: isFocused,
-                            isDropTarget: isDropTarget,
-                            baseSize: baseCardSize,
-                            onSelect: {
-                                guard !viewModel.isAnyModalPresented else { return }
-                                if isFocused {
-                                    viewModel.isFocusOnHeroBar = true
-                                    viewModel.heroActionFocusIndex = 0
-                                    SoundEffectService.shared.play(.click)
-                                } else {
-                                    viewModel.isFocusOnHeroBar = false
-                                    viewModel.selectUnifiedItem(at: idx, items: items)
-                                }
+                switch item {
+                case .ported(let game):
+                    let isDropTarget = hoveredTargetPath == game.url.standardized.path &&
+                                       viewModel.draggedGame != nil &&
+                                       viewModel.draggedGame?.url.standardized.path != game.url.standardized.path
+
+                    SquareGameCardView(
+                        game: game,
+                        viewModel: viewModel,
+                        isFocused: isFocused,
+                        isDropTarget: isDropTarget,
+                        baseSize: baseCardSize,
+                        onSelect: {
+                            guard !viewModel.isAnyModalPresented else { return }
+                            viewModel.draggedGame = nil
+                            hoveredTargetPath = nil
+                            let targetPath = game.url.standardizedFileURL.path
+                            let wasAlreadySelectedAndSynced =
+                                isFocused &&
+                                viewModel.activeLibraryShelf != .unportedSwitch &&
+                                viewModel.currentFocusedGame?.url.standardizedFileURL.path == targetPath
+                            viewModel.selectUnifiedItem(at: idx, items: items, playSound: !wasAlreadySelectedAndSynced)
+                            if wasAlreadySelectedAndSynced {
+                                viewModel.isFocusOnHeroBar = true
+                                viewModel.heroActionFocusIndex = 0
+                                SoundEffectService.shared.play(.click)
+                            } else {
+                                viewModel.isFocusOnHeroBar = false
                             }
-                        )
-                        .zIndex(isFocused ? 10 : (isDropTarget ? 8 : 1))
-                        .id("unified_card_\(idx)")
-                        .onDrag {
-                            viewModel.draggedGame = game
-                            return NSItemProvider(object: game.url.standardized.path as NSString)
                         }
-                        .onDrop(of: [.text, .plainText], delegate: GameReorderDropDelegate(
-                            target: game,
-                            viewModel: viewModel,
-                            hoveredTargetGamePath: $hoveredTargetPath,
-                            move: { dragged, target in
-                                viewModel.moveUnifiedItem(
-                                    fromPath: dragged.url.standardized.path,
-                                    onto: target.url.standardized.path,
-                                    items: items
-                                )
-                            }
-                        ))
-
-                    case .unported(let unported):
-                        UnportedGameCardView(
-                            game: unported,
-                            viewModel: viewModel,
-                            isFocused: isFocused,
-                            baseSize: baseCardSize,
-                            onSelect: {
-                                guard !viewModel.isAnyModalPresented else { return }
-                                if isFocused {
-                                    viewModel.isFocusOnHeroBar = true
-                                    viewModel.heroActionFocusIndex = 0
-                                    SoundEffectService.shared.play(.click)
-                                } else {
-                                    viewModel.isFocusOnHeroBar = false
-                                    viewModel.selectUnifiedItem(at: idx, items: items)
-                                }
-                            }
-                        )
-                        .zIndex(isFocused ? 10 : 1)
-                        .id("unified_card_\(idx)")
+                    )
+                    .zIndex(isFocused ? 10 : (isDropTarget ? 8 : 1))
+                    .id(item.stableId)
+                    .onDrag {
+                        viewModel.draggedGame = game
+                        return NSItemProvider(object: game.url.standardized.path as NSString)
                     }
-                }
+                    .onDrop(of: [.text, .plainText], delegate: GameReorderDropDelegate(
+                        target: game,
+                        viewModel: viewModel,
+                        hoveredTargetGamePath: $hoveredTargetPath,
+                        move: { dragged, target in
+                            viewModel.moveUnifiedItem(
+                                fromPath: dragged.url.standardized.path,
+                                onto: target.url.standardized.path,
+                                items: items
+                            )
+                        }
+                    ))
 
-                // MARK: - Last Item: Add Game / Folder (+) Card with Drag and Drop
-                AddGameCardView(viewModel: viewModel, baseSize: baseCardSize)
-                    .id("unified_card_\(items.count)")
-                    .zIndex(viewModel.focusedUnifiedIndex == items.count ? 10 : 1)
+                case .unported(let unported):
+                    UnportedGameCardView(
+                        game: unported,
+                        viewModel: viewModel,
+                        isFocused: isFocused,
+                        baseSize: baseCardSize,
+                        onSelect: {
+                            guard !viewModel.isAnyModalPresented else { return }
+                            viewModel.draggedGame = nil
+                            hoveredTargetPath = nil
+                            let wasAlreadySelectedAndSynced =
+                                isFocused &&
+                                viewModel.activeLibraryShelf == .unportedSwitch &&
+                                viewModel.focusedUnportedGame?.id == unported.id
+                            viewModel.selectUnifiedItem(at: idx, items: items, playSound: !wasAlreadySelectedAndSynced)
+                            if wasAlreadySelectedAndSynced {
+                                viewModel.isFocusOnHeroBar = true
+                                viewModel.heroActionFocusIndex = 0
+                                SoundEffectService.shared.play(.click)
+                            } else {
+                                viewModel.isFocusOnHeroBar = false
+                            }
+                        }
+                    )
+                    .zIndex(isFocused ? 10 : 1)
+                    .id(item.stableId)
+                }
             }
-            .padding(.horizontal, 36)
-            .padding(.vertical, verticalPadding)
+
+            AddGameCardView(viewModel: viewModel, baseSize: baseCardSize)
+                .id("unified_card_add")
+                .zIndex(viewModel.focusedUnifiedIndex == items.count ? 10 : 1)
+        }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 GeometryReader { geo in
                     Color.clear
                         .preference(key: UnifiedGridWidthKey.self, value: geo.size.width)
                 }
             )
+            .padding(.horizontal, 36)
+            .padding(.vertical, verticalPadding)
             .onPreferenceChange(UnifiedGridWidthKey.self) { width in
                 guard width > 0 else { return }
                 let baseCardSize: CGFloat = 144 * CGFloat(viewModel.libraryCardScale)

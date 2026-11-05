@@ -62,16 +62,14 @@ jobs:
         id: do_merge
         if: steps.check_diff.outputs.behind > 0
         run: |
-          echo "Tentando mesclar upstream/main na branch main..."
-          # Tenta o merge padrão preservando os commits locais do launcher
-          if git merge upstream/main --no-edit -m "chore(sync): merge upstream updates from seedds/nxnative"; then
+          echo "Executando sincronização segura com upstream..."
+          git config merge.ours.driver true
+          if bash scripts/sync_upstream.sh; then
             echo "has_conflicts=false" >> $GITHUB_OUTPUT
             echo "✅ Mesclagem concluída com sucesso sem conflitos!"
           else
             echo "has_conflicts=true" >> $GITHUB_OUTPUT
             echo "⚠️ Conflito de mesclagem detectado!"
-            # Aborta imediatamente para NÃO corromper nem quebrar a branch main
-            git merge --abort
           fi
 
       - name: Regenerar Lista de Jogos Suportados (SUPPORTED_GAMES.md)

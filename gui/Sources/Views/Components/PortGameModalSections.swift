@@ -352,7 +352,39 @@ public struct PortAdvancedSettingsView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         portToggleRow(title: viewModel.tr("build.opt_fps"), isOn: $viewModel.showFps, index: 6)
                         portToggleRow(title: viewModel.tr("build.opt_keep_extracted"), isOn: $viewModel.keepExtracted, index: 7)
-                        portToggleRow(title: viewModel.tr("build.opt_allow_other_metal"), isOn: $viewModel.allowOtherMetal, index: 8)
+                        
+                        VStack(alignment: .leading, spacing: 3) {
+                            portToggleRow(title: viewModel.tr("build.opt_allow_other_metal"), isOn: $viewModel.allowOtherMetal, index: 8)
+                            
+                            if let metal = viewModel.metalToolchainInfo {
+                                HStack(spacing: 5) {
+                                    Circle()
+                                        .fill(metalStatusColor(metal: metal))
+                                        .frame(width: 5, height: 5)
+                                    
+                                    Text(metal.shortVersion)
+                                        .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
+                                        .foregroundColor(NXTheme.textPrimary)
+                                    
+                                    Text("·")
+                                        .foregroundColor(NXTheme.textMuted.opacity(0.6))
+                                        .font(.system(size: 9.5))
+                                    
+                                    Text(metalStatusLabel(metal: metal))
+                                        .font(.system(size: 9.5))
+                                        .foregroundColor(metal.isVerified ? NXTheme.textSecondary : (viewModel.allowOtherMetal ? NXTheme.secondary : Color.orange))
+                                }
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 2.5)
+                                .background(NXTheme.glassSurfaceElevated.opacity(0.50))
+                                .clipShape(Capsule())
+                                .overlay(
+                                    Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                                )
+                                .padding(.leading, 18)
+                            }
+                        }
+                        
                         portToggleRow(title: viewModel.tr("build.opt_survey_only"), isOn: $viewModel.surveyOnly, index: 9)
                     }
                 }
@@ -378,5 +410,19 @@ public struct PortAdvancedSettingsView: View {
             .onTapGesture {
                 viewModel.portModalFocusIndex = index
             }
+    }
+
+    private func metalStatusColor(metal: MetalToolchainInfo) -> Color {
+        guard metal.isAvailable else { return Color.red }
+        if metal.isVerified { return Color.green }
+        return viewModel.allowOtherMetal ? NXTheme.secondary : Color.orange
+    }
+
+    private func metalStatusLabel(metal: MetalToolchainInfo) -> String {
+        guard metal.isAvailable else { return viewModel.tr("build.metal_status_not_found") }
+        if metal.isVerified { return viewModel.tr("build.metal_status_verified") }
+        return viewModel.allowOtherMetal
+            ? viewModel.tr("build.metal_status_allowed")
+            : viewModel.tr("build.metal_status_untested")
     }
 }

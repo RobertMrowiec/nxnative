@@ -60,11 +60,7 @@ extension AppViewModel {
         case 1:
             gameForSettingsSheet = game
         case 2:
-            if game.platform == .ios {
-                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: game.url)
-            } else {
-                revealInFinder(url: game.url)
-            }
+            revealInFinder(url: game.url)
         case 3:
             let profile = GameDetailsProfile.inspect(for: game)
             revealSaveFolder(profile.saveDirectory)

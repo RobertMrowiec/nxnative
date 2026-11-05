@@ -20,7 +20,7 @@ public struct GameSettingsModsAndSavesView: View {
             if game.platform == .ios {
                 GameSettingsIosDeploymentView(game: game)
             }
-            if game.platform != .nonSwitch {
+            if game.platform == .macApp {
                 modsSection
             }
             GameSettingsSavesSectionView(game: game)

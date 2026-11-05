@@ -9,7 +9,8 @@ public struct SquareGameCardView: View {
     public let baseSize: CGFloat
     public let onSelect: () -> Void
     @ObservedObject private var deploymentTracker = IosDeploymentTracker.shared
-    @State private var cachedIcon: NSImage? = nil
+    @ObservedObject private var artworkStore = ArtworkStore.shared
+    @ObservedObject private var coverService = GameCoverService.shared
 
     public init(
         game: PortedGame,
@@ -28,8 +29,9 @@ public struct SquareGameCardView: View {
     }
 
     private var iconImage: NSImage {
-        if let cached = cachedIcon { return cached }
-        return ArtworkStore.shared.loadSquareIcon(for: game)
+        _ = artworkStore.refreshTrigger
+        _ = coverService.refreshRevision
+        return artworkStore.loadSquareIcon(for: game)
     }
 
     private var isBeingDragged: Bool {
@@ -184,17 +186,6 @@ public struct SquareGameCardView: View {
             } label: {
                 Label(viewModel.tr("actions.move_to_trash"), systemImage: "trash")
             }
-        }
-        .onAppear {
-            if cachedIcon == nil {
-                cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
-            }
-        }
-        .onChange(of: game.url) { _ in
-            cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
-        }
-        .onReceive(GameCoverService.shared.$refreshRevision) { _ in
-            cachedIcon = ArtworkStore.shared.loadSquareIcon(for: game)
         }
     }
 }

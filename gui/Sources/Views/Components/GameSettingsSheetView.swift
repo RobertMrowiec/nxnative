@@ -228,6 +228,7 @@ public struct GameSettingsSheetView: View {
                     .id("setting_row_9")
             }
             .padding(20)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
             .onChange(of: viewModel.settingsModalFocusIndex) { newIndex in
                 withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
                     scrollProxy.scrollTo("setting_row_\(newIndex)", anchor: .center)

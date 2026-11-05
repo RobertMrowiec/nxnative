@@ -23,7 +23,9 @@ extension MainView {
             .frame(minHeight: 54)
             .background(
                 Group {
-                    if !useFloatingGlassBars {
+                    if viewModel.selectedTab == 0 {
+                        Color.clear
+                    } else if !useFloatingGlassBars {
                         ZStack {
                             NXTheme.canvasObsidian.opacity(0.85)
                             Rectangle().fill(.ultraThinMaterial)
@@ -33,7 +35,7 @@ extension MainView {
             )
             .overlay(
                 Group {
-                    if !useFloatingGlassBars {
+                    if viewModel.selectedTab != 0 && !useFloatingGlassBars {
                         Rectangle()
                             .frame(height: 1)
                             .foregroundColor(NXTheme.borderSubtle)
@@ -174,16 +176,6 @@ extension MainView {
                     fallbackStroke: NXTheme.secondary.opacity(0.6)
                 )
                 .nxGlassTransition(.materialize)
-            } else {
-                StatusBadge(
-                    isPositive: viewModel.isProdKeysValid && viewModel.isNxnativeValid,
-                    text: (viewModel.isProdKeysValid && viewModel.isNxnativeValid)
-                        ? viewModel.tr("status.env_ready")
-                        : viewModel.tr("status.setup_required"),
-                    showText: false
-                )
-                .padding(useFloatingGlassBars ? 7 : 0)
-                .modifier(BrandIslandCapsuleModifier(isEnabled: useFloatingGlassBars))
             }
         }
         .fixedSize(horizontal: true, vertical: false)

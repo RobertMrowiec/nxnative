@@ -28,11 +28,13 @@ public struct ControlsView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     // MARK: - Header & Profile Management
                     profileManagementHeader
+                        .frame(maxWidth: .infinity)
                         .id("controls_card_0")
                         .overlay(cardStroke(for: 0, cornerRadius: 20))
 
                     // MARK: - Device Mode Selector (Gamepad vs Keyboard)
                     deviceSelectorBar
+                        .frame(maxWidth: .infinity)
                         .id("controls_item_device_bar")
 
                     // MARK: - Main Interactive Mapping Surface
@@ -61,6 +63,7 @@ public struct ControlsView: View {
                                 )
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         .id("controls_card_1")
                         .overlay(cardStroke(for: 1, cornerRadius: 18))
                         
@@ -69,6 +72,7 @@ public struct ControlsView: View {
                             deadzone: $activeProfile.analogDeadzone,
                             isFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 2
                         )
+                        .frame(maxWidth: .infinity)
                         .id("controls_card_2")
                         .overlay(cardStroke(for: 2, cornerRadius: 18))
 
@@ -80,6 +84,7 @@ public struct ControlsView: View {
                             isFloorBoostFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 3 && viewModel.controlsHapticsFocus == 2,
                             isTestFocused: viewModel.isInsideControlsCard && viewModel.controlsCardIndex == 3 && viewModel.controlsHapticsFocus == 3
                         )
+                        .frame(maxWidth: .infinity)
                         .id("controls_card_3")
                         .overlay(cardStroke(for: 3, cornerRadius: 18))
                     } else {
@@ -103,10 +108,13 @@ public struct ControlsView: View {
                                 SimpleKeyboardMappingView(profile: $activeProfile)
                             }
                         }
+                        .frame(maxWidth: .infinity)
                     }
                 }
                 .padding(20)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .nxScrollEdgeEffect(edges: [.top, .bottom])
             .onChange(of: viewModel.controlsCardIndex) { newIdx in
                 withAnimation(.easeInOut(duration: 0.25)) {

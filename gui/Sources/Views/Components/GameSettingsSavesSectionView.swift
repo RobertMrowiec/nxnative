@@ -19,12 +19,12 @@ public struct GameSettingsSavesSectionView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             // MARK: - 1. iCloud Cross-Save Universal Management
             iCloudCrossSaveCard
 
-            // MARK: - 2. Device Direct Transfer (Push / Pull)
-            if !deviceService.connectedDevices.isEmpty {
+            // MARK: - 2. Device Direct Transfer (Only for Mac Apps)
+            if game.platform == .macApp && !deviceService.connectedDevices.isEmpty {
                 Divider().opacity(0.2)
                 deviceSyncSection
             }
@@ -43,9 +43,9 @@ public struct GameSettingsSavesSectionView: View {
                 let cover = GameCoverService.shared.coverImage(for: game)
                 saveService.setICloudSyncEnabled(newValue, for: game, cover: cover)
                 if newValue {
-                    backupStatusText = "Saves movidos para o iCloud: nxnative_launcher"
+                    backupStatusText = "Saves sincronizados via iCloud"
                 } else {
-                    backupStatusText = "Saves revertidos para o armazenamento local"
+                    backupStatusText = "Saves salvos localmente"
                 }
             }
         )
@@ -68,40 +68,19 @@ public struct GameSettingsSavesSectionView: View {
                 Toggle("", isOn: isGameICloudEnabledBinding)
                     .labelsHidden()
                     .toggleStyle(.switch)
-                    .help(saveService.isICloudSyncEnabled(for: game) ? "Turn off iCloud Sync for this game to keep saves only on local Mac storage" : "Turn on iCloud Sync to share this game's saves via iCloud Drive")
             }
 
-            // Status Banner
+            // Compact Status Banner
             HStack(spacing: 8) {
-                if !saveService.isICloudSyncEnabled(for: game) {
-                    Circle()
-                        .fill(Color.blue)
-                        .frame(width: 7, height: 7)
+                Circle()
+                    .fill(saveService.isICloudSyncEnabled(for: game) ? (saveService.isICloudDriveAvailable ? Color.green : Color.orange) : Color.blue)
+                    .frame(width: 7, height: 7)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.t("settings_modal.icloud_local_only"))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(NXTheme.textPrimary)
-
-                        Text(L10n.t("settings_modal.icloud_local_only_desc"))
-                            .font(.system(size: 10))
-                            .foregroundColor(NXTheme.textSecondary)
-                    }
-                } else {
-                    Circle()
-                        .fill(saveService.isICloudDriveAvailable ? Color.green : Color.orange)
-                        .frame(width: 7, height: 7)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(saveService.isICloudDriveAvailable ? "iCloud Drive Ativo para este Jogo" : "iCloud Drive Desativado no macOS")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(NXTheme.textPrimary)
-
-                        Text(L10n.t("settings_modal.saves_centralized"))
-                            .font(.system(size: 10))
-                            .foregroundColor(NXTheme.textSecondary)
-                    }
-                }
+                Text(saveService.isICloudSyncEnabled(for: game)
+                     ? (saveService.isICloudDriveAvailable ? "iCloud Drive Ativo (Cross-Save com iPhone)" : "iCloud Drive Desativado no macOS")
+                     : L10n.t("settings_modal.icloud_local_only"))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(NXTheme.textPrimary)
 
                 Spacer()
 
@@ -109,9 +88,9 @@ public struct GameSettingsSavesSectionView: View {
                     Button(L10n.t("settings_modal.local_backup")) {
                         SoundEffectService.shared.play(.click)
                         if let backup = saveService.backupMacSave(titleId: titleId) {
-                            backupStatusText = "Saved locally: \(backup.lastPathComponent)"
+                            backupStatusText = "Backup: \(backup.lastPathComponent)"
                         } else {
-                            backupStatusText = "No save data found to backup"
+                            backupStatusText = "Nenhum save local para backup"
                         }
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
@@ -129,31 +108,10 @@ public struct GameSettingsSavesSectionView: View {
                     }
                     .buttonStyle(NXSecondaryButtonStyle())
                     .controlSize(.mini)
-                    .help(saveService.isICloudSyncEnabled(for: game) ? L10n.t("settings_modal.icloud_folder_help") : "Reveal local save folder in Finder")
                 }
             }
             .padding(10)
             .nxGlassCard(cornerRadius: 10, isNested: true)
-
-            // Cross-Platform Sync Guide with iPhone
-            if saveService.isICloudSyncEnabled(for: game) {
-                HStack(spacing: 8) {
-                    Image(systemName: "iphone.gen3")
-                        .foregroundColor(.blue)
-                        .font(.system(size: 14))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.t("settings.icloud_sync_ios_title"))
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(NXTheme.textPrimary)
-                        Text(L10n.t("settings.icloud_sync_ios_desc"))
-                            .font(.system(size: 10))
-                            .foregroundColor(NXTheme.textSecondary)
-                    }
-                }
-                .padding(8)
-                .background(Color.blue.opacity(0.12))
-                .cornerRadius(8)
-            }
 
             if let status = backupStatusText {
                 Text(status)
@@ -169,22 +127,11 @@ public struct GameSettingsSavesSectionView: View {
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .foregroundColor(NXTheme.textPrimary)
 
-            Text(L10n.t("settings_modal.auto_sync_desc"))
-                .font(.system(size: 10))
-                .foregroundColor(NXTheme.textSecondary)
-
             ForEach(deviceService.connectedDevices) { dev in
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(L10n.t("settings_modal.sync_with_device", dev.name, dev.model))
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(NXTheme.textPrimary)
-                        if let text = syncStatusText {
-                            Text(text)
-                                .font(.system(size: 10))
-                                .foregroundColor(NXTheme.secondary)
-                        }
-                    }
+                    Text("\(dev.name) (\(dev.model))")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(NXTheme.textPrimary)
 
                     Spacer()
 
@@ -204,8 +151,7 @@ public struct GameSettingsSavesSectionView: View {
                     }) {
                         HStack(spacing: 5) {
                             if isSyncing {
-                                ProgressView()
-                                    .controlSize(.mini)
+                                ProgressView().controlSize(.mini)
                             } else {
                                 Image(systemName: "arrow.triangle.2.circlepath")
                             }
@@ -216,7 +162,6 @@ public struct GameSettingsSavesSectionView: View {
                     .controlSize(.mini)
                     .disabled(isSyncing)
                 }
-                .padding(.vertical, 2)
             }
         }
     }

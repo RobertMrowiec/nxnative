@@ -100,7 +100,7 @@ public final class GameScanner {
                 } else {
                     type = .dlc
                 }
-            } else if lower.contains("base") || versionString == "v0" {
+            } else if lower.contains("base") || versionString == "v0" || ext == "nsp" || ext == "xci" {
                 type = .base
             } else {
                 type = .unknown

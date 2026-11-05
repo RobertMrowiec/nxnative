@@ -48,18 +48,30 @@ extension ConsoleHeroView {
             .buttonStyle(NXPressableButtonStyle())
             .disabled(isLaunching)
             .nxNoFocusRing()
+            .nxGlassTransition(.identity)
             
-            // Controls Guide Button (only for Mac ports)
-            if g.platform == .macApp {
-                heroSecondaryButton(
-                    icon: "gamecontroller.fill",
-                    title: viewModel.tr("controls.guide_title"),
-                    index: 1
-                ) {
-                    SoundEffectService.shared.play(.click)
-                    viewModel.showControlsGuideSheet = true
-                }
+            // Options Button (Gamepad Menu Icon, Text Removed)
+            heroIconButton(
+                icon: "line.3.horizontal",
+                index: 1,
+                helpText: viewModel.tr("console.options")
+            ) {
+                SoundEffectService.shared.play(.click)
+                viewModel.gameForSettingsSheet = g
             }
+            
+            // Play Time Indicator (same line as play, matching title font style rounded heavy, slightly smaller)
+            HStack(spacing: 7) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundColor(NXTheme.primary)
+                
+                Text(viewModel.formattedPlayTime(for: g))
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundColor(NXTheme.textPrimary)
+            }
+            .padding(.leading, 8)
+            .shadow(color: Color.black.opacity(0.85), radius: 6, x: 0, y: 2)
         } else {
             // Send to Device Button for iOS IPAs
             Button(action: {
@@ -107,48 +119,40 @@ extension ConsoleHeroView {
             }
             .buttonStyle(NXPressableButtonStyle())
             .nxNoFocusRing()
+            .nxGlassTransition(.identity)
 
-            // AirDrop Button for iOS
-            heroSecondaryButton(
-                icon: "airdrop",
-                title: viewModel.tr("common.airdrop"),
-                index: 1
+            // Options Button for iOS (Gamepad Menu Icon, Text Removed)
+            heroIconButton(
+                icon: "line.3.horizontal",
+                index: 2,
+                helpText: viewModel.tr("console.options")
             ) {
                 SoundEffectService.shared.play(.click)
-                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: g.url)
+                viewModel.gameForSettingsSheet = g
             }
-            .help(viewModel.tr("settings_modal.airdrop_help"))
 
             // Reveal in Finder Button for iOS
             heroSecondaryButton(
                 icon: "folder.fill",
                 title: viewModel.tr("console.reveal_ipa"),
-                index: 4
+                index: 3
             ) {
                 SoundEffectService.shared.play(.click)
                 NSWorkspace.shared.activateFileViewerSelecting([g.url])
             }
-        }
-
-        // Options Button
-        heroSecondaryButton(
-            icon: "slider.horizontal.3",
-            title: viewModel.tr("console.options"),
-            index: 2
-        ) {
-            SoundEffectService.shared.play(.click)
-            viewModel.gameForSettingsSheet = g
-        }
-
-        // Saves Folder Button
-        heroSecondaryButton(
-            icon: "folder.fill",
-            title: viewModel.tr("console.saves"),
-            index: 3
-        ) {
-            SoundEffectService.shared.play(.click)
-            let profile = GameDetailsProfile.inspect(for: g)
-            viewModel.revealSaveFolder(profile.saveDirectory)
+            
+            // Play Time Indicator for iOS ports
+            HStack(spacing: 7) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .foregroundColor(NXTheme.primary)
+                
+                Text(viewModel.formattedPlayTime(for: g))
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .foregroundColor(NXTheme.textPrimary)
+            }
+            .padding(.leading, 8)
+            .shadow(color: Color.black.opacity(0.85), radius: 6, x: 0, y: 2)
         }
     }
 
@@ -195,6 +199,7 @@ extension ConsoleHeroView {
         .buttonStyle(NXPressableButtonStyle())
         .disabled(isUnportedBuilding)
         .nxNoFocusRing()
+        .nxGlassTransition(.identity)
 
         if let base = u.baseFile {
             heroSecondaryButton(icon: "folder.fill", title: viewModel.tr("actions.app_files"), index: 1) {
@@ -230,33 +235,32 @@ extension ConsoleHeroView {
         }
         .buttonStyle(NXPressableButtonStyle())
         .nxNoFocusRing()
+        .nxGlassTransition(.identity)
     }
 
-    internal func statusPill(title: String, active: Bool) -> some View {
-        Text(title)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .nxGlassBar(
-                in: Capsule(),
-                tint: active ? NXTheme.primary.opacity(0.46) : NXTheme.glassSurface.opacity(0.28),
-                fallbackFill: active ? NXTheme.primary.opacity(0.35) : NXTheme.textMuted.opacity(0.24),
-                fallbackStroke: active ? NXTheme.secondary.opacity(0.45) : Color.white.opacity(0.12)
-            )
-    }
-
-    internal func statusText(_ title: String) -> some View {
-        Text(title)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
-            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
-    }
-
-    internal func statusSeparator() -> some View {
-        Text("|")
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(.white.opacity(0.50))
-            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
+    internal func heroIconButton(icon: String, index: Int, helpText: String, action: @escaping () -> Void) -> some View {
+        let isFocused = viewModel.isFocusOnHeroBar && viewModel.heroActionFocusIndex == index
+        return Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(isFocused ? .white : NXTheme.textPrimary)
+                .frame(width: 36, height: 36)
+                .contentShape(Circle())
+                .nxGlassInteractive(
+                    in: Circle(),
+                    isSelected: isFocused,
+                    fallbackFill: isFocused ? NXTheme.primary.opacity(0.85) : NXTheme.glassSurfaceElevated.opacity(0.85)
+                )
+                .overlay(
+                    Circle()
+                        .strokeBorder(isFocused ? Color.white : Color.clear, lineWidth: 2)
+                )
+                .scaleEffect(isFocused ? 1.05 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.72), value: isFocused)
+        }
+        .buttonStyle(NXPressableButtonStyle())
+        .help(helpText)
+        .nxNoFocusRing()
+        .nxGlassTransition(.identity)
     }
 }

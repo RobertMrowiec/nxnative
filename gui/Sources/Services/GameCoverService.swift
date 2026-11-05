@@ -29,11 +29,11 @@ public final class GameCoverService: ObservableObject {
         self.cacheDirectory = appSup
 
         let detected = SystemDetector.shared.detectNxnativeDirectory().path
-        let repoCovers = URL(fileURLWithPath: detected).appendingPathComponent("docs/images/covers")
-        if fileManager.fileExists(atPath: repoCovers.path) {
-            self.coversRepoDirectory = repoCovers
+        let repoImages = URL(fileURLWithPath: detected).appendingPathComponent("docs/images")
+        if fileManager.fileExists(atPath: repoImages.path) {
+            self.coversRepoDirectory = repoImages
         } else {
-            self.coversRepoDirectory = URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/docs/images/covers")
+            self.coversRepoDirectory = URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/docs/images")
         }
 
         // Expanded memory bounds for whole library/compatibility list: 512 images or 128 MB max
@@ -72,14 +72,14 @@ public final class GameCoverService: ObservableObject {
     }
 
     public func setCustomCover(imageURL: URL, for game: PortedGame) -> Bool {
-        guard let image = ImageDownsampler.downsample(url: imageURL, maxPixelSize: 320) ?? NSImage(contentsOf: imageURL) else { return false }
+        guard let image = ImageDownsampler.downsample(url: imageURL, maxPixelSize: 1024) ?? NSImage(contentsOf: imageURL) else { return false }
         let titleId = (game.titleId ?? CompatibilityService.shared.findTitleId(forGameTitle: game.name))?.uppercased()
         let key = (titleId ?? game.uniqueKey).uppercased()
         let dest = customCoverURL(for: game)
 
         guard let tiffData = image.tiffRepresentation,
               let bitmap = NSBitmapImageRep(data: tiffData),
-              let jpgData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.90]) else {
+              let jpgData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.92]) else {
             return false
         }
 
@@ -139,38 +139,63 @@ public final class GameCoverService: ObservableObject {
         // 1. User custom cover
         let customFile = customCoverURL(for: game)
         if fileManager.fileExists(atPath: customFile.path),
-           let img = ImageDownsampler.downsample(url: customFile, maxPixelSize: 320) ?? NSImage(contentsOf: customFile) {
+           let img = ImageDownsampler.downsample(url: customFile, maxPixelSize: 1024) ?? NSImage(contentsOf: customFile) {
             cacheImage(img, forKeys: lookupKeys)
             return img
         }
 
-        // 2. Check game bundle's Contents/Resources for cover art
-        let bundleResources = game.url.appendingPathComponent("Contents/Resources")
-        for filename in ["cover.jpg", "cover.png", "coverHQ.jpg", "boxart.jpg"] {
-            let bundleCover = bundleResources.appendingPathComponent(filename)
-            if fileManager.fileExists(atPath: bundleCover.path),
-               let img = ImageDownsampler.downsample(url: bundleCover, maxPixelSize: 320) ?? NSImage(contentsOf: bundleCover),
-               img.isValid, img.size.width >= 32, img.size.height >= 32 {
-                cacheImage(img, forKeys: lookupKeys)
-                return img
-            }
-        }
-
-        // 3. Check disk cache in ~/Library/Application Support/nxnative/covers/<TitleID>.jpg
+        // 2. Check disk cache in ~/Library/Application Support/nxnative/covers/<TitleID>.jpg (clean official artwork)
         if let tid = titleId, !tid.isEmpty {
             let cached = cacheDirectory.appendingPathComponent("\(tid).jpg")
             if fileManager.fileExists(atPath: cached.path),
-               let img = ImageDownsampler.downsample(url: cached, maxPixelSize: 320) ?? NSImage(contentsOf: cached),
-               img.isValid, img.size.width >= 32, img.size.height >= 32 {
+               let rawImg = ImageDownsampler.downsample(url: cached, maxPixelSize: 1024) ?? NSImage(contentsOf: cached),
+               rawImg.isValid, rawImg.size.width >= 32, rawImg.size.height >= 32 {
+                // If it was a raw retail scan with console header, clean it
+                let img: NSImage
+                if rawImg.size.height >= rawImg.size.width * 1.15, let rawData = try? Data(contentsOf: cached) {
+                    let cleaned = cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
+                    img = cleaned.1
+                } else {
+                    img = rawImg
+                }
                 cacheImage(img, forKeys: lookupKeys)
                 injectCoverIfPossible(sourceImageURL: cached, targetAppURL: game.url)
                 return img
             }
         }
 
-        // 4. Check local docs/images/covers/ repository for matching portrait box art
+        // 3. Check game bundle's Contents/Resources for cover art
+        let bundleResources = game.url.appendingPathComponent("Contents/Resources")
+        for filename in ["cover.jpg", "cover.png", "coverHQ.jpg", "boxart.jpg"] {
+            let bundleCover = bundleResources.appendingPathComponent(filename)
+            if fileManager.fileExists(atPath: bundleCover.path),
+               let rawImg = ImageDownsampler.downsample(url: bundleCover, maxPixelSize: 1024) ?? NSImage(contentsOf: bundleCover),
+               rawImg.isValid, rawImg.size.width >= 32, rawImg.size.height >= 32 {
+                // If the bundle has a retail box art scan with Nintendo Switch header banner, strip it cleanly
+                let img: NSImage
+                if rawImg.size.height >= rawImg.size.width * 1.15, let rawData = try? Data(contentsOf: bundleCover) {
+                    let cleaned = cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
+                    img = cleaned.1
+                    // Replace the dirty bundle cover with the clean version
+                    try? cleaned.0.write(to: bundleCover, options: .atomic)
+                } else {
+                    img = rawImg
+                }
+                cacheImage(img, forKeys: lookupKeys)
+                return img
+            }
+        }
+
+        // 4. Check local docs/images/ repository (including Switch 2 gallery.tsv mappings)
         if let localCover = findLocalRepoCover(forGameName: game.name, titleId: titleId) {
-            if let img = ImageDownsampler.downsample(url: localCover, maxPixelSize: 320) ?? NSImage(contentsOf: localCover) {
+            if let rawImg = ImageDownsampler.downsample(url: localCover, maxPixelSize: 1024) ?? NSImage(contentsOf: localCover) {
+                let img: NSImage
+                if rawImg.size.height >= rawImg.size.width * 1.15, let rawData = try? Data(contentsOf: localCover) {
+                    let cleaned = cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
+                    img = cleaned.1
+                } else {
+                    img = rawImg
+                }
                 cacheImage(img, forKeys: lookupKeys)
                 if let tid = titleId, !tid.isEmpty {
                     let cacheTarget = cacheDirectory.appendingPathComponent("\(tid).jpg")
@@ -186,12 +211,12 @@ public final class GameCoverService: ObservableObject {
         // 5. For Non-Switch games, use high-resolution macOS application bundle icon
         if game.platform == .nonSwitch {
             let icon = NSWorkspace.shared.icon(forFile: game.url.path)
-            icon.size = NSSize(width: 320, height: 320)
+            icon.size = NSSize(width: 1024, height: 1024)
             cacheImage(icon, forKeys: lookupKeys)
             return icon
         }
 
-        // 6. Asynchronously fetch from online databases (GameTDB, Libretro, Nintendo CDN)
+        // 6. Asynchronously fetch from online databases (Prioritizing Nintendo CDN official clean 1024x1024 icons)
         fetchOfficialCoverAsync(titleId: titleId, gameName: game.name, targetAppURL: game.url, gameKey: key)
         return nil
     }
@@ -213,16 +238,30 @@ public final class GameCoverService: ObservableObject {
         if let tid = resolvedId, !tid.isEmpty {
             let cached = cacheDirectory.appendingPathComponent("\(tid).jpg")
             if fileManager.fileExists(atPath: cached.path),
-               let img = ImageDownsampler.downsample(url: cached, maxPixelSize: 320) ?? NSImage(contentsOf: cached),
-               img.isValid, img.size.width >= 32, img.size.height >= 32 {
+               let rawImg = ImageDownsampler.downsample(url: cached, maxPixelSize: 1024) ?? NSImage(contentsOf: cached),
+               rawImg.isValid, rawImg.size.width >= 32, rawImg.size.height >= 32 {
+                let img: NSImage
+                if rawImg.size.height >= rawImg.size.width * 1.15, let rawData = try? Data(contentsOf: cached) {
+                    let cleaned = cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
+                    img = cleaned.1
+                } else {
+                    img = rawImg
+                }
                 cacheImage(img, forKeys: lookupKeys)
                 return img
             }
         }
 
         if let localCover = findLocalRepoCover(forGameName: gameName, titleId: resolvedId) {
-            if let img = ImageDownsampler.downsample(url: localCover, maxPixelSize: 320) ?? NSImage(contentsOf: localCover),
-               img.isValid, img.size.width >= 32, img.size.height >= 32 {
+            if let rawImg = ImageDownsampler.downsample(url: localCover, maxPixelSize: 1024) ?? NSImage(contentsOf: localCover),
+               rawImg.isValid, rawImg.size.width >= 32, rawImg.size.height >= 32 {
+                let img: NSImage
+                if rawImg.size.height >= rawImg.size.width * 1.15, let rawData = try? Data(contentsOf: localCover) {
+                    let cleaned = cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
+                    img = cleaned.1
+                } else {
+                    img = rawImg
+                }
                 cacheImage(img, forKeys: lookupKeys)
                 return img
             }
@@ -265,26 +304,43 @@ public final class GameCoverService: ObservableObject {
     }
 
     private func findLocalRepoCover(forGameName name: String, titleId: String?) -> URL? {
-        if let tid = titleId, !tid.isEmpty {
-            for ext in ["jpg", "png", "jpeg"] {
-                let byId = coversRepoDirectory.appendingPathComponent("\(tid.uppercased()).\(ext)")
-                if fileManager.fileExists(atPath: byId.path),
-                   let img = ImageDownsampler.downsample(url: byId, maxPixelSize: 320) ?? NSImage(contentsOf: byId),
-                   img.isValid, img.size.width >= 32, img.size.height >= 32 {
-                    return byId
+        let tidUpper = titleId?.uppercased()
+
+        // 1. Check upstream showcase gallery index (gallery.tsv) mapping (Switch 2 & Switch 1 titles)
+        if let fn = ArtworkStore.shared.galleryFilename(for: tidUpper ?? name) ?? ArtworkStore.shared.galleryFilename(for: name) {
+            let localGallery = coversRepoDirectory.appendingPathComponent(fn)
+            if fileManager.fileExists(atPath: localGallery.path),
+               let img = ImageDownsampler.downsample(url: localGallery, maxPixelSize: 1024) ?? NSImage(contentsOf: localGallery),
+               img.isValid, img.size.width >= 32, img.size.height >= 32 {
+                return localGallery
+            }
+        }
+
+        // 2. Direct Title ID match in images directory or covers subdirectory
+        if let tid = tidUpper, !tid.isEmpty {
+            for dir in [coversRepoDirectory, coversRepoDirectory.appendingPathComponent("covers")] {
+                for ext in ["jpg", "png", "jpeg"] {
+                    let byId = dir.appendingPathComponent("\(tid).\(ext)")
+                    if fileManager.fileExists(atPath: byId.path),
+                       let img = ImageDownsampler.downsample(url: byId, maxPixelSize: 1024) ?? NSImage(contentsOf: byId),
+                       img.isValid, img.size.width >= 32, img.size.height >= 32 {
+                        return byId
+                    }
                 }
             }
         }
 
-        let imagesDir = coversRepoDirectory.deletingLastPathComponent()
+        // 3. Normalized Title Slug match
         let slug = slugify(name)
         if !slug.isEmpty {
-            for ext in ["jpg", "png", "jpeg"] {
-                let bySlug = imagesDir.appendingPathComponent("\(slug).\(ext)")
-                if fileManager.fileExists(atPath: bySlug.path),
-                   let img = ImageDownsampler.downsample(url: bySlug, maxPixelSize: 320) ?? NSImage(contentsOf: bySlug),
-                   img.isValid, img.size.width >= 32, img.size.height >= 32 {
-                    return bySlug
+            for dir in [coversRepoDirectory, coversRepoDirectory.appendingPathComponent("covers")] {
+                for ext in ["jpg", "png", "jpeg"] {
+                    let bySlug = dir.appendingPathComponent("\(slug).\(ext)")
+                    if fileManager.fileExists(atPath: bySlug.path),
+                       let img = ImageDownsampler.downsample(url: bySlug, maxPixelSize: 1024) ?? NSImage(contentsOf: bySlug),
+                       img.isValid, img.size.width >= 32, img.size.height >= 32 {
+                        return bySlug
+                    }
                 }
             }
         }
@@ -337,9 +393,20 @@ public final class GameCoverService: ObservableObject {
 
         var candidates: [URL] = []
 
-        // 1. High-Quality Clean Game Artwork from upstream repository (Gallery / Showcase)
+        // 1. TOP PRIORITY: Official Nintendo CDN high-res (1024x1024) clean promotional icon & banner (29,000+ titles)
+        // Clean game illustration and logo only, zero console banners, zero retail plastic headers, zero eShop badges.
+        if let tid = tidUpper, let entry = ArtworkStore.shared.lookupTitleDbEntry(for: tid) {
+            if let iconUrlStr = entry["icon"], let iconUrl = URL(string: iconUrlStr) {
+                candidates.append(iconUrl)
+            }
+            if let bannerUrlStr = entry["banner"], let bannerUrl = URL(string: bannerUrlStr) {
+                candidates.append(bannerUrl)
+            }
+        }
+
+        // 2. High-Quality Clean Game Artwork from repository gallery / showcase
         if let fn = ArtworkStore.shared.galleryFilename(for: tidUpper ?? searchKey) ?? ArtworkStore.shared.galleryFilename(for: gameName) {
-            let localGallery = self.coversRepoDirectory.deletingLastPathComponent().appendingPathComponent(fn)
+            let localGallery = self.coversRepoDirectory.appendingPathComponent(fn)
             if fileManager.fileExists(atPath: localGallery.path) {
                 candidates.append(localGallery)
             }
@@ -348,17 +415,19 @@ public final class GameCoverService: ObservableObject {
             }
         }
 
-        // 2. High-Probability GameTDB Box Arts (Priority: US, EN, JA)
-        if let tid = tidUpper {
-            let gids = Self.verifiedGameTDBIds[tid] ?? []
-            for gid in gids {
-                for sub in ["coverHQ", "cover"] {
-                    for reg in ["US", "EN", "JA"] {
-                        if let u = URL(string: "https://art.gametdb.com/switch/\(sub)/\(reg)/\(gid).jpg") {
-                            candidates.append(u)
-                        }
-                    }
-                }
+        // 2.5 Slug-based clean repo art for Switch 2 and unindexed titles
+        let slug = gameName.lowercased()
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: "-")
+        for ext in ["jpg", "png"] {
+            let localSlug = self.coversRepoDirectory.appendingPathComponent("\(slug).\(ext)")
+            if fileManager.fileExists(atPath: localSlug.path) {
+                candidates.append(localSlug)
+            }
+            if let remoteSlug = URL(string: "https://raw.githubusercontent.com/seedds/nxnative/main/docs/images/\(slug).\(ext)") {
+                candidates.append(remoteSlug)
             }
         }
 
@@ -371,6 +440,20 @@ public final class GameCoverService: ObservableObject {
             if let encoded = "\(cleanTitle)\(suffix).png".addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
                let libretroURL = URL(string: "https://thumbnails.libretro.com/Nintendo%20-%20Switch/Named_Boxarts/\(encoded)") {
                 candidates.append(libretroURL)
+            }
+        }
+
+        // 4. Fallback GameTDB Box Arts (Switch 1 only, priority: coverHQ then cover)
+        if let tid = tidUpper, tid.hasPrefix("0100") {
+            let gids = Self.verifiedGameTDBIds[tid] ?? []
+            for gid in gids {
+                for sub in ["coverHQ", "cover"] {
+                    for reg in ["US", "EN", "JA"] {
+                        if let u = URL(string: "https://art.gametdb.com/switch/\(sub)/\(reg)/\(gid).jpg") {
+                            candidates.append(u)
+                        }
+                    }
+                }
             }
         }
 
@@ -428,7 +511,7 @@ public final class GameCoverService: ObservableObject {
 
     /// Strips retail plastic console header banners, age ratings, and console logos from box arts,
     /// ensuring only pure game illustration and title logo are displayed (matching Steam Grid / Playnite clean room style).
-    private func cleanArtworkForCleanPresentation(from image: NSImage, originalData: Data) -> (Data, NSImage) {
+    public func cleanArtworkForCleanPresentation(from image: NSImage, originalData: Data) -> (Data, NSImage) {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             return (originalData, image)
         }
@@ -490,17 +573,20 @@ public final class GameCoverService: ObservableObject {
         return (jpgData, cleanedImage)
     }
 
-    private func containsForbiddenStoreBranding(in image: NSImage) -> Bool {
+    public func containsForbiddenStoreBranding(in image: NSImage) -> Bool {
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .fast
+        request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
         let handler = VNImageRequestHandler(cgImage: cg, options: [:])
         try? handler.perform([request])
+        let forbidden = ["nintendo", "switch", "eshop", "e-shop", "joy-con", "joycon"]
         for obs in request.results ?? [] {
-            let text = obs.topCandidates(1).first?.string.lowercased() ?? ""
-            if text.contains("eshop") || text.contains("e-shop") || text.contains("nintendo eshop") {
-                return true
+            let text = (obs.topCandidates(1).first?.string ?? "").lowercased()
+            for word in forbidden {
+                if text.contains(word) {
+                    return true
+                }
             }
         }
         return false
@@ -520,16 +606,23 @@ public final class GameCoverService: ObservableObject {
             guard let self = self else { return }
             if let http = response as? HTTPURLResponse, http.statusCode == 200,
                let d = data, !d.isEmpty,
-               let img = ImageDownsampler.downsample(data: d, maxPixelSize: 480) ?? NSImage(data: d),
-               img.isValid, img.size.width >= 32, img.size.height >= 32 {
+               let rawImg = ImageDownsampler.downsample(data: d, maxPixelSize: 1024) ?? NSImage(data: d),
+               rawImg.isValid, rawImg.size.width >= 32, rawImg.size.height >= 32 {
                 
-                // Real-time Vision Guard: reject candidate if it has eShop marks
-                if self.containsForbiddenStoreBranding(in: img) {
+                let (cleanedData, cleanedImg): (Data, NSImage)
+                if rawImg.size.height >= rawImg.size.width * 1.15 {
+                    (cleanedData, cleanedImg) = self.cleanArtworkForCleanPresentation(from: rawImg, originalData: d)
+                } else {
+                    (cleanedData, cleanedImg) = (d, rawImg)
+                }
+
+                // Real-time Vision Guard: reject candidate if it has Nintendo, Switch, or eShop marks
+                if self.containsForbiddenStoreBranding(in: cleanedImg) {
                     self.tryFetchCandidate(candidates: candidates, index: index + 1, completion: completion)
                     return
                 }
 
-                completion(d, img)
+                completion(cleanedData, cleanedImg)
             } else {
                 self.tryFetchCandidate(candidates: candidates, index: index + 1, completion: completion)
             }

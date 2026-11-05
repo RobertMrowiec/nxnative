@@ -37,6 +37,21 @@ build_app_bundle() {
     if [ -d "$GUI_DIR/Resources" ]; then
         # Copy primary icon sets and menu bar icons (avoid redundant 1024x1024 iOS PNG clones)
         cp "$GUI_DIR/Resources/"*.icns "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
+        
+        # Sincroniza o tema de ícone salvo no UserDefaults (se existir) como AppIcon.icns principal
+        SAVED_ICON_MODE="$(defaults read org.nxnative.launcher NXNative_SavedIconAppearanceMode_v2 2>/dev/null || echo 'Default')"
+        case "$SAVED_ICON_MODE" in
+            "Dark") ICON_SRC="AppIcon-Dark.icns" ;;
+            "Clear Light"|"ClearLight") ICON_SRC="AppIcon-ClearLight.icns" ;;
+            "Clear Dark"|"ClearDark") ICON_SRC="AppIcon-ClearDark.icns" ;;
+            "Tinted Light"|"TintedLight") ICON_SRC="AppIcon-TintedLight.icns" ;;
+            "Tinted Dark"|"TintedDark"|"Monochrome"|"Mono") ICON_SRC="AppIcon-TintedDark.icns" ;;
+            *) ICON_SRC="AppIcon-Default.icns" ;;
+        esac
+        if [ -f "$APP_BUNDLE/Contents/Resources/$ICON_SRC" ]; then
+            cp "$APP_BUNDLE/Contents/Resources/$ICON_SRC" "$APP_BUNDLE/Contents/Resources/AppIcon.icns"
+        fi
+        
         cp "$GUI_DIR/Resources/MenuBarIcon-"*.png "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
         cp "$GUI_DIR/Resources/"*.svg "$APP_BUNDLE/Contents/Resources/" 2>/dev/null || true
         if [ -d "$GUI_DIR/Resources/NxNative_Launcher.icon" ]; then
@@ -107,9 +122,9 @@ build_app_bundle() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.9.2</string>
+    <string>1.9.3</string>
     <key>CFBundleVersion</key>
-    <string>27</string>
+    <string>28</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -122,6 +137,8 @@ EOF
 
     echo "==> Assinando bundle ad-hoc..."
     codesign --force --deep --sign - "$APP_BUNDLE"
+    touch "$APP_BUNDLE/Contents/Info.plist" "$APP_BUNDLE"
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "$APP_BUNDLE" 2>/dev/null || true
 }
 
 # Remove qualquer cópia duplicada interna no repositório

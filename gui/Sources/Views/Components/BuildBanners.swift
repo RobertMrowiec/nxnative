@@ -200,34 +200,17 @@ public struct BuildBanners: View {
             NXGlassContainer(spacing: 8) {
                 HStack(spacing: 8) {
                     if path.hasSuffix(".ipa") {
-                        let romfsURL = URL(fileURLWithPath: path).deletingLastPathComponent().appendingPathComponent("romfs.img")
-                        let namedRomfsURL = URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("romfs.img")
-                        let separateRomfsURL = FileManager.default.fileExists(atPath: romfsURL.path) ? romfsURL : (FileManager.default.fileExists(atPath: namedRomfsURL.path) ? namedRomfsURL : nil)
-
                         Button(action: {
                             SoundEffectService.shared.play(.click)
                             let url = URL(fileURLWithPath: path)
-                            DeviceDeploymentService.shared.shareViaAirDrop(fileURL: url)
+                            DeviceDeploymentService.shared.revealInFinder(fileURL: url)
                         }) {
                             HStack(spacing: 4) {
-                                Image(systemName: "airdrop")
-                                Text(viewModel.tr("common.airdrop"))
+                                Image(systemName: "folder")
+                                Text(viewModel.tr("settings_modal.show_ipa"))
                             }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
-
-                        if let rfs = separateRomfsURL {
-                            Button(action: {
-                                SoundEffectService.shared.play(.click)
-                                DeviceDeploymentService.shared.shareViaAirDrop(fileURL: rfs)
-                            }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text("AirDrop RomFS")
-                                }
-                            }
-                            .buttonStyle(NXSecondaryButtonStyle())
-                        }
                     }
                     
                     Button(viewModel.tr("common.view_library")) {

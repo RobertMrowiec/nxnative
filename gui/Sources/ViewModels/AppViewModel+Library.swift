@@ -1,9 +1,19 @@
 import Foundation
 import AppKit
 
+private var isSwitchingToManualOrder = false
+
 extension AppViewModel {
+    /// Switches from alphabetical sorting to manual/persisted order without re-sorting over a live drag-and-drop move.
+    public func activateManualOrderMode() {
+        guard activeSortOption != .lastPlayed else { return }
+        isSwitchingToManualOrder = true
+        activeSortOption = .lastPlayed
+        isSwitchingToManualOrder = false
+    }
+
     // MARK: - Library Operations (Privacy-guarded)
-    public func refreshLibrary() {
+    public func refreshLibrary(focusOnOutputURL: URL? = nil) {
         isScanningLibrary = true
         var searchDirs: [URL] = []
         
@@ -34,15 +44,7 @@ extension AppViewModel {
             DispatchQueue.main.async {
                 let visible = LibraryOrder.apply(to: games.filter { !self.hiddenGamePaths.contains($0.url.standardized.path) })
                 self.libraryGames = visible
-                if self.focusedGameIndex >= visible.count {
-                    self.focusedGameIndex = max(0, visible.count - 1)
-                }
-                self.focusedMacIndex = max(0, min(self.focusedMacIndex, max(0, self.switch1LibraryGames.count - 1)))
-                self.focusedSwitch2Index = max(0, min(self.focusedSwitch2Index, max(0, self.switch2LibraryGames.count - 1)))
-                self.focusedIosIndex = max(0, min(self.focusedIosIndex, max(0, self.iosLibraryGames.count - 1)))
-                self.focusedNonSwitchIndex = max(0, min(self.focusedNonSwitchIndex, max(0, self.nonSwitchLibraryGames.count - 1)))
-                self.focusedUnportedGameIndex = max(0, min(self.focusedUnportedGameIndex, max(0, self.unportedGames.count - 1)))
-                self.syncFocusedGameIndex()
+                self.reconcileLibraryFocusState(preferredPortedURL: focusOnOutputURL)
                 self.isScanningLibrary = false
                 
                 // Automatically ensure every game in the library has its correct official cover and input mapping
@@ -147,7 +149,10 @@ extension AppViewModel {
         guard !gameFolders.isEmpty else {
             detectedFiles = []
             detectedGames = []
-            selectedGame = nil
+            if !isBuilding {
+                selectedGame = nil
+            }
+            reconcileLibraryFocusState()
             return
         }
         let folders = gameFolders
@@ -155,14 +160,18 @@ extension AppViewModel {
             let files = GameScanner.shared.scan(directories: folders)
             let games = GameScanner.shared.groupFilesIntoGames(files: files)
             DispatchQueue.main.async {
-                self?.detectedFiles = files
-                self?.detectedGames = games
-                if self?.selectedGame == nil || !games.contains(where: { $0.id == self?.selectedGame?.id }) {
-                    self?.selectedGame = games.first
+                guard let self = self else { return }
+                self.detectedFiles = files
+                self.detectedGames = games
+                if !self.isBuilding {
+                    if self.selectedGame == nil || !games.contains(where: { $0.id == self.selectedGame?.id }) {
+                        self.selectedGame = self.unportedGames.first ?? games.first
+                    }
+                    if let firstGame = (self.unportedGames.first ?? games.first), self.appName.isEmpty {
+                        self.appName = firstGame.name
+                    }
                 }
-                if let self = self, let firstGame = games.first, self.appName.isEmpty {
-                    self.appName = firstGame.name
-                }
+                self.reconcileLibraryFocusState()
             }
         }
     }
@@ -186,54 +195,6 @@ extension AppViewModel {
         }
     }
     
-    // MARK: - Native Mac Game Folders (Non-Switch Games)
-    public func addNonSwitchGameFolder(_ url: URL) {
-        let standardized = url.standardizedFileURL
-        if !nonSwitchGameFolders.contains(where: { $0.standardizedFileURL.path == standardized.path }) {
-            nonSwitchGameFolders.append(standardized)
-        }
-    }
-
-    public func removeNonSwitchGameFolder(_ url: URL) {
-        let path = url.standardizedFileURL.path
-        nonSwitchGameFolders.removeAll { $0.standardizedFileURL.path == path }
-    }
-
-    public func clearAllNonSwitchGameFolders() {
-        nonSwitchGameFolders.removeAll()
-    }
-
-    public func selectAdditionalNonSwitchGameFolder() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = true
-        panel.prompt = tr("system.add_folder")
-        panel.message = tr("system.select_nonswitch_folder_message")
-        
-        if panel.runModal() == .OK {
-            for url in panel.urls {
-                addNonSwitchGameFolder(url)
-            }
-        }
-    }
-
-    public func selectSingleNonSwitchGameFile() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [.application]
-        panel.prompt = tr("system.add_nonswitch_single_app")
-        panel.message = tr("system.select_nonswitch_app_message")
-        
-        if panel.runModal() == .OK {
-            for url in panel.urls {
-                addNonSwitchGame(url: url)
-            }
-        }
-    }
-    
     // MARK: - Sorting Helpers & Unified Items
     public func resetLibraryOrganization() {
         activeGroupFilter = .categories
@@ -242,6 +203,7 @@ extension AppViewModel {
     }
 
     public func applyActiveSorting() {
+        guard !isSwitchingToManualOrder else { return }
         switch activeSortOption {
         case .lastPlayed:
             libraryGames.sort { a, b in
@@ -260,6 +222,7 @@ extension AppViewModel {
             detectedGames.sort { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
         }
         LibraryOrder.save(libraryGames)
+        reconcileLibraryFocusState()
     }
 
     public func sortGames(_ games: [PortedGame]) -> [PortedGame] {
@@ -300,97 +263,5 @@ extension AppViewModel {
             combined = LibraryOrder.applyUnified(to: combined)
         }
         return combined
-    }
-    
-    // MARK: - Drag and Drop & ZIP
-    public func handleDroppedURLs(_ urls: [URL]) {
-        dropErrorMessage = nil
-        for url in urls {
-            var isDir: ObjCBool = false
-            guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) else { continue }
-            
-            let ext = url.pathExtension.lowercased()
-            if ext == "app" {
-                addNonSwitchGame(url: url)
-            } else if ext == "zip" {
-                extractDroppedZip(zipURL: url)
-            } else if isDir.boolValue {
-                let hasApps = containsMacApps(in: url)
-                let hasRoms = containsSwitchRoms(in: url)
-                if hasApps {
-                    addNonSwitchGameFolder(url)
-                }
-                if hasRoms || !hasApps {
-                    addGameFolder(url)
-                }
-            } else {
-                let parent = url.deletingLastPathComponent()
-                addGameFolder(parent)
-            }
-        }
-    }
-    
-    private func containsMacApps(in directory: URL) -> Bool {
-        guard let enumerator = FileManager.default.enumerator(
-            at: directory,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
-        ) else { return false }
-        
-        var count = 0
-        for case let fileURL as URL in enumerator {
-            count += 1
-            if count > 50 { break }
-            if fileURL.pathExtension.lowercased() == "app" {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func containsSwitchRoms(in directory: URL) -> Bool {
-        guard let enumerator = FileManager.default.enumerator(
-            at: directory,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]
-        ) else { return false }
-        
-        let romExts: Set<String> = ["nsp", "nsz", "xci", "xcz"]
-        var count = 0
-        for case let fileURL as URL in enumerator {
-            count += 1
-            if count > 50 { break }
-            if romExts.contains(fileURL.pathExtension.lowercased()) {
-                return true
-            }
-        }
-        return false
-    }
-    
-    private func extractDroppedZip(zipURL: URL) {
-        let gamesDir = URL(fileURLWithPath: defaultInstallPath).appendingPathComponent("Games")
-        isExtractingZip = true
-        zipExtractionMessage = "Analyzing ZIP archive..."
-        
-        ZipExtractor.shared.extract(
-            zipURL: zipURL,
-            destinationFolder: gamesDir,
-            progressCallback: { [weak self] msg in
-                self?.zipExtractionMessage = msg
-            },
-            completion: { [weak self] result in
-                guard let self = self else { return }
-                self.isExtractingZip = false
-                
-                switch result {
-                case .success(let extractedDir):
-                    self.selectedGameFolder = extractedDir
-                    self.logs.append(LogEntry(level: .success, message: "Archive extracted to: \(extractedDir.path)"))
-                case .failure(let error):
-                    self.dropErrorMessage = error.localizedDescription
-                    self.logs.append(LogEntry(level: .error, message: "Failed to extract archive: \(error.localizedDescription)"))
-                }
-            }
-        )
     }
 }

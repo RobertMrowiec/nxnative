@@ -12,6 +12,11 @@ public enum BundledTools {
         FileManager.default.isExecutableFile(atPath: path)
     }
 
+    /// Root directory of the `nxnative` repository.
+    public static var nxnativeRootPath: String {
+        SystemDetector.shared.detectNxnativeDirectory().path
+    }
+
     /// Path to `Contents/Resources/tools/bin`, if present and non-empty.
     public static func binDirectory(in resURL: URL? = resources) -> String? {
         guard let dir = resURL?.appendingPathComponent("tools/bin"),

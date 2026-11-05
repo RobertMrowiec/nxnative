@@ -3,6 +3,8 @@ import SwiftUI
 import AppKit
 
 public final class AppViewModel: ObservableObject, BuildRunnerDelegate, InstallerServiceDelegate, UpdateCheckerDelegate {
+    public static var shared: AppViewModel? = nil
+
     // MARK: - Storage Keys for Persistence
     public enum StorageKeys {
         public static let savedGameFolder = "NXNative_SavedGameFolder"
@@ -177,6 +179,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var settingsModalFocusIndex: Int = 0
     @Published public var controlsFocusIndex: Int = 0
     @Published public var settingsFocusIndex: Int = 0
+    @Published public var activeSettingsCategory: SettingsCategory = .general
+    @Published public var settingsItemFocusIndex: Int = 0
     
     // Controls Tab Navigation (2-Level Card Architecture)
     @Published public var controlsCardIndex: Int = 0 // 0: Header, 1: Mapping, 2: Deadzone, 3: Rumble
@@ -254,6 +258,10 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             return Date(timeIntervalSince1970: ts)
         }
         return nil
+    }
+    
+    public func formattedPlayTime(for game: PortedGame) -> String {
+        PlayTimeService.shared.formattedPlayTime(for: game)
     }
     
     public func addNonSwitchGame(url: URL) {
@@ -339,6 +347,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             UserDefaults.standard.set(allowOtherMetal, forKey: StorageKeys.savedAllowOtherMetal)
         }
     }
+    @Published public var metalToolchainInfo: MetalToolchainInfo? = nil
     @Published public var userDidManuallyOverrideRomfsSeparate: Bool = false
     @Published public var romfsSeparate: Bool = false {
         didSet {
@@ -443,7 +452,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var iconAppearanceMode: AppIconAppearanceMode = .default {
         didSet {
             UserDefaults.standard.set(iconAppearanceMode.rawValue, forKey: StorageKeys.savedIconAppearanceMode)
-            updateDockIcon()
+            UserDefaults.standard.synchronize()
+            updateDockIcon(userInitiated: true)
             DispatchQueue.main.async {
                 MenuBarManager.shared.updateMenuBarIcon()
             }
@@ -549,6 +559,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     let updateChecker = UpdateCheckerService.shared
     
     public init() {
+        Self.shared = self
         runner.delegate = self
         installer.delegate = self
         updateChecker.delegate = self

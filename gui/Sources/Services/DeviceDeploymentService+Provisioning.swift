@@ -54,8 +54,18 @@ extension DeviceDeploymentService {
         proc.standardOutput = pipe
         proc.standardError = Pipe()
 
+        let watchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+        watchdog.schedule(deadline: .now() + 5.0)
+        watchdog.setEventHandler { [weak proc] in
+            if let p = proc, p.isRunning {
+                p.terminate()
+            }
+        }
+
         guard (try? proc.run()) != nil else { return nil }
+        watchdog.resume()
         proc.waitUntilExit()
+        watchdog.cancel()
         guard proc.terminationStatus == 0 else { return nil }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -325,8 +335,16 @@ extension DeviceDeploymentService {
                 let fwProc = Process()
                 fwProc.executableURL = URL(fileURLWithPath: "/usr/bin/codesign")
                 fwProc.arguments = ["--force", "--sign", resolvedIdentity, fw.path]
-                try? fwProc.run()
-                fwProc.waitUntilExit()
+                let wd = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+                wd.schedule(deadline: .now() + 15.0)
+                wd.setEventHandler { [weak fwProc] in
+                    if let p = fwProc, p.isRunning { p.terminate() }
+                }
+                if (try? fwProc.run()) != nil {
+                    wd.resume()
+                    fwProc.waitUntilExit()
+                    wd.cancel()
+                }
             }
         }
 
@@ -341,8 +359,16 @@ extension DeviceDeploymentService {
         signArgs.append(contentsOf: ["--sign", resolvedIdentity, targetAppURL.path])
 
         sign.arguments = signArgs
-        try? sign.run()
-        sign.waitUntilExit()
+        let signWd = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+        signWd.schedule(deadline: .now() + 30.0)
+        signWd.setEventHandler { [weak sign] in
+            if let p = sign, p.isRunning { p.terminate() }
+        }
+        if (try? sign.run()) != nil {
+            signWd.resume()
+            sign.waitUntilExit()
+            signWd.cancel()
+        }
 
         if let entURL = tempEntitlementsURL {
             try? fm.removeItem(at: entURL)

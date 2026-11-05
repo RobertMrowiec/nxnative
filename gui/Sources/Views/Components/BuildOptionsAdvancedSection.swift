@@ -53,9 +53,39 @@ public struct BuildOptionsAdvancedSection: View {
                         }
                     }
                     
-                    Toggle(viewModel.tr("build.opt_allow_other_metal"), isOn: $viewModel.allowOtherMetal)
-                        .font(.system(size: 12))
-                        .foregroundColor(NXTheme.textPrimary)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Toggle(viewModel.tr("build.opt_allow_other_metal"), isOn: $viewModel.allowOtherMetal)
+                            .font(.system(size: 12))
+                            .foregroundColor(NXTheme.textPrimary)
+                        
+                        if let metal = viewModel.metalToolchainInfo {
+                            HStack(spacing: 6) {
+                                Circle()
+                                    .fill(statusColor(metal: metal))
+                                    .frame(width: 6, height: 6)
+                                
+                                Text(metal.shortVersion)
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                    .foregroundColor(NXTheme.textPrimary)
+                                
+                                Text("·")
+                                    .foregroundColor(NXTheme.textMuted.opacity(0.6))
+                                    .font(.system(size: 10))
+                                
+                                Text(statusLabel(metal: metal))
+                                    .font(.system(size: 10))
+                                    .foregroundColor(metal.isVerified ? NXTheme.textSecondary : (viewModel.allowOtherMetal ? NXTheme.secondary : Color.orange))
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(NXTheme.glassSurfaceElevated.opacity(0.60))
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5)
+                            )
+                            .padding(.leading, 20)
+                        }
+                    }
                     
                     Toggle(viewModel.tr("build.opt_survey_only"), isOn: $viewModel.surveyOnly)
                         .font(.system(size: 12))
@@ -89,5 +119,19 @@ public struct BuildOptionsAdvancedSection: View {
                 }
             }
         }
+    }
+
+    private func statusColor(metal: MetalToolchainInfo) -> Color {
+        guard metal.isAvailable else { return Color.red }
+        if metal.isVerified { return Color.green }
+        return viewModel.allowOtherMetal ? NXTheme.secondary : Color.orange
+    }
+
+    private func statusLabel(metal: MetalToolchainInfo) -> String {
+        guard metal.isAvailable else { return viewModel.tr("build.metal_status_not_found") }
+        if metal.isVerified { return viewModel.tr("build.metal_status_verified") }
+        return viewModel.allowOtherMetal
+            ? viewModel.tr("build.metal_status_allowed")
+            : viewModel.tr("build.metal_status_untested")
     }
 }

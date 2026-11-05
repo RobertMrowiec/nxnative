@@ -24,4 +24,12 @@ public enum UnifiedLibraryItem: Identifiable, Hashable {
         case .unported(let u): return u.baseFile?.url.standardized.path ?? u.id
         }
     }
+
+    /// Scan-stable identity for SwiftUI `ForEach` and `ScrollViewReader` so drag-reordering moves views instead of mutating slot state.
+    public var stableId: String {
+        switch self {
+        case .ported(let g): return "ported_\(g.stableId)"
+        case .unported(let u): return "unported_\(u.id)"
+        }
+    }
 }

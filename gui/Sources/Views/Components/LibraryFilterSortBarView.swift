@@ -9,17 +9,30 @@ public struct LibraryFilterSortBarView: View {
     }
     
     public var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Spacer()
+            
+            // Search Field Capsule (positioned on the right next to filters)
+            NXLiquidGlassSearchField(
+                viewModel.tr("library.search_placeholder"),
+                text: $viewModel.librarySearchText
+            )
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .frame(maxWidth: 220)
+            .nxGlassBar(
+                in: Capsule(),
+                fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.85),
+                fallbackStroke: NXTheme.borderSubtle
+            )
             
             // Group Filter Menu
             Menu {
                 ForEach(LibraryGroupFilter.allCases) { filter in
                     Button {
                         SoundEffectService.shared.play(.click)
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            viewModel.activeGroupFilter = filter
-                        }
+                        viewModel.activeGroupFilter = filter
+                        viewModel.reconcileLibraryFocusState()
                     } label: {
                         HStack {
                             Image(systemName: filter.iconName)
@@ -59,9 +72,8 @@ public struct LibraryFilterSortBarView: View {
                 ForEach(LibrarySortOption.allCases) { option in
                     Button {
                         SoundEffectService.shared.play(.click)
-                        withAnimation(.easeInOut(duration: 0.20)) {
-                            viewModel.activeSortOption = option
-                        }
+                        viewModel.activeSortOption = option
+                        viewModel.reconcileLibraryFocusState()
                     } label: {
                         HStack {
                             Image(systemName: option.iconName)
@@ -95,6 +107,30 @@ public struct LibraryFilterSortBarView: View {
             .fixedSize()
             .nxNoFocusRing()
             .help(viewModel.tr("library.tooltip_sort", viewModel.tr(viewModel.activeSortOption.translationKey)))
+            
+            // Rescan / Refresh Library Button
+            Button {
+                SoundEffectService.shared.play(.click)
+                viewModel.scanAllGameFolders()
+                viewModel.refreshLibrary()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(NXTheme.textPrimary)
+                }
+                .padding(.horizontal, 7)
+                .frame(height: 26)
+                .nxGlassBar(
+                    in: RoundedRectangle(cornerRadius: 7, style: .continuous),
+                    fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.70),
+                    fallbackStroke: NXTheme.borderSubtle
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+            .fixedSize()
+            .nxNoFocusRing()
+            .help(viewModel.tr("library.rescan_tooltip"))
         }
         .padding(.horizontal, 34)
         .padding(.top, 2)

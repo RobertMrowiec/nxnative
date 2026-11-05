@@ -4,9 +4,11 @@ import AppKit
 public struct LibraryView: View {
     @ObservedObject public var viewModel: AppViewModel
     @ObservedObject private var controllerService = GameControllerService.shared
-    
-    public init(viewModel: AppViewModel) {
+    public var containerHeight: CGFloat
+
+    public init(viewModel: AppViewModel, containerHeight: CGFloat = 720) {
         self.viewModel = viewModel
+        self.containerHeight = containerHeight
     }
     
     private var filteredGames: [PortedGame] {
@@ -23,18 +25,21 @@ public struct LibraryView: View {
     }
     
     public var body: some View {
+        let isLibraryEmptyAfterScan = !viewModel.isScanningLibrary && viewModel.libraryGames.isEmpty && viewModel.unportedGames.isEmpty
+
         ZStack {
-            Group {
-                // MARK: - Switch Dark Mode Console Showcase (Hero 16:9 + Square Tiles 1:1)
-                if filteredGames.isEmpty && viewModel.unportedGames.isEmpty {
-                    LibraryEmptyDropView(viewModel: viewModel)
-                } else {
-                    SwitchConsoleLibraryView(viewModel: viewModel, games: filteredGames)
-                }
-            }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                // MARK: - Floating Liquid Glass Library Toolbar (Search & Card Scale Slider)
-                LibraryToolbarView(viewModel: viewModel)
+            SwitchConsoleLibraryView(
+                viewModel: viewModel,
+                games: filteredGames,
+                containerHeight: containerHeight
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .opacity(isLibraryEmptyAfterScan ? 0 : 1)
+            .allowsHitTesting(!isLibraryEmptyAfterScan)
+
+            if isLibraryEmptyAfterScan {
+                LibraryEmptyDropView(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             
             // Compact Console Action Sheet (Overlay when Game Selected)
@@ -63,6 +68,13 @@ public struct LibraryView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 .zIndex(100)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            if viewModel.detectedGames.isEmpty && !viewModel.gameFolders.isEmpty {
+                viewModel.scanAllGameFolders()
+            }
+            viewModel.reconcileLibraryFocusState()
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isGameActionMenuPresented)
         .sheet(item: $viewModel.gameForSettingsSheet) { game in

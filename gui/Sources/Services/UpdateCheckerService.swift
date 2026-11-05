@@ -254,7 +254,11 @@ public final class UpdateCheckerService {
             }
             
             reportProgress("==> Fetching upstream engine commits from GitHub (seedds/nxnative)...")
+            _ = self.runGitWithStatus(["rebase", "--abort"], in: nxnativePath)
+            _ = self.runGitWithStatus(["merge", "--abort"], in: nxnativePath)
             _ = self.ensureOfficialRemote(in: nxnativePath, reportProgress: reportProgress)
+            // Discard transient engine patch modifications so git merge never conflicts with PatchService edits
+            _ = self.runGitWithStatus(["checkout", "--", "."], in: nxnativePath)
             let fetchRes = self.runGitWithStatus(["fetch", "upstream", "main"], in: nxnativePath, timeout: 20.0)
             if fetchRes.exitCode != 0 {
                 self.isUpdating = false

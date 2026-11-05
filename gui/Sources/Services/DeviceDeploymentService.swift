@@ -7,13 +7,15 @@ public struct ConnectedAppleDevice: Identifiable, Equatable, Hashable {
     public let model: String
     public let osVersion: String
     public let isPaired: Bool
+    public let isAvailable: Bool
 
-    public init(id: String, name: String, model: String, osVersion: String, isPaired: Bool) {
+    public init(id: String, name: String, model: String, osVersion: String, isPaired: Bool, isAvailable: Bool = true) {
         self.id = id
         self.name = name
         self.model = model
         self.osVersion = osVersion
         self.isPaired = isPaired
+        self.isAvailable = isAvailable
     }
 }
 
@@ -62,6 +64,7 @@ public enum DeploymentErrorCategory: Equatable {
 public struct DeploymentProgressInfo: Equatable {
     public enum Phase: String {
         case idle = "Idle"
+        case compiling = "Compiling Game Framework"
         case extracting = "Extracting Package (.ipa)"
         case signing = "Preparing Signature"
         case connecting = "Connecting to Device"
@@ -179,11 +182,23 @@ public final class DeviceDeploymentService: ObservableObject {
         on device: ConnectedAppleDevice,
         team: DeveloperSigningTeam? = nil,
         game: PortedGame? = nil,
+        isHubBootstrap: Bool = false,
         completion: @escaping (Bool, String) -> Void
     ) {
-        // Prevent concurrent deployments
-        if activeDeployment.isRunning {
+        // Prevent concurrent deployments unless this is an internal bootstrap step of the Hub
+        if activeDeployment.isRunning && !isHubBootstrap {
             completion(false, "Another deployment is already in progress.")
+            return
+        }
+
+        // Fast pre-flight check: ensure device is not locked or unavailable
+        if !device.isAvailable {
+            failDeployment(
+                category: .deviceLocked,
+                title: "\(device.name) está Indisponível ou Bloqueado",
+                detail: "O dispositivo está bloqueado ou a sessão USB precisa ser renovada.\n1. Desbloqueie o iPhone com seu código de acesso.\n2. Se solicitado, toque em 'Confiar neste Computador'.\n3. Verifique se o Modo de Desenvolvedor está ativo em Ajustes > Privacidade e Segurança."
+            )
+            completion(false, "Device is locked or unavailable.")
             return
         }
 
@@ -191,21 +206,25 @@ public final class DeviceDeploymentService: ObservableObject {
         self.currentDeployingAppURL = appBundleURL
         self.currentDeployingGame = game
 
-        // Initialize active deployment state
-        activeDeployment = DeploymentProgressInfo(
-            phase: .extracting,
-            progressFraction: 0.05,
-            statusMessage: "Starting installation on \(device.name)...",
-            detailMessage: "Preparing game package for transfer...",
-            logLines: ["==> Starting deployment of \(appBundleURL.lastPathComponent) on \(device.name)..."],
-            isRunning: true,
-            targetDeviceName: device.name,
-            elapsedSeconds: 0,
-            errorCategory: nil,
-            rawError: nil
-        )
+        if !isHubBootstrap {
+            // Initialize active deployment state
+            activeDeployment = DeploymentProgressInfo(
+                phase: .extracting,
+                progressFraction: 0.05,
+                statusMessage: "Starting installation on \(device.name)...",
+                detailMessage: "Preparing game package for transfer...",
+                logLines: ["==> Starting deployment of \(appBundleURL.lastPathComponent) on \(device.name)..."],
+                isRunning: true,
+                targetDeviceName: device.name,
+                elapsedSeconds: 0,
+                errorCategory: nil,
+                rawError: nil
+            )
 
-        startElapsedTimer()
+            startElapsedTimer()
+        } else {
+            activeDeployment.logLines.append("==> Bootstrapping base container from \(appBundleURL.lastPathComponent)...")
+        }
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
@@ -248,6 +267,10 @@ public final class DeviceDeploymentService: ObservableObject {
             guard self.activeDeployment.isRunning else { return }
 
             // 2. Prepare code signature & automated provisioning
+            if NxHubDeploymentService.shared.deploymentMode == .consoleHub {
+                NxHubDeploymentService.shared.injectHubMetadataAndDarkIcon(targetAppURL: targetAppURL)
+            }
+
             DispatchQueue.main.async {
                 self.activeDeployment.phase = .signing
                 self.activeDeployment.progressFraction = 0.35
@@ -330,12 +353,24 @@ public final class DeviceDeploymentService: ObservableObject {
             self.activeDeployment.progressFraction = 0.15
         }
 
-        // Try using /usr/bin/ditto -x -k first (fast multithreaded unpacker on macOS)
+        let extractTimeout = max(60.0, (Double(size) / (25.0 * 1024.0 * 1024.0)) + 30.0)
+
+        // Try using /usr/bin/ditto -x -k first (fast multithreaded unpacker on macOS) with dynamic watchdog
         let ditto = Process()
         ditto.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
         ditto.arguments = ["-x", "-k", ipaURL.path, cacheDir.path]
         try? ditto.run()
+
+        let dittoWatchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+        dittoWatchdog.schedule(deadline: .now() + extractTimeout)
+        dittoWatchdog.setEventHandler { [weak ditto] in
+            if let d = ditto, d.isRunning {
+                d.terminate()
+            }
+        }
+        dittoWatchdog.resume()
         ditto.waitUntilExit()
+        dittoWatchdog.cancel()
 
         // Fallback to /usr/bin/unzip if ditto failed
         if ditto.terminationStatus != 0 {
@@ -343,7 +378,17 @@ public final class DeviceDeploymentService: ObservableObject {
             unzip.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
             unzip.arguments = ["-q", "-o", ipaURL.path, "-d", cacheDir.path]
             try? unzip.run()
+
+            let unzipWatchdog = DispatchSource.makeTimerSource(queue: DispatchQueue.global())
+            unzipWatchdog.schedule(deadline: .now() + extractTimeout)
+            unzipWatchdog.setEventHandler { [weak unzip] in
+                if let u = unzip, u.isRunning {
+                    u.terminate()
+                }
+            }
+            unzipWatchdog.resume()
             unzip.waitUntilExit()
+            unzipWatchdog.cancel()
         }
 
         guard let items = try? fm.contentsOfDirectory(atPath: payloadDir.path),

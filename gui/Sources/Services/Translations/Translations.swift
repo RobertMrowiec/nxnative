@@ -14,56 +14,69 @@ public enum Translations {
                 .merging(controllerProfilePtBR) { _, new in new }
                 .merging(wizardGamerPtBR) { _, new in new }
                 .merging(portugueseAdditions) { _, new in new }
+                .merging(nxnLauncherPtBR) { _, new in new }
         case .ptPT:
             return baseEnglish
                 .merging(portuguesePortugal) { _, new in new }
                 .merging(controllerProfilePtPT) { _, new in new }
                 .merging(wizardGamerPtBR) { _, new in new }
                 .merging(portuguesePortugalAdditions) { _, new in new }
+                .merging(nxnLauncherPtPT) { _, new in new }
         case .es:
             return baseEnglish
                 .merging(spanish) { _, new in new }
                 .merging(spanishAdditions) { _, new in new }
+                .merging(nxnLauncherEs) { _, new in new }
         case .de:
             return baseEnglish
                 .merging(german) { _, new in new }
                 .merging(germanAdditions) { _, new in new }
+                .merging(nxnLauncherDe) { _, new in new }
         case .fr:
             return baseEnglish
                 .merging(french) { _, new in new }
                 .merging(frenchAdditions) { _, new in new }
+                .merging(nxnLauncherFr) { _, new in new }
         case .it:
             return baseEnglish
                 .merging(italian) { _, new in new }
                 .merging(italianAdditions) { _, new in new }
+                .merging(nxnLauncherIt) { _, new in new }
         case .ja:
             return baseEnglish
                 .merging(japanese) { _, new in new }
                 .merging(japaneseAdditions) { _, new in new }
+                .merging(nxnLauncherJa) { _, new in new }
         case .ko:
             return baseEnglish
                 .merging(korean) { _, new in new }
                 .merging(koreanAdditions) { _, new in new }
+                .merging(nxnLauncherKo) { _, new in new }
         case .pl:
             return baseEnglish
                 .merging(polish) { _, new in new }
                 .merging(polishAdditions) { _, new in new }
+                .merging(nxnLauncherPl) { _, new in new }
         case .ru:
             return baseEnglish
                 .merging(russian) { _, new in new }
                 .merging(russianAdditions) { _, new in new }
+                .merging(nxnLauncherRu) { _, new in new }
         case .sv:
             return baseEnglish
                 .merging(swedish) { _, new in new }
                 .merging(swedishAdditions) { _, new in new }
+                .merging(nxnLauncherSv) { _, new in new }
         case .zhHans:
             return baseEnglish
                 .merging(chineseSimplified) { _, new in new }
                 .merging(chineseSimplifiedAdditions) { _, new in new }
+                .merging(nxnLauncherZhHans) { _, new in new }
         case .zhHant:
             return baseEnglish
                 .merging(chineseTraditional) { _, new in new }
                 .merging(chineseTraditionalAdditions) { _, new in new }
+                .merging(nxnLauncherZhHant) { _, new in new }
         }
     }
 
@@ -72,6 +85,7 @@ public enum Translations {
             .merging(controllerProfileEn) { _, new in new }
             .merging(wizardGamerEn) { _, new in new }
             .merging(englishAdditions) { _, new in new }
+            .merging(nxnLauncherEn) { _, new in new }
     }
 
     private static let wizardGamerEn: [String: String] = [

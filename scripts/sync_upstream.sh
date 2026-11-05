@@ -2,6 +2,11 @@
 # ==============================================================================
 # NxNative Launcher - Safe Upstream Synchronization Script (seedds/nxnative)
 # ==============================================================================
+# Features:
+# 1. Configures 'merge=ours' driver so launcher components are never overwritten.
+# 2. Seamlessly merges upstream updates without blocking or causing conflicts.
+# 3. Preserves zero-hang launcher safety and custom hooks in all scenarios.
+# ==============================================================================
 set -e
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,7 +14,10 @@ cd "$REPO_ROOT"
 
 echo "🔄 [NxNative Launcher] Checking upstream synchronization (seedds/nxnative)..."
 
-# 1. Ensure upstream (GitHub) and origin (GitLab) remotes are configured
+# 1. Configure merge drivers for zero-conflict automated updates
+git config merge.ours.driver true
+
+# 2. Ensure upstream (GitHub) and origin (GitLab) remotes are configured
 if ! git remote get-url upstream >/dev/null 2>&1; then
     echo "⚙️ Adding upstream remote (https://github.com/seedds/nxnative.git)..."
     git remote add upstream https://github.com/seedds/nxnative.git
@@ -26,41 +34,33 @@ else
     fi
 fi
 
-# 2. Fetch upstream updates
+# 3. Fetch upstream updates
 echo "📥 Fetching commits from upstream/main..."
 git fetch upstream main
 
-# 3. Verify local branch status
+# 4. Verify local branch status
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 if [ "$CURRENT_BRANCH" != "main" ]; then
     echo "⚠️ Warning: You are currently on branch '$CURRENT_BRANCH'. Switching to 'main'..."
     git checkout main
 fi
 
-# 4. Check for unstaged or uncommitted changes
+# 5. Check for unstaged or uncommitted changes
+STASHED=0
 if ! git diff-index --quiet HEAD --; then
-    echo "⚠️ Uncommitted modifications found in working directory:"
-    git status --short
-    echo ""
-    echo "💡 Tip: Commit or run 'git stash' before syncing to prevent local conflicts."
-    read -p "Temporarily stash working changes and proceed? (y/N): " -n 1 -r
-    echo ""
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        git stash push -m "Auto-stash before sync-upstream on $(date)"
-        STASHED=1
-    else
-        echo "❌ Synchronization aborted to protect uncommitted changes."
-        exit 1
-    fi
+    echo "⚠️ Uncommitted modifications found in working directory."
+    echo "📦 Auto-stashing local modifications before syncing..."
+    git stash push -m "Auto-stash before sync-upstream on $(date)"
+    STASHED=1
 fi
 
-# 5. Compare commit counts
+# 6. Compare commit counts
 BEHIND_COUNT=$(git rev-list --count HEAD..upstream/main)
 if [ "$BEHIND_COUNT" -eq 0 ]; then
     echo "✅ Your fork is already 100% up to date with seedds/nxnative:main! No action required."
-    if [ "${STASHED:-0}" -eq 1 ]; then
+    if [ "$STASHED" -eq 1 ]; then
         echo "Restoring local stashed changes..."
-        git stash pop
+        git stash pop || true
     fi
     exit 0
 fi
@@ -70,11 +70,50 @@ echo "--- Latest 5 commits in upstream ---"
 git log HEAD..upstream/main --oneline -n 5
 echo "------------------------------------"
 
-# 6. Execute safe merge
-echo "🔀 Merging upstream/main into your main branch..."
+# 7. Execute safe merge with intelligent conflict resolution
+echo "🔀 Merging upstream/main into main branch..."
+MERGE_OK=0
 if git merge upstream/main --no-edit -m "chore(sync): merge upstream updates from seedds/nxnative"; then
+    MERGE_OK=1
+else
+    echo "⚙️ Analyzing potential conflicts..."
+    CONFLICT_FILES=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+    if [ -n "$CONFLICT_FILES" ]; then
+        echo "⚙️ Auto-resolving engine updates while safeguarding local launcher customizations..."
+        for file in $CONFLICT_FILES; do
+            if [[ "$file" == gui/* ]] || \
+               [[ "$file" == frontend-ios/* ]] || \
+               [[ "$file" == "README.md" ]] || \
+               [[ "$file" == "GEMINI.md" ]] || \
+               [[ "$file" == .gitlab* ]] || \
+               [[ "$file" == .github/* ]] || \
+               [[ "$file" == scripts/build_gui.sh ]] || \
+               [[ "$file" == scripts/create_dmg.sh ]] || \
+               [[ "$file" == scripts/gitlab_release.sh ]] || \
+               [[ "$file" == scripts/sync_upstream.sh ]] || \
+               [[ "$file" == dm/ios/Shell/* ]] || \
+               [[ "$file" == dm/ios/framework/* ]] || \
+               [[ "$file" == dm/ios/project-*.yml ]] || \
+               [[ "$file" == dm/ios/tools/build_shell.sh ]] || \
+               [[ "$file" == dm/ios/Sources/FrameworkBootstrap.* ]] || \
+               [[ "$file" == dm/ios/Sources/DataBookmark.* ]]; then
+                echo "  [KEEP OURS] $file"
+                git checkout HEAD -- "$file" 2>/dev/null || true
+            else
+                echo "  [ACCEPT UPSTREAM] $file"
+                git checkout --theirs -- "$file" 2>/dev/null || true
+            fi
+            git add "$file" 2>/dev/null || true
+        done
+        if git commit --no-edit -m "chore(sync): merge upstream updates from seedds/nxnative (auto-resolved)"; then
+            MERGE_OK=1
+        fi
+    fi
+fi
+
+if [ "$MERGE_OK" -eq 1 ]; then
     echo ""
-    echo "🎉 Merge completed successfully with zero conflicts!"
+    echo "🎉 Merge completed successfully!"
     echo "All NxNative Launcher customizations have been preserved."
     echo ""
     echo "🎮 Regenerating SUPPORTED_GAMES.md from upstream game definitions..."
@@ -84,21 +123,15 @@ if git merge upstream/main --no-edit -m "chore(sync): merge upstream updates fro
         git add SUPPORTED_GAMES.md nxnative/SUPPORTED_GAMES.md 2>/dev/null || true
         git commit -m "docs: auto-update SUPPORTED_GAMES.md from upstream game list" || true
     fi
-    echo ""
-    echo "👉 To publish the updates to your GitLab repository, run:"
-    echo "   git push origin main"
 else
     echo ""
-    echo "⚠️ MERGE CONFLICT DETECTED!"
-    echo "Aborting merge to safeguard your local changes..."
-    git merge --abort
-    echo "Your main branch has been restored to its intact state."
-    echo "To inspect and resolve conflicts manually, run:"
-    echo "   git merge upstream/main"
+    echo "⚠️ Conflict could not be automatically resolved. Restoring clean state..."
+    git merge --abort || true
+    echo "Main branch remains safe."
 fi
 
-if [ "${STASHED:-0}" -eq 1 ]; then
+if [ "$STASHED" -eq 1 ]; then
     echo ""
     echo "Restoring local stashed changes..."
-    git stash pop
+    git stash pop || true
 fi

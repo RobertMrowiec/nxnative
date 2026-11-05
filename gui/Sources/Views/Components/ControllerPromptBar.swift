@@ -40,6 +40,11 @@ public struct ControllerPromptBar: View {
                     }
                     .transaction { $0.animation = nil }
                 }
+                
+                // Card size slider attached to the bottom bar as the first option from right to left
+                if viewModel.selectedTab == 0 {
+                    cardScaleSliderView
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
@@ -118,6 +123,34 @@ public struct ControllerPromptBar: View {
         )
     }
 
+    // MARK: - Card Scale Slider View (My Games Tab)
+    private var cardScaleSliderView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "minus.magnifyingglass")
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundColor(.white.opacity(0.85))
+            
+            NXLiquidGlassSlider(
+                value: $viewModel.libraryCardScale,
+                in: 0.70...1.50,
+                step: 0.05,
+                accentColor: NXTheme.primary
+            )
+            .frame(width: 86)
+            
+            Image(systemName: "plus.magnifyingglass")
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundColor(.white.opacity(0.85))
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 3.5)
+        .nxGlassBar(
+            in: Capsule(),
+            fallbackFill: NXTheme.glassSurfaceElevated.opacity(0.75),
+            fallbackStroke: NXTheme.borderSubtle
+        )
+    }
+
     private func compactPadName(_ raw: String) -> String {
         let trimmed = raw.replacingOccurrences(of: "Wireless Controller", with: "")
             .replacingOccurrences(of: "Controller", with: "")
@@ -159,7 +192,6 @@ public struct ControllerPromptBar: View {
                 }
                 optionsPill(glyph: optionsBtn, action: "Game Options")
                 dpadPill(glyph: "←/→", action: "Browse")
-                controllerPill(glyph: yBtn, action: "Saves", color: brandYColor)
             }
             
         case 1: // Compatibility
@@ -202,9 +234,9 @@ public struct ControllerPromptBar: View {
             
         case 4: // Settings
             controllerPill(glyph: confirmBtn, action: "Select / Open", color: brandAColor)
+            dpadPill(glyph: "←/→", action: "Category")
             dpadPill(glyph: "↑/↓", action: "Navigate")
-            controllerPill(glyph: xBtn, action: "Check Updates", color: brandXColor)
-            controllerPill(glyph: yBtn, action: "Repair Tools", color: brandYColor)
+            controllerPill(glyph: yBtn, action: "Dev Mode", color: brandYColor)
             
         case 5: // Console / Logs
             controllerPill(glyph: xBtn, action: "Copy", color: brandXColor)

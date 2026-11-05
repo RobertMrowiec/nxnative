@@ -73,7 +73,8 @@ extension AppViewModel {
             )
         }
         
-        refreshLibrary()
+        let outURL = outputPath.map { URL(fileURLWithPath: $0) }
+        refreshLibrary(focusOnOutputURL: outURL)
         
         SoundEffectService.shared.play(.launch)
         NotificationService.shared.sendPortSuccessNotification(

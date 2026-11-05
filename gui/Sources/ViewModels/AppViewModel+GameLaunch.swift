@@ -35,6 +35,20 @@ extension AppViewModel {
                     } else {
                         self?.runningGameTitle = game.name
                         self?.logs.append(LogEntry(level: .success, message: "Launched Mac native game: \(game.name)"))
+                        if let app = runningApp {
+                            let sessionStart = Date()
+                            NotificationCenter.default.addObserver(
+                                forName: NSWorkspace.didTerminateApplicationNotification,
+                                object: nil,
+                                queue: .main
+                            ) { notif in
+                                if let termApp = notif.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+                                   termApp.processIdentifier == app.processIdentifier {
+                                    let elapsed = Date().timeIntervalSince(sessionStart)
+                                    PlayTimeService.shared.recordSession(for: game, duration: elapsed)
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -92,8 +106,9 @@ extension AppViewModel {
                         self?.logs.append(LogEntry(level: .success, message: "Launched game: \(game.name)"))
                         MemoryOptimizer.shared.optimizeForBackground(viewModel: self)
                         
-                        // Observe game termination to clear runningGameTitle and pack save.dmsync for iOS iCloud sync
+                        // Observe game termination to clear runningGameTitle, track playtime, and pack save.dmsync for iOS iCloud sync
                         if let runningApp = GameControllerService.shared.activeRunningGameApp {
+                            let sessionStart = Date()
                             NotificationCenter.default.addObserver(
                                 forName: NSWorkspace.didTerminateApplicationNotification,
                                 object: nil,
@@ -102,6 +117,8 @@ extension AppViewModel {
                                 if let termApp = notif.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
                                    termApp.processIdentifier == runningApp.processIdentifier {
                                     self?.runningGameTitle = nil
+                                    let elapsed = Date().timeIntervalSince(sessionStart)
+                                    PlayTimeService.shared.recordSession(for: game, duration: elapsed)
                                     if SaveSyncService.shared.isICloudSyncEnabled(for: game) {
                                         DispatchQueue.global(qos: .utility).async {
                                             _ = SaveSyncService.shared.writeDMSync(for: game)

@@ -452,7 +452,7 @@ extension Translations {
         "build.opt_romfs_separate_help": "대용량 게임 파일을 IPA 외부에 보관합니다. AltStore, Sideloadly용 경량(<100MB) IPA를 생성합니다.",
         "build.romfs_split_recommendation": "대용량 게임 감지됨 (~%@): 사이드로딩 도구는 대용량 IPA에서 오류가 발생하기 쉽습니다. RomFS 분리를 적극 권장합니다.",
         "common.enable": "활성화",
-        "compatibility.iphone_chip_filter": "iPhone 칩:",
+        "compatibility.iphone_chip_filter": "iPhone / iPad:",
         "compatibility.new": "신규",
         "compatibility.new_badge": "NEW",
         "controls.mouse_invert_x": "수평 X축 반전",

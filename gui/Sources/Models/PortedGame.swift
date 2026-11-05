@@ -37,6 +37,11 @@ public struct PortedGame: Identifiable, Hashable {
         if let bid = bundleId, !bid.isEmpty { return bid }
         return name
     }
+
+    /// Globally unique, scan-stable identity distinguishing `.app` and `.ipa` builds of the same Title ID.
+    public var stableId: String {
+        url.standardizedFileURL.path
+    }
     
     public var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: sizeBytes, countStyle: .file)

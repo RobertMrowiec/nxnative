@@ -263,6 +263,10 @@ public final class SystemDetector {
     }
     
     internal func runQuickCommand(_ cmd: String, args: [String]) -> (output: String, success: Bool) {
+        return runQuickCommandWithTimeout(cmd, args: args, timeoutSeconds: 3.0)
+    }
+    
+    internal func runQuickCommandWithTimeout(_ cmd: String, args: [String], timeoutSeconds: Double = 2.0) -> (output: String, success: Bool) {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: cmd)
         process.arguments = args
@@ -274,11 +278,18 @@ public final class SystemDetector {
         
         let pipe = Pipe()
         process.standardOutput = pipe
-        process.standardError = pipe
+        process.standardError = Pipe()
         
         do {
             try process.run()
-            process.waitUntilExit()
+            let deadline = DispatchTime.now() + timeoutSeconds
+            while process.isRunning && DispatchTime.now() < deadline {
+                usleep(30_000) // 30ms polling
+            }
+            if process.isRunning {
+                process.terminate()
+                return ("", false)
+            }
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             let str = String(data: data, encoding: .utf8) ?? ""
             return (str.trimmingCharacters(in: .whitespacesAndNewlines), process.terminationStatus == 0)

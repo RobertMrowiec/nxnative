@@ -143,8 +143,55 @@ extension SaveSyncService {
         return r > 0 ? Data(buf.prefix(r)) : Data()
     }
 
-    private func hasEntries(_ dir: String) -> Bool {
+    internal func hasEntries(_ dir: String) -> Bool {
         ((try? fileManager.contentsOfDirectory(atPath: dir)) ?? []).contains { $0 != ".DS_Store" }
+    }
+
+    /// Unpacks a DMSYNC1 binary archive (save.dmsync) into the destination directory.
+    @discardableResult
+    public func unpackDMSync(at fileURL: URL, into destDir: URL) -> Bool {
+        guard let data = try? Data(contentsOf: fileURL), data.count >= 144 else { return false }
+        guard data.prefix(8) == Data("DMSYNC1\n".utf8) else { return false }
+
+        let entriesCount = Int(data.subdata(in: 12..<16).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian })
+        var offset = 144 // 8 + 4 + 4 + 32 + 8 + 24 + 64
+
+        try? fileManager.createDirectory(at: destDir, withIntermediateDirectories: true)
+
+        for _ in 0..<entriesCount {
+            guard offset + 24 <= data.count else { return false }
+            let etype = data[offset]
+            let pathLen = Int(data.subdata(in: (offset + 2)..<(offset + 4)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian })
+            let guestLen = Int(data.subdata(in: (offset + 4)..<(offset + 6)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian })
+            let size = Int(data.subdata(in: (offset + 8)..<(offset + 16)).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian })
+            offset += 24
+
+            guard offset + pathLen + guestLen <= data.count else { return false }
+            guard let relPath = String(data: data.subdata(in: offset..<(offset + pathLen)), encoding: .utf8) else { return false }
+            offset += pathLen + guestLen
+
+            // Strip leading "save/" or "save_device/" if unpack target is already save dir
+            let stripped: String
+            if relPath.hasPrefix("save/") {
+                stripped = String(relPath.dropFirst(5))
+            } else if relPath == "save" {
+                continue
+            } else {
+                stripped = relPath
+            }
+
+            let targetURL = destDir.appendingPathComponent(stripped)
+            if etype == 1 {
+                try? fileManager.createDirectory(at: targetURL, withIntermediateDirectories: true)
+            } else if etype == 2 {
+                guard offset + size <= data.count else { return false }
+                let fileData = data.subdata(in: offset..<(offset + size))
+                offset += size
+                try? fileManager.createDirectory(at: targetURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? fileData.write(to: targetURL)
+            }
+        }
+        return true
     }
 
     /// Depth first, a folder before its contents, names in byte order, .DS_Store and links skipped (save_sync.c walk()).

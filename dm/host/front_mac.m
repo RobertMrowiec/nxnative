@@ -443,7 +443,7 @@ static int fn_shortcut(NSEvent *e) {
     NSString *s = e.charactersIgnoringModifiers;
     return (e.modifierFlags & NSEventModifierFlagFunction) && s.length == 1 && [[NSCharacterSet letterCharacterSet] characterIsMember:[s characterAtIndex:0]];
 }
-static void on_key(NSEvent *e, int down) {
+static void on_mouse_button(int buttonCode, int down) {
     if (!g_input_on) return;
     load_custom_input_mapping();
     int b = key_bit((unsigned short)buttonCode);

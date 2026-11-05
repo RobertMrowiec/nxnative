@@ -45,11 +45,12 @@ public struct CompatibilityView: View {
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 18)
                         .padding(.top, 14)
                         .padding(.bottom, 32)
                     } else {
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .top), count: 6), spacing: 14) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 160, maximum: 230), spacing: 12, alignment: .top)], spacing: 14) {
                             ForEach(Array(filteredGames.enumerated()), id: \.element.id) { index, game in
                                 let isFocused = viewModel.compatibilityFocusArea == .games && viewModel.focusedCompatibilityIndex == index
                                 CompatibleGameGridCard(
@@ -69,12 +70,14 @@ public struct CompatibilityView: View {
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 16)
                         .padding(.top, 14)
                         .padding(.bottom, 32)
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .nxScrollEdgeEffect(edges: [.top, .bottom])
             .safeAreaInset(edge: .top, spacing: 0) {
                 floatingHeaderStack

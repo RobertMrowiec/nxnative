@@ -116,11 +116,11 @@ public struct BuildCelebrationCard: View {
                     } else if outputPath.hasSuffix(".ipa") {
                         Button(action: {
                             let ipaURL = URL(fileURLWithPath: outputPath)
-                            DeviceDeploymentService.shared.shareViaAirDrop(fileURL: ipaURL)
+                            DeviceDeploymentService.shared.revealInFinder(fileURL: ipaURL)
                         }) {
                             HStack(spacing: 8) {
-                                Image(systemName: "airdrop")
-                                Text(viewModel.tr("build.airdrop_ios"))
+                                Image(systemName: "folder")
+                                Text(viewModel.tr("settings_modal.show_ipa"))
                             }
                             .font(.system(size: 14, weight: .bold, design: .rounded))
                             .frame(maxWidth: .infinity)

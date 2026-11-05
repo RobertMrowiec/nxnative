@@ -8,14 +8,24 @@ public struct ConsoleHeroView: View {
     @ObservedObject internal var artworkStore = ArtworkStore.shared
     @ObservedObject internal var deviceService = DeviceDeploymentService.shared
     @ObservedObject internal var deploymentTracker = IosDeploymentTracker.shared
+    @ObservedObject internal var playTimeService = PlayTimeService.shared
     @Environment(\.nxLiquidGlass) internal var glassEnv
     public let height: CGFloat
 
     public init(game: PortedGame? = nil, unportedGame: SelectableGame? = nil, viewModel: AppViewModel, height: CGFloat) {
         self.game = game
-        self.unportedGame = unportedGame
+        self.unportedGame = (game == nil) ? unportedGame : nil
         self.viewModel = viewModel
         self.height = height
+    }
+
+    private var actionBarModeKey: String {
+        if let g = game {
+            return g.isPlayableLocally ? "hero_actions_ported_local" : "hero_actions_ported_ios"
+        } else if unportedGame != nil {
+            return "hero_actions_unported"
+        }
+        return "hero_actions_empty"
     }
 
     private var heroImage: NSImage? {
@@ -46,28 +56,16 @@ public struct ConsoleHeroView: View {
 
     public var body: some View {
         ZStack(alignment: .bottomLeading) {
-            // MARK: - 16:9 Widescreen Promotional Artwork
-            GeometryReader { geo in
-                if let img = heroImage {
-                    Image(nsImage: img)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geo.size.width, height: height)
-                        .clipped()
-                } else {
-                    // Procedural atmospheric gradient fallback
-                    ZStack {
-                        Color.nxCanvas.opacity(0.6)
-                        RadialGradient(
-                            gradient: Gradient(colors: [NXTheme.primary.opacity(0.34), Color.nxCanvas.opacity(0.85)]),
-                            center: .topTrailing,
-                            startRadius: 40,
-                            endRadius: 600
-                        )
-                    }
-                    .frame(width: geo.size.width, height: height)
-                }
-            }
+            // MARK: - Top-Down Legibility Gradient (for header menu buttons & logo)
+            LinearGradient(
+                stops: [
+                    .init(color: Color.black.opacity(0.72), location: 0.0),
+                    .init(color: Color.black.opacity(0.35), location: 0.18),
+                    .init(color: Color.clear, location: 0.38)
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
             .allowsHitTesting(false)
 
             // MARK: - Dark Mode Linear Blend Overlay
@@ -95,14 +93,12 @@ public struct ConsoleHeroView: View {
 
             // MARK: - Game Metadata & Liquid Glass Console Action Buttons
             VStack(alignment: .leading, spacing: 8) {
-                // Clean Game Title
                 Text(game?.name ?? unportedGame?.name ?? "")
                     .font(.system(size: 34, weight: .heavy, design: .rounded))
                     .foregroundColor(NXTheme.textPrimary)
                     .lineLimit(2)
                     .shadow(color: Color.black.opacity(0.8), radius: 10, x: 0, y: 3)
 
-                // Console Runtime Status Metadata (clean text with shadow below title)
                 HStack(spacing: 8) {
                     if let g = game {
                         if g.platform == .macApp {
@@ -117,8 +113,10 @@ public struct ConsoleHeroView: View {
                                 statusSeparator()
                                 statusText("MetalFX")
                             }
-                            statusSeparator()
-                            statusText(g.isSwitch2 ? "Nintendo Switch 2" : "macOS Native")
+                            if g.isSwitch2 {
+                                statusSeparator()
+                                statusText("Nintendo Switch 2")
+                            }
                         } else if g.platform == .nonSwitch {
                             statusText(viewModel.tr("shelf.non_switch_title"))
                             statusSeparator()
@@ -154,7 +152,6 @@ public struct ConsoleHeroView: View {
                 }
                 .padding(.bottom, 4)
 
-                // Interactive Liquid Glass Action Bar
                 NXGlassContainer(spacing: 12) {
                     HStack(spacing: 12) {
                         if let g = game {
@@ -165,10 +162,62 @@ public struct ConsoleHeroView: View {
                     }
                     .padding(.top, 4)
                 }
+                .id(actionBarModeKey)
+                .transition(.identity)
+                .animation(nil, value: actionBarModeKey)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 34)
             .padding(.bottom, 22)
         }
-        .frame(height: height)
+        .frame(maxWidth: .infinity, minHeight: height, maxHeight: height, alignment: .bottomLeading)
+        .background {
+            if let img = heroImage {
+                Image(nsImage: img)
+                    .resizable()
+                    .scaledToFill()
+                    .allowsHitTesting(false)
+            } else {
+                ZStack {
+                    Color.nxCanvas.opacity(0.6)
+                    RadialGradient(
+                        gradient: Gradient(colors: [NXTheme.primary.opacity(0.34), Color.nxCanvas.opacity(0.85)]),
+                        center: .topTrailing,
+                        startRadius: 40,
+                        endRadius: 600
+                    )
+                }
+                .allowsHitTesting(false)
+            }
+        }
+        .clipped()
+    }
+
+    internal func statusPill(title: String, active: Bool) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .nxGlassBar(
+                in: Capsule(),
+                tint: active ? NXTheme.primary.opacity(0.46) : NXTheme.glassSurface.opacity(0.28),
+                fallbackFill: active ? NXTheme.primary.opacity(0.35) : NXTheme.textMuted.opacity(0.24),
+                fallbackStroke: active ? NXTheme.secondary.opacity(0.45) : Color.white.opacity(0.12)
+            )
+    }
+
+    internal func statusText(_ title: String) -> some View {
+        Text(title)
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(.white)
+            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
+    }
+
+    internal func statusSeparator() -> some View {
+        Text("|")
+            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .foregroundColor(.white.opacity(0.50))
+            .shadow(color: Color.black.opacity(0.85), radius: 4, x: 0, y: 1.5)
     }
 }

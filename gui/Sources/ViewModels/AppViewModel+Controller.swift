@@ -124,6 +124,12 @@ extension AppViewModel {
             }
         case 1:
             handleCompatibilityNavigateLeft()
+        case 2:
+            handleControlsGamepadAction(.navigateLeft)
+        case 3:
+            handlePersonalizeGamepadAction(.navigateLeft)
+        case 4:
+            handleSystemGamepadAction(.navigateLeft)
         default: break
         }
     }
@@ -132,7 +138,13 @@ extension AppViewModel {
         switch selectedTab {
         case 0:
             if isFocusOnHeroBar {
-                if heroActionFocusIndex < 3 {
+                let maxIdx: Int
+                if let g = currentFocusedGame {
+                    maxIdx = g.platform == .macApp ? 1 : 3
+                } else {
+                    maxIdx = 1
+                }
+                if heroActionFocusIndex < maxIdx {
                     heroActionFocusIndex += 1
                     SoundEffectService.shared.play(.focus)
                 }
@@ -141,6 +153,12 @@ extension AppViewModel {
             }
         case 1:
             handleCompatibilityNavigateRight()
+        case 2:
+            handleControlsGamepadAction(.navigateRight)
+        case 3:
+            handlePersonalizeGamepadAction(.navigateRight)
+        case 4:
+            handleSystemGamepadAction(.navigateRight)
         default: break
         }
     }
@@ -154,8 +172,12 @@ extension AppViewModel {
             handleLibraryNavigateUp()
         case 1:
             handleCompatibilityNavigateUp()
+        case 2:
+            handleControlsGamepadAction(.navigateUp)
+        case 3:
+            handlePersonalizeGamepadAction(.navigateUp)
         case 4:
-            refreshPrerequisites()
+            handleSystemGamepadAction(.navigateUp)
         default: break
         }
     }
@@ -171,6 +193,12 @@ extension AppViewModel {
             }
         case 1:
             handleCompatibilityNavigateDown()
+        case 2:
+            handleControlsGamepadAction(.navigateDown)
+        case 3:
+            handlePersonalizeGamepadAction(.navigateDown)
+        case 4:
+            handleSystemGamepadAction(.navigateDown)
         default: break
         }
     }
@@ -198,140 +226,10 @@ extension AppViewModel {
             prof.swapFaceButtons()
             InputProfileManager.shared.updateProfile(prof)
         case 4:
-            SoundEffectService.shared.play(.click)
-            if !prerequisites.allSatisfied { showInstallerSheet = true }
+            handleSystemGamepadAction(.confirm)
         default:
             SoundEffectService.shared.play(.click)
             break
-        }
-    }
-
-    public func executeFocusedHeroBarAction() {
-        if let g = currentFocusedGame {
-            switch heroActionFocusIndex {
-            case 0:
-                if g.isPlayableLocally {
-                    launchGame(g)
-                } else {
-                    gameForSettingsSheet = g
-                }
-            case 1:
-                if g.platform == .macApp {
-                    showControlsGuideSheet = true
-                } else {
-                    DeviceDeploymentService.shared.shareViaAirDrop(fileURL: g.url)
-                }
-            case 2:
-                gameForSettingsSheet = g
-            case 3:
-                let profile = GameDetailsProfile.inspect(for: g)
-                revealSaveFolder(profile.saveDirectory)
-            default:
-                break
-            }
-        } else if let u = focusedUnportedGame ?? unportedGames.first {
-            switch heroActionFocusIndex {
-            case 0:
-                selectedGame = u
-                gameForPortModal = u
-            case 1:
-                if let base = u.baseFile {
-                    NSWorkspace.shared.activateFileViewerSelecting([base.url])
-                }
-            default:
-                break
-            }
-        }
-    }
-    
-    func handleCancel() {
-        if gameForSettingsSheet != nil {
-            gameForSettingsSheet = nil
-            SoundEffectService.shared.play(.click)
-            return
-        }
-        switch selectedTab {
-        case 0:
-            if isFocusOnHeroBar {
-                isFocusOnHeroBar = false
-                SoundEffectService.shared.play(.click)
-                return
-            }
-            if isGameActionMenuPresented {
-                SoundEffectService.shared.play(.click)
-                withAnimation(.easeInOut(duration: 0.18)) { isGameActionMenuPresented = false }
-            } else if activeLibraryShelf == .unportedSwitch, let unported = focusedUnportedGame,
-                      isBuilding && (buildingGameId == unported.id || selectedGame?.id == unported.id) {
-                SoundEffectService.shared.play(.click)
-                cancelBuild()
-            } else if isFocusOnDeck {
-                isFocusOnDeck = false
-                SoundEffectService.shared.play(.click)
-            }
-        case 1:
-            handleCompatibilityCancel()
-        default:
-            break
-        }
-    }
-    
-    func handleSecondaryAction() {
-        switch selectedTab {
-        case 0:
-            if let game = currentFocusedGame { launchGame(game) }
-        case 1:
-            handleCompatibilitySecondaryAction()
-        case 3:
-            SoundEffectService.shared.play(.click)
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                isLiquidGlassEnabled.toggle()
-            }
-        case 5:
-            let allText = logs.map { "\($0.timestamp) [\($0.level.rawValue.uppercased())] \($0.message)" }.joined(separator: "\n")
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(allText, forType: .string)
-        default:
-            break
-        }
-    }
-    
-    func handleContextAction() {
-        switch selectedTab {
-        case 0:
-            if let game = currentFocusedGame {
-                SoundEffectService.shared.play(.click)
-                let profile = GameDetailsProfile.inspect(for: game)
-                revealSaveFolder(profile.saveDirectory)
-            }
-        case 3:
-            SoundEffectService.shared.play(.click)
-            withAnimation(.spring(response: 0.30, dampingFraction: 0.78)) {
-                liquidGlassIntensity = (liquidGlassIntensity >= 0.5) ? 0.0 : 1.0
-                if !isLiquidGlassEnabled {
-                    isLiquidGlassEnabled = true
-                }
-            }
-        case 5:
-            SoundEffectService.shared.play(.click)
-            logs.removeAll()
-        default:
-            break
-        }
-    }
-    
-    func handleOptionsAction() {
-        if gameForSettingsSheet != nil {
-            if let g = gameForSettingsSheet { saveRuntimeConfig(activeSettingsConfig, for: g) }
-            gameForSettingsSheet = nil
-            SoundEffectService.shared.play(.click)
-            return
-        }
-        // Select / View button: toggle fullscreen on macOS
-        DispatchQueue.main.async {
-            if let window = NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible }) {
-                window.toggleFullScreen(nil)
-                SoundEffectService.shared.play(.click)
-            }
         }
     }
 }

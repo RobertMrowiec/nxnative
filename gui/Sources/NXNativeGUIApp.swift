@@ -23,7 +23,7 @@ struct NXNativeGUIApp: App {
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unifiedCompact)
-        .defaultSize(width: 820, height: 680)
+        .defaultSize(width: 1180, height: 760)
         .commands {
             SidebarCommands()
             

@@ -158,18 +158,6 @@ extension GameSettingsIosDeploymentView {
                 HStack(spacing: 8) {
                     Button(action: {
                         SoundEffectService.shared.play(.click)
-                        deviceService.shareViaAirDrop(fileURL: game.url)
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "airdrop")
-                            Text(L10n.t("settings_modal.airdrop_now"))
-                        }
-                    }
-                    .buttonStyle(NXPrimaryButtonStyle())
-                    .controlSize(.small)
-
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
                         deviceService.revealInFinder(fileURL: game.url)
                     }) {
                         HStack(spacing: 4) {
@@ -190,5 +178,85 @@ extension GameSettingsIosDeploymentView {
                 .strokeBorder(Color.orange.opacity(0.3), lineWidth: 1)
         )
         .cornerRadius(8)
+    }
+
+    // MARK: - Action Section
+    internal var actionSection: some View {
+        HStack(spacing: 12) {
+            if let record = deploymentTracker.deploymentRecord(for: game) {
+                IosRenewalBadgeView(record: record)
+            }
+
+            Spacer()
+
+            if hasExternalRomfs {
+                Button(action: {
+                    guard let dev = deviceService.selectedDevice else { return }
+                    SoundEffectService.shared.play(.click)
+                    deviceService.pushRomfsDirectly(gameURL: game.url, device: dev) { _, _ in }
+                }) {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.up.doc.fill")
+                        Text(L10n.t("settings.ios_push_romfs_only"))
+                    }
+                }
+                .buttonStyle(NXSecondaryButtonStyle())
+                .controlSize(.small)
+                .disabled(deviceService.selectedDevice == nil || deviceService.isDetecting)
+            }
+
+            if SaveSyncService.shared.locateExistingSave(titleId: game.titleId ?? "", gameName: game.name) != nil {
+                Button(action: {
+                    guard let dev = deviceService.selectedDevice else { return }
+                    SoundEffectService.shared.play(.click)
+                    SaveSyncService.shared.restoreICloudSaveToDevice(
+                        titleId: game.titleId ?? "",
+                        gameName: game.name,
+                        bundleId: hubService.resolveHubBundleId(for: game, on: dev),
+                        device: dev
+                    ) { success, _ in
+                        SoundEffectService.shared.play(success ? .click : .error)
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise.icloud.fill")
+                            .font(.system(size: 11))
+                        Text("Restaurar Save")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                }
+                .buttonStyle(NXSecondaryButtonStyle())
+                .controlSize(.small)
+                .disabled(deviceService.selectedDevice == nil || deviceService.isDetecting)
+            }
+
+            let installButtonTitle: String = {
+                if let dev = deviceService.selectedDevice {
+                    return dev.model.contains("iPad")
+                        ? L10n.t("nxn_launcher.install_ipad")
+                        : L10n.t("nxn_launcher.install_iphone")
+                }
+                return L10n.t("nxn_launcher.install_device")
+            }()
+
+            Button(action: {
+                guard let dev = deviceService.selectedDevice else { return }
+                SoundEffectService.shared.play(.click)
+                hubService.deployToHub(game: game, device: dev, team: deviceService.selectedSigningTeam) { success, _ in
+                    SoundEffectService.shared.play(success ? .click : .error)
+                }
+            }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.down.to.line.circle.fill")
+                        .font(.system(size: 12, weight: .bold))
+                    Text(installButtonTitle)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 7)
+            }
+            .buttonStyle(NXPrimaryButtonStyle())
+            .disabled(deviceService.selectedDevice == nil || deviceService.isDetecting)
+        }
     }
 }

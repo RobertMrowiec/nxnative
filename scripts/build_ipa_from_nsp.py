@@ -2716,6 +2716,9 @@ def parse_args(argv):
     ap.add_argument('--romfs', choices=('bundle', 'separate'), help='bundle = the game files go into the IPA (default: the ROMFS setting, bundle); separate = they stay out of the IPA and the Xcode app: the build is small and fast, and the RomFS image '
                     'is copied to the phone once per game version with the scripts/push_romfs.sh command printed at the end (the app refuses an image of another version)')
     ap.add_argument('--prepare-xcode', action='store_true', help='prepare a per-game Xcode project and add it to the shared workspace instead of packing an IPA (requires keeping extracted files)')
+    ap.add_argument('--shell-framework', metavar='FOLDER', help='route C\'s shell (docs/launcher-c-plan.md M2): build only the game\'s framework, FOLDER/DmGame<title ID>.framework '
+                    '(its code, tables, settings list, shader libraries and icon), for dm/ios/tools/build_shell.sh to embed in the one app for all games; no IPA or Xcode project, '
+                    'the game files stay separate (implies --romfs separate and --keep-extracted)')
     ap.add_argument('--platform', choices=('ios', 'mac', 'mac-app'), help='ios = the IPA (or the Xcode project); mac = for development: build only what running the game on this Mac needs (the Mac shaders and the Mac host, '
                     'no iOS shaders, Xcode project or IPA), keep the extracted files and print the command that runs the game; mac-app = what mac builds, then a self-contained, double-clickable '
                     'Mac app of the game (default: <game name>.app in the NSP folder, -o names another) (default: the PLATFORM setting, ios)')
@@ -2835,6 +2838,10 @@ def main(args=None):
     if seen_shaders and not mac: raise BuildError('--seen-shaders / SEEN_SHADERS builds a partial library of Mac shaders: it needs --platform mac or mac-app')
     if args.mac_sign and not mac_pack: raise BuildError('--mac-sign signs the Mac app: it needs --platform mac-app')
     if mac and prepare_xcode: raise BuildError(f'--prepare-xcode makes an iPhone project: it cannot be combined with --platform {platform}')
+    shell_fw = Path(os.path.expanduser(args.shell_framework)).resolve() if args.shell_framework else None
+    if shell_fw and (mac or prepare_xcode): raise BuildError('--shell-framework builds only the game framework for the shell: it cannot be combined with --platform mac / mac-app or --prepare-xcode')
+    if shell_fw and args.romfs == 'bundle': raise BuildError('--shell-framework keeps the game files separate (the shell takes them from Documents/games/<title ID>/): it cannot be combined with --romfs bundle')
+    if shell_fw: args.romfs = 'separate'; args.keep_extracted = True
     if mac and not apple_silicon(): raise BuildError(f'--platform {platform} runs the game in the Mac host, which runs the game\'s own arm64 code natively: it needs a Mac with Apple silicon, and this Mac has an Intel processor')
     check_native_python()
     keep = KEEP_EXTRACTED if args.keep_extracted is None else args.keep_extracted
@@ -3099,8 +3106,8 @@ def main(args=None):
         rmtree(work / 'tmp'); return {'row': (PROGRAM_INDEX, g.id, patched, rfs.source(game), ios, gfx), 'ex': ex, 'keep': keep}
     programs = other_programs(args, g)
     if programs and romfs_mode == 'separate': raise BuildError('a game of several programs keeps its files in the app (ROMFS / --romfs bundle): Documents holds one RomFS image, one program\'s')
-    if not prepare_xcode and free_gb(out_ipa.parent) < 5: raise BuildError(f'less than 5 GB free on the volume of {out_ipa.parent}')
-    say('preparing the Xcode project' if prepare_xcode else f'building the IPA → {out_ipa}')
+    if not prepare_xcode and not shell_fw and free_gb(out_ipa.parent) < 5: raise BuildError(f'less than 5 GB free on the volume of {out_ipa.parent}')
+    say('preparing the Xcode project' if prepare_xcode else f'building the game framework for the shell → {shell_fw}' if shell_fw else f'building the IPA → {out_ipa}')
     ipa_env = dict(env, GAME=g.id, W=str(work / 'ipa'), PATCHED=str(patched), ROMFS=str(rfs.source(game)), MSL_IOS=str(ios), GFXAPI=gfx, FONT_PY=py, DM_DISPLAY_NAME=app_name, DM_BUNDLE_ID=bundle_id, AOC=str(aoc or ''), DM_XCODE_DERIVED_DATA=str(work / 'xcode-derived-data'), DM_TEAM_ID=team_id, DM_LANG=lang, CONTROL=str(control))
     if prepare_xcode: ipa_env['DM_XCODE_PROJECT_DIR'] = str(project.parent)
     separate = romfs_mode == 'separate'
@@ -3135,6 +3142,17 @@ def main(args=None):
         if separate: say_push_romfs(rfs.source(game), bundle_id)
         say('choose the game scheme in Xcode, select your Team and iPhone or iPad, then Run (Release)')
         report_profile_status(g, reg, pkg_ver, derived, provisional, 'Xcode project', patched)
+        return
+    if shell_fw:   # route C's shell: the framework alone, which build_shell.sh embeds; the game files stay where they are for the copy to the device
+        ipa_env['DM_FRAMEWORK_ONLY'] = str(shell_fw)
+        fw = shell_fw / f'DmGame{g.id.upper()}.framework'
+        PROG.stage('game framework')
+        run(['bash', repo / 'dm/ios/tools/build_ipa.sh'], logs / 'build_framework.log', env=ipa_env)
+        if not fw.is_dir(): raise BuildError(f'no built framework at {fw}')
+        PROG.end(f'{fw.name}, {amount(sum(f.stat().st_size for f in fw.rglob("*") if f.is_file()), "B")}')
+        rmtree(work / 'tmp')
+        say(f'done: {fw}')
+        report_profile_status(g, reg, pkg_ver, derived, provisional, 'game framework', patched)
         return
     watch = IpaWatch(repo, work / 'ipa', out_ipa)
     PROG.stage('app build', poll=watch.poll, step='starting')   # build_ipa.sh's "pack IPA" line starts the stage "IPA pack"
