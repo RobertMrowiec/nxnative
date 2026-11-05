@@ -55,15 +55,6 @@ static const lock_t k_locks[] = {
 
 static int rd(uint64_t a, void *out, size_t n) { vm_size_t got = 0; return a >= 0x1000 && vm_read_overwrite(mach_task_self(), (vm_address_t)a, n, (vm_address_t)out, &got) == KERN_SUCCESS && got == n; }
 
-static int g_engine_fps_locked = 0;
-int dm_fps_has_engine_lock(void) { return g_engine_fps_locked; }
-
-static const char *k_trinity_builds[] = {
-    "b1f12fd919eae86a", // Pokémon Legends: Z-A 2.0.2 (v393216)
-    "7222e13e00000000", // Pokémon Legends: Z-A 1.0.0 (v0)
-    "ca44e7dd62e61a2a", // Pokémon Scarlet 1.0.0
-};
-
 // NieR 1.0.3 exposes its preset minimum but ships fixed mode-specific fallbacks.
 // Keep the native current-scale and UV controller intact; only select its
 // verified lower bound. This is independent of the FPS choice.
@@ -218,11 +209,6 @@ static lock_t ue[3], target_lock; static const lock_t *rows[NLOCKS + 4]; static 
 static pthread_once_t g_found = PTHREAD_ONCE_INIT;
 static void lock_find(void) {
     for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) {
-        for (size_t b = 0; b < sizeof k_trinity_builds / sizeof k_trinity_builds[0]; b++) {
-            if (!strncmp(g_mod[i].build_id, k_trinity_builds[b], 16)) {
-                trinity = (int)(b + 1); base = g_mod[i].base;
-            }
-        }
         for (int k = 0; k < (int)(sizeof k_nier_dr / sizeof *k_nier_dr); k++) if (!strcmp(g_mod[i].build_id, k_nier_dr[k].build)) { base = g_mod[i].base; nier = 1; display = k_nier_dr[k].display; }
         for (int k = 0; k < NLOCKS; k++) if (!strcmp(g_mod[i].build_id, k_locks[k].build)) { rows[nrow++] = &k_locks[k]; base = g_mod[i].base; }
         if (target_row(&g_mod[i], &target_lock)) { rows[nrow++] = &target_lock; base = g_mod[i].base; }
@@ -235,29 +221,26 @@ static void lock_find(void) {
 // Frostbite's simulation rate, found by name).
 // Without one, and without a frame step state page, nothing makes the game follow the cap, so the graphics layer keeps the game's own present interval (hle_nvn.c fps_present_cap):
 // presenting at a cap the game does not step by runs a fixed-step game fast or slow (Tears of the Kingdom 1.4.2 at 2x with DM_FPS_TARGET=60)
-int dm_fps_lock_engine(void) { pthread_once(&g_found, lock_find); return nrow || nier || trinity || fb.n; }
+int dm_fps_lock_engine(void) { pthread_once(&g_found, lock_find); return nrow || nier || fb.n; }
+int nvn_fps_high_now(void);   // hle_nvn.c
 void dm_fps_lock_tick(void) {
     dynamic_resolution_tick();   // separate from the FPS cap
-    static int state = -2, nlog[NLOCKS + 4], target; static const char *src;
+    static int state = -2, nlog[NLOCKS + 4], target, high; static const char *src;
     if (state == -1) return;
     if (state == -2) {
         state = -1; pthread_once(&g_found, lock_find);
-        if (!nrow && !nier && !trinity && !fb.n && !ue_missing) return;
+        if (!nrow && !nier && !fb.n && !ue_missing) return;
         const char *e = getenv("DM_FPS_TARGET"); int t = e ? atoi(e) : DM_GAME_FPS_TARGET; src = e ? "DM_FPS_TARGET" : "game profile fps_target";
-        if (t != 0 && t != 30 && t != 60) { LOG("[RED] DM_FPS_TARGET=%s: must be 0, 30 or 60; leaving the game's frame limit", e); t = 0; }
+        if (t != 0 && t != 30 && t != 60 && t != 120) { LOG("[RED] DM_FPS_TARGET=%s: must be 0, 30, 60 or 120; leaving the game's frame limit", e); t = 0; }
+        if (t == 120 && DM_GAME_FPS_MAX < 120) { LOG("[RED] DM_FPS_TARGET=120: this game's speed at 120 fps is not checked (profile fps_max); running at 60"); t = 60; }
+        high = t == 120;
         if (t && ue_missing) LOG("[RED] main: Unreal %s not found by the rewriter (ue_cvar.py NAMES; game profile ue_fps_cvar): the game's own frame limit stays", DM_GAME_UE_FPS_CVAR);
         if (!nrow && !nier && !fb.n) return;
         if (!t) { for (int r = 0; r < nrow; r++) LOG("main: %s left as the game sets it (%s)", rows[r]->what, src); if (nier) LOG("main: NieR frame interval left as the game sets it (%s)", src);
                   if (fb.n) LOG("main: Frostbite simulation rate left as the game sets it (%s)", src); return; }
         target = t; state = 0;
-        if (target == 60 && (nrow > 0 || nier > 0)) g_engine_fps_locked = 1;
     }
-    if (trinity) {
-        static int nlog_trinity;
-        if (nlog_trinity++ < 5) {
-            LOG("main: Trinity Engine (Pokémon Legends: Z-A) speed sync active (preserving 1.0x normal speed pacing without 2x turbo)");
-        }
-    }
+    if (high) target = nvn_fps_high_now();   // 120 while frames fit, else 60: the game's step stays what the screen shows (hle_nvn.c fps_high)
     if (nier) {
         // NieR:Automata US/EU 1.0.3 (3c10ec35c5ef4c3686b4053afb0e58e7):
         // - [base + 0x192be00] points to the NVN graphics device object whose +0x9c160 holds the present interval (1 = 60 FPS, 2 = 30 FPS),
@@ -265,7 +248,7 @@ void dm_fps_lock_tick(void) {
         // Resolution policy is applied independently above, so 30/60 FPS does
         // not implicitly enable or disable the native resolution controller.
         uint64_t p = 0; static int nlog_nier;
-        uint32_t want = (uint32_t)(60 / target), want_mode = want - 1, cur_mode = 0;
+        uint32_t want = target > 60 ? 1 : (uint32_t)(60 / target), want_mode = want - 1, cur_mode = 0;
         if (rd((uint64_t)(uintptr_t)(base + display + 0x504), &cur_mode, sizeof cur_mode) && cur_mode != want_mode && (cur_mode == 0 || cur_mode == 1)) {
             uint32_t *dst = (uint32_t *)(uintptr_t)(base + display + 0x504);
             dm_guest_write_prepare(dst, sizeof *dst);
@@ -316,7 +299,7 @@ void dm_fps_lock_tick(void) {
                 snprintf(was, sizeof was, "%u", cur);
             } else {
                 int fps = L->kind == FPS_I32;
-                want = fps ? (uint32_t)target : 60 / (uint32_t)target;
+                want = fps ? (uint32_t)target : target > 60 ? 1 : 60 / (uint32_t)target;   // above 60 the display link paces it: a vsync count stays 1
                 if (cur == want || cur < (fps ? 10u : 1u) || cur > (fps ? 120u : 4u)) continue;
                 snprintf(was, sizeof was, "%u", cur);
             }

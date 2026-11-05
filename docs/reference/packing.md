@@ -9,6 +9,14 @@
 - **Fix:** the scanner accepts the table boundary as the end of the final name. `nx_extract` supplies LibHac with a virtual header containing the missing NUL followed by the original payload storage. File offsets remain relative to that payload, and the source package and encrypted NCA bytes are unchanged. Truncated tables and out-of-table name offsets still fail. Synthetic package tests cover both readers and payload preservation.
 - **Found on:** Moving Out 2 (`010065D018172000`), base 1.1.254 NSP and update 1.3.315 NSZ. Package reading was checked, not gameplay.
 
+### A NUP with complete standalone updates stops at "no base game"
+
+- **Symptom:** `no base game, only update packages: pack the base game and its update into one NUP`, even when the update carries the complete game's files ([issue #1195](https://github.com/seedds/nxnative/issues/1195)).
+- **Cause:** `pack_nup.scan` required a `base` record. NUP v1 permits a container without one when every update has the `standalone_update` flag (package flags bit 0, [SPEC §3.1.2](https://github.com/a55uka/nup/blob/meow/SPEC.md#312-package-kinds)). The reference packer writes one for a dump with no `base/` folder and, since its commit `92089de3`, for an empty `base/` too; before that an empty `base/` gave an empty base record, which got through the check. The issue was filed before that commit, so its NUP came from a dump with no `base/` folder or from another packer; the file itself was not seen.
+- **Fix:** no base record and a base record with no files are one case: `scan` gives `None` for the base, and only the update versions present are offered. Both packing entry points select the newest update by default; requesting version 0 fails. The selected update must have `exefs/main`, `exefs/main.npdm` and its own RomFS; it cannot borrow another update's RomFS. Control data the update lacks comes from the record that holds application metadata: the empty base record, else the first package ([SPEC §5.1](https://github.com/a55uka/nup/blob/meow/SPEC.md#51-localized-records-types-0x0009--0x000a)). A base with files still supplies the RomFS for an update without one. Program-ID, DLC, content-size and SHA-256 checks apply as before. A version that cannot be packed stops at a `[RED]` line: the disk check reads its RomFS folder before extraction, so `cli()` catches `pack_nup.Error`.
+- **Not known from the file:** whether the update is the whole game. The flag does not promise it (the spec says such an update needs a matching base elsewhere), and an update holding only changed files would pack and then fail at boot, after a full shader build. The scripts print that the update is taken as the whole game. Measured: both NUPs at hand have an update RomFS that holds every path of its base (Age of Imprisonment: 2,065 base files, 2,153 in the update, none missing; Yoshi and the Mysterious Book: 147 and 147, none missing).
+- **Found on:** [Mario Kart World](../../dm/games/0400C3F00006E000/README.md). Reproduced with its base dump repackaged by the reference tool as a standalone-update fixture; this checks packaging, not the reported 1.8.0's contents or gameplay. Synthetic tests cover both entry points, both forms of no base, multiple versions, control data, DLC and incomplete updates.
+
 ## Build tools
 
 ### Homebrew .NET is on PATH but apphosts cannot find the runtime
@@ -38,6 +46,13 @@
 - **Cause:** `metallib()` passed every `.air` file as an absolute path in one command. The NSP script runs it with `TMPDIR` set to the work folder, so each path holds that folder's name; a game with thousands of generated modules (Super Mario Galaxy: 3,083 captured shaders, more with the dual-source variants) under a long NSP folder name exceeds macOS's 1 MB `ARG_MAX`.
 - **Fix:** `metallib()` runs from the files' common folder with relative paths and an absolute output path, so the command length no longer depends on the work folder's name.
 - **Found on:** [Super Mario Galaxy](../../dm/games/010099C022B96000/README.md), with its dump in a folder named after both games of the cartridge. Applies to every Vulkan game's shader step.
+
+### The split shader tables differ from a game profile's
+
+- **Symptom:** the shader split stops with `the split shader tables differ from game profile <id>'s`, on the game version the profile registers.
+- **Cause:** the check compares the split's data rows with the profile's byte for byte, so it stops for either of two reasons: other game files, or a change to `shader_split.py` that reads the same files differently. A profile's tables can only be split again where its game files are, so continuous integration cannot catch the second reason.
+- **Fix:** the error shows each differing table's row counts and its first row on each side. For a splitter change, check that the new rows are right, then copy the tables from `shader/pkg.partial/tables` in the build folder into the profile. A change to the splitter's output also needs the other profiles it reaches split again.
+- **Found on:** [Splatoon Raiders](../../dm/games/0400380020056000/README.md) ([issue #1263](https://github.com/seedds/nxnative/issues/1263)): [NVN2 task and mesh shaders](shaders.md#nvn2-task-and-mesh-shaders) moved one row from vertex to mesh. Donkey Kong Bananza, Pokemon Pokopia and Hyrule Warriors: Age of Imprisonment were checked and hold no such shader; Fire Emblem Fortune's Weave was not checked, as no dump was at hand.
 
 ## IPA archives
 

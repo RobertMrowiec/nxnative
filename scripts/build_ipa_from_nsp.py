@@ -364,14 +364,11 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=(), fatal=True):
     cmd = [str(c) for c in cmd]
     log.parent.mkdir(parents=True, exist_ok=True)
     tail = collections.deque(maxlen=40)
-    err_lines = collections.deque(maxlen=20)
     p = subprocess.Popen(cmd, env=env, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace', bufsize=1)
     try:
         with open(log, 'w') as f:
             for line in p.stdout:
                 f.write(line); tail.append(line)
-                if ': error:' in line or 'fatal error:' in line or 'undefined symbol' in line.lower():
-                    err_lines.append(line)
                 if on_line:
                     try: on_line(line.rstrip('\n'))
                     except Exception: pass   # progress never stops the build
@@ -390,11 +387,8 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=(), fatal=True):
 
 
 def build_id(nso):
-    try:
-        with open(nso, 'rb') as f:
-            f.seek(0x40); return f.read(16).hex()
-    except (OSError, FileNotFoundError):
-        return None
+    with open(nso, 'rb') as f:
+        f.seek(0x40); return f.read(16).hex()
 
 
 def _gone(func, path, exc):   # shutil.rmtree's onexc hook (Python 3.12+, the script's floor)
@@ -404,22 +398,8 @@ def _gone(func, path, exc):   # shutil.rmtree's onexc hook (Python 3.12+, the sc
 def rmtree(p):
     """Make p gone. An entry that vanishes between the listing and its unlink is the goal reached, not an error: on an exFAT / FAT drive macOS keeps each AppleDouble `._x` beside `x`
     and drops it when `x` is deleted, so the walk's later unlink of `._x` raised FileNotFoundError and left the folder half deleted"""
-    p = Path(p)
-    if p.is_symlink() or p.is_file():
-        try: p.unlink()
-        except OSError: pass
-    elif p.exists():
-        target = p
-        trash = p.with_name(f'.trash_{p.name}_{os.getpid()}_{time.time_ns()}')
-        try:
-            p.rename(trash)
-            target = trash
-        except OSError:
-            pass
-        if sys.platform == 'darwin':
-            res = subprocess.run(['rm', '-rf', str(target)], capture_output=True)
-            if res.returncode == 0: return
-        shutil.rmtree(target, onexc=_gone)
+    if p.is_symlink() or p.is_file(): p.unlink()
+    elif p.exists(): shutil.rmtree(p, onexc=_gone)   # Python 3.13 and later pass these by themselves
 
 
 def build_nx_extract(repo, work, logs, env):
@@ -555,7 +535,7 @@ def package_title_reader(repo, keys, env):
 
 
 def version_of(path):
-    m = re.search(r'(?:\[v|\(v|[\s_-]v)(\d+)(?:\]|\)|[\s._-]|$)', path.name, re.I)
+    m = re.search(r'\[v(\d+)\]', path.name)
     return int(m.group(1)) if m else None
 
 
@@ -608,19 +588,8 @@ def scan_nsps(nsp_dir, from_package=None, contents_of=None, want=None):
         tid = title_of(p, from_package)
         if tid is None: unknown.append(p); continue
         add(p, tid, version_of(p))
-    if len(fams) == 1 and unknown:
-        only_app, only_fam = next(iter(fams.items()))
-        for u in list(unknown):
-            low_name = u.name.lower()
-            if 'dlc' in low_name:
-                dlc_idx = len(only_fam['dlc']) + 1
-                only_fam['dlc'].append((only_app + 0x1000 + dlc_idx, version_of(u), u))
-                unknown.remove(u)
-            elif 'update' in low_name or 'patch' in low_name:
-                only_fam['updates'].append((version_of(u), u))
-                unknown.remove(u)
-        if len(unknown) == 1 and only_fam['base'] is None:   # a base game converted from a cartridge may have neither tags nor a ticket; build IDs are checked afterwards
-            only_fam['base'] = unknown[0]
+    if len(fams) == 1 and len(unknown) == 1 and next(iter(fams.values()))['base'] is None:   # a base game converted from a cartridge may have neither tags nor a ticket; build IDs are checked afterwards
+        next(iter(fams.values()))['base'] = unknown[0]
     if not fams: raise BuildError(f'no NSP with a readable title ID in {nsp_dir}')
     games = ', '.join(f'{t:016X}' for t in fams)
     if want is not None and want not in fams: raise BuildError(f'no game {want:016X} (--title-id / TITLE_ID) in {nsp_dir}, which holds {games}')
@@ -707,22 +676,21 @@ def vnum(ver):   # 'v655360' → 655360
 
 
 def nsp_versions(fam, builds):
-    """The versions the folder holds: {version: its update NSP, or None for v0 (the base game alone)}. An update is known by the [v<N>] tag in its file name; a single update without one
+    """The versions the folder holds: {version: its update NSP, or None for v0 (the base game alone; a NUP may have no base game, then no v0)}. An update is known by the [v<N>] tag in its file name; a single update without one
     is taken for the newest update the profile registers (its build IDs are checked once extracted), and is left out when the profile registers none or other updates are there"""
-    out = {'v0': None}
+    out = {'v0': None} if fam['base'] is not None else {}
     for v, p in fam['updates']:
         if v is not None: out[f'v{v}'] = p
     loose = [p for v, p in fam['updates'] if v is None]
     reg = sorted((b for b in builds if b != 'v0'), key=vnum)
     if loose and len(fam['updates']) == 1 and reg: out[reg[-1]] = loose[0]
-    elif loose and not reg: out['v65536'] = loose[-1]
     elif loose: say(f'[RED] leaving out update NSPs without a version tag ([v<N>]) in their name: {", ".join(p.name for p in loose)}')
     return out
 
 
 def pick_nsps(fam, have, versions):
-    """For each version to extract, (base game, update or None): v0 = the base game alone, v<N> = the base game + the update with version number N"""
-    say(f'base: {fam["base"].name}')
+    """For each version to extract, (base game, update or None): v0 = the base game alone, v<N> = the base game + the update with version number N. A NUP may have no base game: (None, update)"""
+    if fam['base'] is not None: say(f'base: {fam["base"].name}')
     out = {}
     for ver in versions:
         if ver not in have: raise BuildError(f'no NSP for update {ver} (the game profile needs these versions: {", ".join(versions)})')
@@ -998,15 +966,6 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
     its main has no state page, so a cap of 30 or 60 would present every vsync while the game steps 1/30 s per frame (double speed). Returns the version's display version"""
     src = sorted(p for p in g.dir.iterdir() if p.is_file() and (p.name not in DERIVED_SKIP or shader_only and p.name == 'patches.py'))
     T, disp = '\t', nacp.version(d / 'control.nacp') or '?'
-    if not shader_only:
-        try:
-            rfs_src = (d / 'romfs_manifest.tsv') if (d / 'romfs_manifest.tsv').is_file() else ((d / 'RomFS') if (d / 'RomFS').is_dir() else (d / 'ExeFS'))
-            F = pg.facts_of(d / 'ExeFS', rfs_src)
-            guessed = pg.guess(F).get('modules')
-            if guessed and guessed[0]:
-                mods = guessed[0].split()
-        except Exception:
-            mods = [m for m in mods if (d / 'ExeFS' / m).is_file()]
     row = T.join(['build', ver, disp] + [f'{m}={build_id(d / "ExeFS" / m)}' for m in mods if (d / 'ExeFS' / m).exists()])
     # the header names the profile by its ID, not its folder: the text is part of the derived key, so the same profile in another checkout keeps the derived folder and the split
     out, put = [f'# Derived from game profile {g.id} by scripts/build_ipa_from_nsp.py for {ver} ({disp}), a version that profile was not brought up on:',
@@ -1019,9 +978,7 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
     stubs = frame_step_builds(g.dir / 'patches.py')
     own_step = shader_only or not stubs or not (d / 'ExeFS/main').exists() or build_id(d / 'ExeFS/main') in stubs
     for line in (g.dir / 'game.tsv').read_text(encoding='utf-8').splitlines():
-        parts = line.split(T, 1)
-        tag = parts[0]
-        if not own_step and tag == 'fps_target' and line.partition(T)[2].strip() != '0':
+        if not own_step and line.split(T, 1)[0] == 'fps_target' and line.partition(T)[2].strip() != '0':
             out += ['# the profile has frame step stubs for other builds only: this version\'s main has none, so it keeps the game\'s own step', f'fps_target{T}0']; continue
         if line.split(T, 1)[0] in ids: out.append(ids[line.split(T, 1)[0]]); continue
         if not shader_only and line.split(T, 1)[0] == 'modules' and (d / 'ExeFS').is_dir():
@@ -1030,9 +987,6 @@ def derive_profile(g, pdir, ver, d, mods, app=None, shader_only=False):
                 out += [f'# this version ships no {" ".join(m for m in want if m not in have)}', f'modules{T}{" ".join(have)}']; continue
         if not shader_only and line.split(T, 1)[0] in ('build', 'package', 'shader_versions'):
             if not put: out += [row, f'package{T}{ver}', f'shader_versions{T}{ver}']; put = True
-            continue
-        if not shader_only and tag == 'modules':
-            out.append(f'modules{T}{" ".join(mods)}')
             continue
         out.append(line)
     text, kf = '\n'.join(out) + '\n', derived_key(pdir)   # beside the profile, not in it: no tool reads it as a table
@@ -1257,8 +1211,9 @@ def extract_nup(ex, name, k, base, app, n):   # one version of a NUP (k: its bas
     def poll():
         try: return {'done': part.stat().st_size}
         except OSError: return None
-    PROG.stage(f'unpack {name}', poll=poll, unit='B', total=n.tree_bytes(pack_nup.romfs_of(k, base)), est=True)
-    try: pack_nup.pack_version(n, k, base, app, dst, say=lambda s: None)
+    try:
+        PROG.stage(f'unpack {name}', poll=poll, unit='B', total=n.tree_bytes(pack_nup.romfs_of(k, base)), est=True)
+        pack_nup.pack_version(n, k, base, app, dst, say=lambda s: None)
     except pack_nup.Error as e: raise BuildError(str(e)) from e
     PROG.end(amount((dst / 'RomFS.img').stat().st_size, 'B'))
     return dst
@@ -1325,23 +1280,14 @@ def extract_aoc(nx, keys, repo, work, app, fam, logs):
 def build_mismatch(d, name, g):   # the modules of an extraction whose build ID is not the one the profile's build row of that version registers ([] = the registered build)
     want = g.builds().get(name)
     if want is None: return [f'{name} has no build row']
-    out = []
-    for m, bid in want.items():
-        if m == 'display': continue
-        mod_path = d / 'ExeFS' / m
-        bid_found = build_id(mod_path)
-        if bid_found is None:
-            out.append(f'{m} missing (registered {bid})')
-        elif bid_found != bid:
-            out.append(f'{m} {bid_found} (registered {bid})')
-    return out
+    return [f'{m} {build_id(d / "ExeFS" / m)} (registered {bid})' for m, bid in want.items() if m != 'display' and build_id(d / 'ExeFS' / m) != bid]
 
 
 def patch_files(repo, exe_dir, mods, game_id=None):
     """The patch files that name one of the modules' builds (dm/tools/sdk_patches.py, dm/games/*/patches.py): patch_nso.py loads them all but applies only those of a module's
     build ID. The selected game's file also counts for unknown builds: it may supply MATCH_CUTS. Another game's rules do not change this game's rewrite. sdk_patches.py always counts:
     its MATCH_CUTS are SDK-wide and apply to builds it does not name. The patches.py of profiles in DM_GAMES_DIR (a provisional profile's) count too, as patch_nso.py loads them"""
-    ids = {bid for m in mods if (bid := build_id(exe_dir / m)) is not None}
+    ids = {build_id(exe_dir / m) for m in mods}
     selected = Path(game_id).name if game_id else None
     extra = [p for d in os.environ.get('DM_GAMES_DIR', '').split(os.pathsep) if d for p in sorted(Path(d).glob('*/patches.py'))]
     sdk_wide = repo / 'dm/tools/sdk_patches.py'
@@ -2021,6 +1967,17 @@ def data_rows(b):   # a table's data rows (without # comment lines: the header c
     return [l for l in b.splitlines() if not l.startswith(b'#')]
 
 
+def table_difference(name, profile, split):
+    """How a split table differs from the profile's, for the build error: the row counts on each side and the first such row of each. Rows are compared as sets of lines, so one row added early does not read as every later row changed."""
+    a, b = collections.Counter(data_rows(profile)), collections.Counter(data_rows(split))
+    only_profile, only_split = list((a - b).elements()), list((b - a).elements())
+    if not only_profile and not only_split: return f'{name}: the same rows in another order'
+    out = [f'{name}: {len(only_profile):,} row(s) only in the profile, {len(only_split):,} only in the split']
+    if only_profile: out.append('  profile: ' + only_profile[0].decode(errors='replace'))
+    if only_split: out.append('  split:   ' + only_split[0].decode(errors='replace'))
+    return '\n'.join(out)
+
+
 def dlc_only_shader_change(g, tables):
     """A different DLC shader union, with the registered non-DLC shaders and facts unchanged. Package indices may be re-numbered when an add-on is removed.
     Source ownership is the split's /aoc/<index>/ prefix; a module or base/update shader difference never qualifies for this shader-only derivation."""
@@ -2166,12 +2123,10 @@ def split_shaders(py, repo, roms, mains, pkg, env, logs, g, provisional=False, o
         for n in names: shutil.copyfile(tmp / 'tables' / n, g.table(n))
     else:
         # Data rows byte-identical to the profile's = the same game files the tables were built from; if not, stop (the profile's tables are left alone). Only data rows are compared: the header of Engage's profile tables was written by an older shader_split
-        empty_profile = not g.table('shader_map.tsv').is_file() or g.table('shader_map.tsv').stat().st_size == 0
-        if empty_profile:
-            for n in names: shutil.copyfile(tmp / 'tables' / n, g.table(n))
-        else:
-            diff = [n for n in names if data_rows((tmp / 'tables' / n).read_bytes()) != data_rows(g.table(n).read_bytes())]
-            if diff: raise BuildError(f'the split shader tables differ from game profile {g.id}\'s: {", ".join(diff)} (game files not the versions the profile registers?)')
+        diff = [n for n in names if data_rows((tmp / 'tables' / n).read_bytes()) != data_rows(g.table(n).read_bytes())]
+        if diff:
+            rows = '\n'.join(table_difference(n, g.table(n).read_bytes(), (tmp / 'tables' / n).read_bytes()) for n in diff)
+            raise BuildError(f'the split shader tables differ from game profile {g.id}\'s:\n{rows}\nEither these game files are not the versions the profile registers, or shader_split.py now reads them differently and the profile\'s tables were not split again (the split\'s tables: {tmp / "tables"})')
     rmtree(kf); rmtree(outputkf); swap_in(tmp / 'pkg', pkg); rmtree(tmp)
     note = (f'{int(m.group(1)):,} shaders' if m else '') + (f', {bad.group(1)} file(s) unreadable' if bad else '')
     if key:   # an own profile's tables are outputs too; the next split checks the profile after they were written
@@ -2415,6 +2370,7 @@ def build_shaders(py, repo, sh, xlate, env, logs, g, pkg_key=None, mac=False, se
     if keep_mac: say(f'{sum(1 for _ in (sh / "cache" / f"b-{chain}").glob("*_b.metallib"))} Mac shader libraries kept for the Mac run command ({sh / "cache" / f"b-{chain}"})')
     t = log.read_text(errors='replace')
     if own := re.search(r'^note: (built with this Mac\'s compilers.*)$', t, re.M): say(own.group(1))
+    if lost := re.search(r'^\[RED\] lost without failing: .*$', t, re.M): say(f'{lost.group(0)}; each is named in {log}, and the build goes on: a shader the game never reaches costs nothing')
     m, c = re.search(r'shaders (\d+): ok (\d+)', t), re.search(r'shader cache: hit (\d+)', t)
     note = ''
     if m:
@@ -2914,6 +2870,7 @@ def main(args=None):
     if nup:
         app, fam = scan_nup(nup, int(want, 16) if want else None)
         say(f'a NUP: {nup.name}, {app:016X}, {len(fam["updates"])} update(s), {len(fam["dlc"])} DLC')
+        if fam['base'] is None: say(pack_nup.NO_BASE)
     elif dump:
         app, fam = scan_dump(nsp_dir, int(want, 16) if want else None)
         say(f'a dump folder: {app:016X}, {len(fam["updates"])} update(s), {len(fam["dlc"])} DLC')
@@ -2968,11 +2925,7 @@ def main(args=None):
         if derived: say(f'{derived}: packing {pkg_ver} from a profile derived from it')
     versions = [pkg_ver] if derived else need + ([pkg_ver] if pkg_ver not in need else [])
     work = work_dir(args) or nsp_dir / f'{g.id}_build'
-    if mac_pack:
-        default_name = f'{mac_app_name(g.get("name", g.id))}.app'
-        out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else work.parent / default_name
-    else:
-        out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else work.parent / (g.get('ipa') or f'{g.id}.ipa')   # by default next to the build folder (the NSP folder, beside the NSPs and <id>_build/, unless --work-dir moved it)
+    out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else work.parent / g.get('ipa')   # by default next to the build folder (the NSP folder, beside the NSPs and <id>_build/, unless --work-dir moved it)
     if shadowed and not (args.out or OUT_IPA): out_ipa = out_ipa.with_name(out_ipa.stem + '-provisional.ipa')   # never over the IPA of the game's real profile
     if mac_pack and (args.out or OUT_IPA) and out_ipa.suffix != '.app': raise BuildError(f'the Mac app (-o / OUT_IPA) must end in .app: {out_ipa}')
     project = work / 'xcode/DmIOS.xcodeproj'
@@ -3192,24 +3145,7 @@ def main(args=None):
     if not keep:
         for d in [ex] + [r['ex'] for r in programs.values()]: say(f'deleting the extracted game files: {d}'); rmtree(d)
     say(f'done: {out_ipa} ({out_ipa.stat().st_size / 2**30:.1f} GB)')
-    if separate:
-        src_img = Path(rfs.source(game))
-        if src_img.is_file():
-            dst_imgs = [
-                out_ipa.parent / 'romfs.img',
-                out_ipa.parent / f'{out_ipa.stem}.romfs.img'
-            ]
-            for target in dst_imgs:
-                try:
-                    if target.resolve() != src_img.resolve():
-                        # Use APFS clone via 'cp -c' for instant 0-byte duplicate on macOS
-                        res = subprocess.run(['cp', '-c', str(src_img), str(target)], capture_output=True)
-                        if res.returncode != 0:
-                            shutil.copyfile(src_img, target)
-                        say(f'RomFS image for device: {target} ({target.stat().st_size / 2**30:.1f} GB)')
-                except Exception as ex_copy:
-                    say(f'[YELLOW] Note: could not clone RomFS to {target}: {ex_copy}')
-        say_push_romfs(rfs.source(game), bundle_id)
+    if separate: say_push_romfs(rfs.source(game), bundle_id)
     report_profile_status(g, reg, pkg_ver, derived, provisional, patched=patched)
 
 
@@ -3219,7 +3155,7 @@ def cli(argv):   # returns the exit code: 0 done, 1 error, 130 interrupted
     environ = dict(os.environ)
     try:
         main(parse_args(argv))
-    except (BuildError, nso.Error) as e:   # a damaged module, read in this process (the survey, the heap and region checks), stops the build the same way
+    except (BuildError, nso.Error, pack_nup.Error) as e:   # a damaged module, read in this process (the survey, the heap and region checks), or a NUP's version it cannot pack (no RomFS, read for the disk check before extraction) stops the build the same way
         PROG.close(ok=False); PROG.say(f'[RED] {e}'); return 1
     except KeyboardInterrupt:
         PROG.close(ok=False); PROG.say('[RED] interrupted'); return 130

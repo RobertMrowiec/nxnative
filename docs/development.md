@@ -371,6 +371,7 @@ python3 scripts/build_ipa_from_nsp.py ~/Games/DonkeyKongBananza --platform mac-a
 
 # the same game in one NUP container (https://github.com/a55uka/nup; scripts/pack_nup.py): the .nup file, or a folder that holds one; no prod.keys, and only a game with a profile, like a dump.
 # The RomFS images are written straight from the container (each file checked against its SHA-256); the NACP and icon come from the container when it carries them, else the name comes from the profile as for a dump
+# A NUP with no base game (an empty base record, or none and standalone_update on every update) packs the selected update, which needs its own ExeFS and RomFS, as the whole game; only its update versions are selectable (no v0)
 python3 scripts/build_ipa_from_nsp.py ~/Games/DonkeyKongBananza.nup --platform mac-app
 
 # play the game in Japanese (a code or a name: ja, fr, de, es, zh-Hans, zh-Hant, ko, en-GB, ..., Japanese; English by default)
@@ -699,7 +700,7 @@ Notes on these steps:
 
 ### Building selected Mac shaders
 
-A full shader build of a large map takes hours (Pokopia: 131,426 shaders, an estimated 6.4 hours on an M4 Pro), while play reaches far fewer. `--seen-shaders` (`SEEN_SHADERS = True`) with `--platform mac` or `mac-app` builds only the shaders a game's playtests used, for an NVN game whose profile lists them in `shader_seen.tsv` (Pokopia: 8,157 of them; Hyrule Warriors: Age of Imprisonment: 15,449). Anything else stops with a message, and without the option the build stays the whole map, which then mentions the option for a game with a list.
+A full shader build of a large map takes hours (Pokopia: 131,426 shaders, an estimated 2.5 hours on an M4 Pro), while play reaches far fewer. `--seen-shaders` (`SEEN_SHADERS = True`) with `--platform mac` or `mac-app` builds only the shaders a game's playtests used, for an NVN game whose profile lists them in `shader_seen.tsv` (Pokopia: 8,157 of them; Hyrule Warriors: Age of Imprisonment: 15,449). Anything else stops with a message, and without the option the build stays the whole map, which then mentions the option for a game with a list.
 
 ```sh
 python3 scripts/build_ipa_from_nsp.py "<NSP or dump folder>" --platform mac-app --seen-shaders
