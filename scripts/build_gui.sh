@@ -122,9 +122,9 @@ build_app_bundle() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.9.4</string>
+    <string>1.9.5</string>
     <key>CFBundleVersion</key>
-    <string>29</string>
+    <string>30</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>NSHighResolutionCapable</key>
@@ -134,6 +134,10 @@ build_app_bundle() {
 </dict>
 </plist>
 EOF
+
+    # Remove any stale bytecode caches to preserve code signing integrity
+    find "$APP_BUNDLE" -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+    find "$APP_BUNDLE" -name "*.pyc" -delete 2>/dev/null || true
 
     echo "==> Assinando bundle ad-hoc..."
     codesign --force --deep --sign - "$APP_BUNDLE"

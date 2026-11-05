@@ -33,29 +33,31 @@ extension AppViewModel {
                     window.miniwindowTitle = "NxNative Launcher"
                 }
 
-                // Persist custom icon permanently on disk to the .app bundle
-                let bundleURL = Bundle.main.bundleURL
-                let appBundlePath: String? = {
-                    if bundleURL.pathExtension == "app" {
-                        return bundleURL.path
-                    }
-                    let candidates = [
-                        "/Volumes/SSD FN501 PRO/Emulations/NativePort/NxNative_Launcher.app",
-                        "/Applications/NxNative_Launcher.app"
-                    ]
-                    return candidates.first { FileManager.default.fileExists(atPath: $0) }
-                }()
+                // Persist custom icon permanently on disk ONLY when explicitly initiated by the user
+                if userInitiated {
+                    let bundleURL = Bundle.main.bundleURL
+                    let appBundlePath: String? = {
+                        if bundleURL.pathExtension == "app" {
+                            return bundleURL.path
+                        }
+                        let candidates = [
+                            "/Volumes/SSD FN501 PRO/Emulations/NativePort/NxNative_Launcher.app",
+                            "/Applications/NxNative_Launcher.app"
+                        ]
+                        return candidates.first { FileManager.default.fileExists(atPath: $0) }
+                    }()
 
-                if let targetPath = appBundlePath {
-                    let targetResName = resName
-                    let isDefault = (mode == .default)
-                    DispatchQueue.global(qos: .utility).async {
-                        Self.persistAppIconToDisk(
-                            appBundlePath: targetPath,
-                            resourceName: targetResName,
-                            iconImage: isDefault ? nil : img,
-                            restartDock: userInitiated
-                        )
+                    if let targetPath = appBundlePath {
+                        let targetResName = resName
+                        let isDefault = (mode == .default)
+                        DispatchQueue.global(qos: .utility).async {
+                            Self.persistAppIconToDisk(
+                                appBundlePath: targetPath,
+                                resourceName: targetResName,
+                                iconImage: isDefault ? nil : img,
+                                restartDock: true
+                            )
+                        }
                     }
                 }
             }
@@ -157,13 +159,6 @@ extension AppViewModel {
             self.isCompatibilityFromOnline = isOnline
             self.compatibilityLastUpdated = Date()
             self.isLoadingCompatibility = false
-            
-            // Automatically fetch and cache clean covers for all games (Steam/Playnite style)
-            DispatchQueue.global(qos: .utility).async {
-                for game in games {
-                    _ = GameCoverService.shared.coverImage(titleId: game.titleId, gameName: game.title)
-                }
-            }
         }
     }
     

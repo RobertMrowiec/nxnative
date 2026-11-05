@@ -21,9 +21,9 @@ extension PersonalizationView {
                     Spacer()
                 }
                 
-                // 8 Accent Highlight Color Swatches
+                // 8 Accent Highlight Color Swatches (Equal, uniform size and anti-clipping text)
                 let columns = [
-                    GridItem(.adaptive(minimum: 125, maximum: 220), spacing: 12)
+                    GridItem(.adaptive(minimum: 190, maximum: 280), spacing: 12)
                 ]
                 
                 NXGlassContainer(spacing: 12) {
@@ -110,7 +110,7 @@ extension PersonalizationView {
                 viewModel.highlightTheme = theme
             }
         }) {
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 ZStack {
                     Circle()
                         .fill(
@@ -120,7 +120,7 @@ extension PersonalizationView {
                                 endPoint: .bottomTrailing
                             )
                         )
-                        .frame(width: 34, height: 34)
+                        .frame(width: 32, height: 32)
                         .shadow(
                             color: theme.primaryColor.opacity(isSelected ? 0.65 : 0.30),
                             radius: isSelected ? 8 : 4,
@@ -137,7 +137,7 @@ extension PersonalizationView {
                     
                     if isSelected {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 13, weight: .black))
+                            .font(.system(size: 12, weight: .black))
                             .foregroundColor(.white)
                     }
                 }
@@ -146,10 +146,14 @@ extension PersonalizationView {
                     .font(.system(size: 12, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .allowsTightening(true)
                 
                 Spacer(minLength: 0)
             }
-            .padding(12)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: .infinity)
+            .frame(height: 56)
             .contentShape(Rectangle())
             .nxGlassInteractive(
                 in: RoundedRectangle(cornerRadius: 12, style: .continuous),

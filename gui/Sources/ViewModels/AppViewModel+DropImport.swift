@@ -103,7 +103,7 @@ extension AppViewModel {
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else { return false }
         
-        let romExts: Set<String> = ["nsp", "nsz", "xci", "xcz"]
+        let romExts: Set<String> = ["nsp", "nsz", "xci", "xcz", "nup"]
         var count = 0
         for case let fileURL as URL in enumerator {
             count += 1

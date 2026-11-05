@@ -1828,7 +1828,37 @@ static void present_cfg(const win_t *o) {
     LOG("[nvn] present tick %d Hz, interval mode %s (%s; present interval set by the game %d; %s)", g_hz, g_display_mode ? "display (one frame per tick, a cut)" : "game (original semantics)",
         m ? "DM_PRESENT_INTERVAL" : "game profile present_interval", o->interval, scr > 0 ? "window" : "no window");
 }
-static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? (k && fstep_on() ? k : fstep_hz() / c) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }   // vsyncs per frame that presentation follows
+__attribute__((weak)) int dm_fps_has_engine_lock(void) { return 0; }
+
+static int speed_sync_on(void) {
+    static int s = -1;
+    if (s < 0) {
+        const char *e = getenv("DM_SPEED_SYNC");
+        s = e ? atoi(e) : 1;
+    }
+    return s;
+}
+
+static int hle_speed_sync_pacing(const win_t *o, int c, int k) {
+    if (k && fstep_on()) return k;
+    if (c == 60) {
+        if (o->interval >= 2 && speed_sync_on()) {
+            if (dm_fps_has_engine_lock() || fstep_on()) {
+                return 1;
+            } else {
+                static int nlog_sync = 0;
+                if (nlog_sync++ < 3) {
+                    LOG("[nvn] speed sync: native 30 fps title pacing preserved at normal 1.0x speed (preventing 2x fast-forward)");
+                }
+                return o->interval;
+            }
+        }
+        return fstep_hz() / c;
+    }
+    return c ? fstep_hz() / c : (o->interval > 0 ? o->interval : 1);
+}
+
+static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? hle_speed_sync_pacing(o, c, k) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }   // vsyncs per frame that presentation follows
 // The acquire's wait for the display link: the present interval's vsyncs (60 Hz units), or with present_interval display above 60 Hz (DM_PRESENT_HZ=120 on a 120 Hz link,
 // DM_PRESENT_LINK=2) one tick of the present rate, as many link ticks as that takes. Before, a 120 Hz link waited two ticks per frame there, and display mode never went past 60 fps
 static int link_wait(const win_t *o, uint64_t timeout_ns) {

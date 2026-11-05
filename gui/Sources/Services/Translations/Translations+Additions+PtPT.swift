@@ -14,7 +14,7 @@ extension Translations {
         "library.add_game_card": "Adicionar Jogo ou Pasta",
         "library.cancel_port": "Cancelar Port",
         "library.choose_folder": "Escolher Pasta ou Jogo",
-        "library.empty_drop_subtitle": "Suporta pastas com subpastas, ficheiros NSP, NSZ, XCI, XCZ, atualizações e DLCs",
+        "library.empty_drop_subtitle": "Suporta pastas com subpastas, ficheiros NSP, NSZ, XCI, XCZ, NUP, atualizações e DLCs",
         "library.empty_drop_title": "Arraste Jogos ou Pastas para Aqui",
         "library.filter_all": "Todos",
         "library.filter_categories": "Categorias",

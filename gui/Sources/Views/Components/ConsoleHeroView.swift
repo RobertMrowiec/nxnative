@@ -176,6 +176,8 @@ public struct ConsoleHeroView: View {
                 Image(nsImage: img)
                     .resizable()
                     .scaledToFill()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
                     .allowsHitTesting(false)
             } else {
                 ZStack {

@@ -25,11 +25,15 @@ public struct SelectableGame: Identifiable, Hashable {
         files.first(where: { $0.type == .base || $0.type == .switch2Dump }) ?? files.first
     }
     
+    public var isNup: Bool {
+        files.contains { $0.url.pathExtension.lowercased() == "nup" }
+    }
+    
     public var isSwitch2: Bool {
         if let tid = titleId?.uppercased(), tid.hasPrefix("0400") {
             return true
         }
-        return files.contains { $0.type == .switch2Dump }
+        return files.contains { $0.type == .switch2Dump } || (isNup && (titleId == nil || titleId?.uppercased().hasPrefix("0400") == true))
     }
     
     public var updateCount: Int {

@@ -33,7 +33,8 @@ public struct PortPlatformSelectorView: View {
         let isSelected = viewModel.platform == platform
         let isFocused = viewModel.portModalFocusIndex == index
         let isSwitch2 = viewModel.selectedGame?.isSwitch2 == true
-        let isIosDisabled = (platform == .ios && isSwitch2)
+        let isNup = viewModel.selectedGame?.isNup == true
+        let isIosDisabled = (platform == .ios && (isSwitch2 || isNup))
 
         return Button(action: {
             guard !isIosDisabled else { return }

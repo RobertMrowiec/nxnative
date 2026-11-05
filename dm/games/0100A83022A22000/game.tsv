@@ -16,13 +16,14 @@ app_category	public.app-category.action-games
 # ---- Versions ----
 build	v393216	1.1.1	main=916f5b8d61baa16d0939404ea047e129	subsdk2=ca1378cdd05a63438ef12ee7fbd5ca9c	sdk=f118ae1c2e7728471aaf1a0d58484968
 build	v458752	1.1.2	main=f2d7d0e177d1e60c33678a9a57ba2056	subsdk2=ca1378cdd05a63438ef12ee7fbd5ca9c	sdk=f118ae1c2e7728471aaf1a0d58484968
+build	v589824	1.2.1	main=ddfad5275db77013c5788385984b744d	subsdk0=1e59dde5383b9cfb60f3e67e92add78b	sdk=a5813da32d12ef17099152ca79c9b24d
 package	v458752
 shader_versions	v458752
 
 # ---- Files ----
-# load order as on Horizon: main, subsdk*, sdk (subsdk2 = NintendoSDK_movie, for FNA3D's video player). Not loaded: subsdk0 (NVIDIA's Vulkan driver) and subsdk1 (NVIDIA's OpenGL driver):
-# main imports EGL and Vulkan for SDL3's GL / Vulkan support, but FNA3D renders with NVN, and both drivers program the GPU through NvRm, which the host does not have
-modules	main subsdk2 sdk
+# load order as on Horizon: main, subsdk*, sdk (subsdk2 = NintendoSDK_movie in 1.1.x, subsdk0 = NintendoSDK_movie in 1.2.1, for FNA3D's video player).
+# Not loaded: NVIDIA Vulkan/OpenGL drivers.
+modules	main subsdk0 subsdk2 sdk
 romfs_marker	data/textures
 zip_store	.bin:.bnk:.dat:.mp4:.nro:.otf:.metallib
 

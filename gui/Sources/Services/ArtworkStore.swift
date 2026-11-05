@@ -99,14 +99,11 @@ public final class ArtworkStore: ObservableObject {
             }
         }
 
-        // 4. Switch 2 games (isSwitch2 == true) MUST have their cover found on the internet (not restricted to GameTDB),
-        // strictly free of any Nintendo, Switch, or eShop marks or logos.
+        // 4. Switch 2 games (isSwitch2 == true) use clean cover art from GameCoverService
         if game.isSwitch2 {
             if let cover = GameCoverService.shared.coverImage(for: game) {
-                if !GameCoverService.shared.containsForbiddenStoreBranding(in: cover) {
-                    cacheImage(cover, forKey: cacheKey)
-                    return cover
-                }
+                cacheImage(cover, forKey: cacheKey)
+                return cover
             }
         }
 

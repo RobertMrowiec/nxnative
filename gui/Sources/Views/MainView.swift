@@ -45,18 +45,17 @@ public struct MainView: View {
                     .frame(width: 1, height: 1)
             } else {
                 GeometryReader { windowGeo in
-                    let winWidth = max(880, windowGeo.size.width)
-                    let winHeight = max(620, windowGeo.size.height)
+                    let currentSize = windowGeo.size
 
                     ZStack {
                         NXWindowGlassBackground(viewModel: viewModel)
                             .ignoresSafeArea()
 
-                        atmosphericGlows(in: CGSize(width: winWidth, height: winHeight))
+                        atmosphericGlows(in: currentSize)
 
                         VStack(spacing: 0) {
                             ZStack(alignment: .top) {
-                                selectedTabContent(containerHeight: max(560, winHeight - 48))
+                                selectedTabContent(containerHeight: max(560, currentSize.height - 48))
                                     .padding(.top, viewModel.selectedTab == 0 ? 0 : 58)
                                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     .clipped()
@@ -77,16 +76,16 @@ public struct MainView: View {
                         BuildErrorBannerView(viewModel: viewModel)
                             .zIndex(100)
                     }
-                    .frame(width: winWidth, height: winHeight)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .onAppear {
-                        self.windowWidth = winWidth
-                        self.windowHeight = winHeight
+                        self.windowWidth = currentSize.width
+                        self.windowHeight = currentSize.height
                         self.animatedTabPill = viewModel.selectedTab
                     }
-                    .onChange(of: winWidth) { newW in
+                    .onChange(of: currentSize.width) { newW in
                         self.windowWidth = newW
                     }
-                    .onChange(of: winHeight) { newH in
+                    .onChange(of: currentSize.height) { newH in
                         self.windowHeight = newH
                     }
                     .onChange(of: viewModel.selectedTab) { newTab in
@@ -97,7 +96,7 @@ public struct MainView: View {
                 }
             }
         }
-        .frame(minWidth: 880, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
+        .frame(minWidth: 880, idealWidth: 1280, maxWidth: .infinity, minHeight: 620, idealHeight: 800, maxHeight: .infinity)
         .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
         .preferredColorScheme(.dark)
         .background(

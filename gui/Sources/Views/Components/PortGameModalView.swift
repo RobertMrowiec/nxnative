@@ -63,7 +63,7 @@ public struct PortGameModalView: View {
             if viewModel.selectedGameFolder == nil, let fileDir = game.files.first?.url.deletingLastPathComponent() {
                 viewModel.selectedGameFolder = fileDir
             }
-            if game.isSwitch2 {
+            if game.isSwitch2 || game.isNup {
                 viewModel.platform = .macApp
             }
             if viewModel.appName.isEmpty {
@@ -318,7 +318,7 @@ public struct PortGameModalView: View {
                     .cornerRadius(8)
                 }
                 
-                if !viewModel.isProdKeysValid && !game.isSwitch2 {
+                if !viewModel.isProdKeysValid && !game.isSwitch2 && !game.isNup {
                     HStack(spacing: 8) {
                         Image(systemName: "key.fill")
                             .foregroundColor(.orange)

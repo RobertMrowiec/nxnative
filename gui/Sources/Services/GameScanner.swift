@@ -7,7 +7,7 @@ public final class GameScanner {
     
     public func scan(directory: URL) -> [GameFileItem] {
         let fm = FileManager.default
-        let allowedExtensions = Set(["nsp", "nsz", "xci", "xcz"])
+        let allowedExtensions = Set(["nsp", "nsz", "xci", "xcz", "nup"])
         
         // Check if directory itself is a game dump folder
         let rootDumpItems = inspectDumpItems(url: directory)
@@ -54,6 +54,9 @@ public final class GameScanner {
                let range = Range(match.range(at: 1), in: filename) {
                 titleId = String(filename[range]).uppercased()
                 hasExplicitTitleId = true
+            } else if ext == "nup", let nupTid = extractTitleIdFromNup(url: fileURL) {
+                titleId = nupTid
+                hasExplicitTitleId = true
             } else if let headerTid = extractTitleIdFromPFS0(url: fileURL) {
                 titleId = headerTid.uppercased()
                 hasExplicitTitleId = true
@@ -79,7 +82,13 @@ public final class GameScanner {
             let lower = filename.lowercased()
             let parentFolderLower = fileURL.deletingLastPathComponent().lastPathComponent.lowercased()
             let type: GameFileType
-            if hasExplicitTitleId, let tid = titleId, let val = UInt64(tid, radix: 16) {
+            if ext == "nup" {
+                if let tid = titleId, tid.hasPrefix("0400") || lower.contains("switch 2") || lower.contains("switch2") {
+                    type = .switch2Dump
+                } else {
+                    type = .base
+                }
+            } else if hasExplicitTitleId, let tid = titleId, let val = UInt64(tid, radix: 16) {
                 let low = val & 0xFFF
                 if low == 0 {
                     type = .base
@@ -197,6 +206,33 @@ public final class GameScanner {
             return String(rawStrings[range]).uppercased()
         }
         return nil
+    }
+    
+    /// Lê os cabeçalhos de um contêiner .nup para extrair o Title ID do primeiro pacote registrado (SPEC v1).
+    public func extractTitleIdFromNup(url: URL) -> String? {
+        guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? handle.close() }
+        
+        guard let superData = try? handle.read(upToCount: 128), superData.count >= 24 else { return nil }
+        guard superData[0] == 0x4E, superData[1] == 0x55, superData[2] == 0x50, superData[3] == 0x01 else { return nil } // "NUP\x01"
+        
+        let tocOff = superData.subdata(in: 8..<16).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+        let tocSize = superData.subdata(in: 16..<24).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+        guard tocSize >= 48 + 64 else { return nil }
+        
+        guard (try? handle.seek(toOffset: tocOff)) != nil else { return nil }
+        guard let tocHead = try? handle.read(upToCount: 48 + 128), tocHead.count >= 48 + 64 else { return nil }
+        guard tocHead[0] == 0x54, tocHead[1] == 0x4F, tocHead[2] == 0x43, tocHead[3] == 0x01 else { return nil } // "TOC\x01"
+        
+        let numPkgs = tocHead.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+        guard numPkgs > 0 else { return nil }
+        
+        var tid = tocHead.subdata(in: 48..<56).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+        if tid == 0 && numPkgs > 1 && tocHead.count >= 48 + 128 {
+            tid = tocHead.subdata(in: (48 + 64)..<(48 + 72)).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+        }
+        guard tid != 0 else { return nil }
+        return String(format: "%016llX", tid).uppercased()
     }
     
     /// Inspeciona pasta de dump e seus updates embutidos (updates/<version>), retornando o item base e os updates

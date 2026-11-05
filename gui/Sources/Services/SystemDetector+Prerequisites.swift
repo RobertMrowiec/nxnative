@@ -89,8 +89,8 @@ extension SystemDetector {
 
         if pyInfo.isBundled, let pyPath = chosenPyPath {
             prereqs.python = DependencyStatus(id: "python", name: "Python 3", isAvailable: true, details: "\(chosenPyVersion) (Isolated Standalone)", recommendation: nil, installCommand: "", repairCommand: "", uninstallCommand: nil, isProtected: true)
-            let pyCheck = runQuickCommand(pyPath, args: ["-c", "import lz4, capstone, fontTools; print('OK')"])
-            let nszCheck = runQuickCommand(pyPath, args: ["-c", "import nsz; print('OK')"])
+            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools; print('OK')"])
+            let nszCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import nsz; print('OK')"])
             let hasPackages = pyCheck.success && pyCheck.output.contains("OK")
             let nszNote = nszCheck.success ? " + nsz" : ""
             prereqs.pythonPackages = DependencyStatus(
@@ -100,9 +100,9 @@ extension SystemDetector {
             )
         } else if pyInfo.isSufficient, let pyPath = chosenPyPath {
             prereqs.python = DependencyStatus(id: "python", name: "Python 3", isAvailable: true, details: "\(chosenPyVersion) (\(pyPath))", recommendation: nil, installCommand: "brew install python@3.13", repairCommand: "brew reinstall python@3.13", uninstallCommand: nil, isProtected: false)
-            let pyCheck = runQuickCommand(pyPath, args: ["-c", "import lz4, capstone, fontTools; print('OK')"])
+            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools; print('OK')"])
             if pyCheck.success && pyCheck.output.contains("OK") {
-                let nszCheck = runQuickCommand(pyPath, args: ["-c", "import nsz; print('OK')"])
+                let nszCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import nsz; print('OK')"])
                 let nszNote = nszCheck.success ? " + nsz" : " (nsz optional)"
                 prereqs.pythonPackages = DependencyStatus(
                     id: "python_packages", name: "Python Modules", isAvailable: true,

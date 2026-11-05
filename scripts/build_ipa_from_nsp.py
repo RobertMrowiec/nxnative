@@ -390,8 +390,11 @@ def run(cmd, log, env=None, cwd=None, on_line=None, ok=(), fatal=True):
 
 
 def build_id(nso):
-    with open(nso, 'rb') as f:
-        f.seek(0x40); return f.read(16).hex()
+    try:
+        with open(nso, 'rb') as f:
+            f.seek(0x40); return f.read(16).hex()
+    except (OSError, FileNotFoundError):
+        return None
 
 
 def _gone(func, path, exc):   # shutil.rmtree's onexc hook (Python 3.12+, the script's floor)
@@ -539,6 +542,8 @@ def package_title_reader(repo, keys, env):
 
 def version_of(path):
     m = re.search(r'\[v(\d+)\]', path.name)
+    if not m:
+        m = re.search(r'(?:\[|\(|\b|_|\s)v(\d+)(?:\.(?:nsp|xci|nsz|xcz)|[\]\)\s_]|$)', path.name, re.I)
     return int(m.group(1)) if m else None
 
 
@@ -1352,14 +1357,22 @@ def extract_aoc(nx, keys, repo, work, app, fam, logs):
 def build_mismatch(d, name, g):   # the modules of an extraction whose build ID is not the one the profile's build row of that version registers ([] = the registered build)
     want = g.builds().get(name)
     if want is None: return [f'{name} has no build row']
-    return [f'{m} {build_id(d / "ExeFS" / m)} (registered {bid})' for m, bid in want.items() if m != 'display' and build_id(d / 'ExeFS' / m) != bid]
+    mismatches = []
+    for m, bid in want.items():
+        if m == 'display': continue
+        cur = build_id(d / 'ExeFS' / m)
+        if cur is None:
+            mismatches.append(f'{m} missing (registered {bid})')
+        elif cur != bid:
+            mismatches.append(f'{m} {cur} (registered {bid})')
+    return mismatches
 
 
 def patch_files(repo, exe_dir, mods, game_id=None):
     """The patch files that name one of the modules' builds (dm/tools/sdk_patches.py, dm/games/*/patches.py): patch_nso.py loads them all but applies only those of a module's
     build ID. The selected game's file also counts for unknown builds: it may supply MATCH_CUTS. Another game's rules do not change this game's rewrite. sdk_patches.py always counts:
     its MATCH_CUTS are SDK-wide and apply to builds it does not name. The patches.py of profiles in DM_GAMES_DIR (a provisional profile's) count too, as patch_nso.py loads them"""
-    ids = {build_id(exe_dir / m) for m in mods}
+    ids = {bid for m in mods if (bid := build_id(exe_dir / m))}
     selected = Path(game_id).name if game_id else None
     extra = [p for d in os.environ.get('DM_GAMES_DIR', '').split(os.pathsep) if d for p in sorted(Path(d).glob('*/patches.py'))]
     sdk_wide = repo / 'dm/tools/sdk_patches.py'

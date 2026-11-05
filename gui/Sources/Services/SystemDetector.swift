@@ -32,11 +32,15 @@ public final class SystemDetector {
     public static func queryPythonVersion(_ path: String) -> (major: Int, minor: Int, micro: Int, versionStr: String)? {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: path)
-        process.arguments = ["-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"]
+        process.arguments = ["-B", "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}')"]
+        
+        var env = ProcessInfo.processInfo.environment
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
+        process.environment = env
         
         let pipe = Pipe()
         process.standardOutput = pipe
-        process.standardError = pipe
+        process.standardError = Pipe()
         
         do {
             try process.run()
@@ -275,6 +279,7 @@ public final class SystemDetector {
         var env = ProcessInfo.processInfo.environment
         let extraPaths = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         env["PATH"] = env["PATH"].map { "\(extraPaths):\($0)" } ?? extraPaths
+        env["PYTHONDONTWRITEBYTECODE"] = "1"
         process.environment = env
         
         let pipe = Pipe()

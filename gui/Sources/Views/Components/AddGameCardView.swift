@@ -50,10 +50,12 @@ public struct AddGameCardView: View {
                         .lineLimit(2)
                         .padding(.horizontal, 8)
                     
-                    Text("NSP, NSZ, XCI, XCZ, APP")
+                    Text("NSP, NSZ, XCI, XCZ, NUP, APP")
                         .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                         .foregroundColor(isHovered ? NXTheme.textSecondary : NXTheme.textMuted.opacity(0.80))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.horizontal, 6)
                 }
             }
             .frame(width: baseSize, height: baseSize)
@@ -107,6 +109,7 @@ public struct AddGameCardView: View {
             UTType(filenameExtension: "nsz") ?? .data,
             UTType(filenameExtension: "xci") ?? .data,
             UTType(filenameExtension: "xcz") ?? .data,
+            UTType(filenameExtension: "nup") ?? .data,
             UTType.application,
             .folder
         ]

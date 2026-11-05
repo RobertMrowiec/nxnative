@@ -186,7 +186,7 @@ extension AppViewModel {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
         panel.prompt = "Choose Game Folders"
-        panel.message = "Select folders holding your game NSP, NSZ, or XCI files."
+        panel.message = "Select folders holding your game NSP, NSZ, XCI, or NUP files."
         
         if panel.runModal() == .OK {
             for url in panel.urls {

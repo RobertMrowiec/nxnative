@@ -13,7 +13,7 @@ extension AppViewModel {
         !isBuilding &&
         effectiveGameFolder != nil &&
         selectedGame != nil &&
-        (isProdKeysValid || selectedGame?.isSwitch2 == true) &&
+        (isProdKeysValid || selectedGame?.isSwitch2 == true || selectedGame?.isNup == true) &&
         isNxnativeValid &&
         !isDiskSpaceLow
     }
@@ -62,9 +62,10 @@ extension AppViewModel {
             ))
         }
         
-        if sel.isSwitch2, let dumpFolder = sel.files.first?.url {
-            targetGameDirectory = dumpFolder
-            logs.append(LogEntry(level: .info, message: "Nintendo Switch 2 dump folder identified: '\(dumpFolder.path)'."))
+        if (sel.isSwitch2 || sel.isNup), let firstFile = sel.files.first?.url {
+            targetGameDirectory = firstFile
+            let label = sel.isSwitch2 ? "Nintendo Switch 2 package" : "NUP container"
+            logs.append(LogEntry(level: .info, message: "\(label) identified: '\(firstFile.path)'."))
         } else if detectedGames.count > 1 || sel.files.count < detectedFiles.count || hasSubfolderFiles {
             let safeName = sel.name.replacingOccurrences(of: "[^a-zA-Z0-9._-]", with: "_", options: .regularExpression)
             let stagingDir = URL(fileURLWithPath: defaultInstallPath)
@@ -193,7 +194,7 @@ extension AppViewModel {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Choose Game Folder"
-        panel.message = "Select a folder holding your game NSP, NSZ, or XCI files."
+        panel.message = "Select a folder holding your game NSP, NSZ, XCI, or NUP files."
         
         if panel.runModal() == .OK, let url = panel.url {
             self.selectedGameFolder = url

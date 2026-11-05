@@ -62,7 +62,7 @@ public final class BuildRunner {
         // Determina caminho do python usando deteccao centralizada e estavel
         let pythonPath = SystemDetector.findBestPythonPath()
         
-        let isDump = FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent("base/exefs/main.npdm").path)
+        let isDump = FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent("base/exefs/main.npdm").path) || gameDirectory.pathExtension.lowercased() == "nup"
         
         var arguments: [String] = [
             scriptPath,

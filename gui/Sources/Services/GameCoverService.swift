@@ -464,7 +464,7 @@ public final class GameCoverService: ObservableObject {
             return
         }
 
-        tryFetchCandidate(candidates: candidates, index: 0) { [weak self] rawData, rawImg in
+        tryFetchCandidate(candidates: candidates, index: 0) { [weak self] data, img in
             guard let self = self else { return }
             defer {
                 self.lock.lock()
@@ -472,18 +472,7 @@ public final class GameCoverService: ObservableObject {
                 self.lock.unlock()
             }
 
-            guard let rawData = rawData, let rawImg = rawImg else {
-                self.lock.lock()
-                self.failedLookups.insert(searchKey)
-                self.lock.unlock()
-                return
-            }
-
-            // Strip console branding banners, age ratings, and platform logos (Steam/Playnite/RetroArch clean art style)
-            let (data, img) = self.cleanArtworkForCleanPresentation(from: rawImg, originalData: rawData)
-
-            // Strict Anti-Store Branding Guard: if image still contains eShop text, discard immediately
-            if self.containsForbiddenStoreBranding(in: img) {
+            guard let data = data, let img = img else {
                 self.lock.lock()
                 self.failedLookups.insert(searchKey)
                 self.lock.unlock()
@@ -574,9 +563,11 @@ public final class GameCoverService: ObservableObject {
     }
 
     public func containsForbiddenStoreBranding(in image: NSImage) -> Bool {
+        // Never block the main UI thread with Vision OCR
+        if Thread.isMainThread { return false }
         guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return false }
         let request = VNRecognizeTextRequest()
-        request.recognitionLevel = .accurate
+        request.recognitionLevel = .fast
         request.usesLanguageCorrection = false
         let handler = VNImageRequestHandler(cgImage: cg, options: [:])
         try? handler.perform([request])
