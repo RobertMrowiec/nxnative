@@ -50,6 +50,17 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var enginePatches: [EnginePatchItem] = []
     @Published public var showCltInstallAlert: Bool = false
     
+    // MARK: - Auto-Provisioning & Host Compatibility
+    @Published public var macSDKVersion: String? = nil
+    @Published public var provisioningStatus: String = ""
+    @Published public var isProvisioningBusy: Bool = false
+    @Published public var coreRepoLastCheck: Date? = nil
+    @Published public var buildErrorFocusIndex: Int = 0
+    internal var provisioningTimer: Timer? = nil
+    internal var nextCloneAttempt: Date = .distantPast
+    internal var nextDependencyAttempt: Date = .distantPast
+    internal var nextMetalAttempt: Date = .distantPast
+    
     // MARK: - Keys
     @Published public var prodKeysPath: String = "" {
         didSet {
@@ -735,6 +746,8 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         
         NotificationService.shared.requestAuthorization()
         setupControllerNavigation()
+        detectSDKVersion()
+        startAutoProvisioning()
         
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }

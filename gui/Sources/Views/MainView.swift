@@ -73,6 +73,9 @@ public struct MainView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .id(viewModel.launcherLanguage)
+
+                        BuildErrorBannerView(viewModel: viewModel)
+                            .zIndex(100)
                     }
                     .frame(width: winWidth, height: winHeight)
                     .onAppear {

@@ -97,8 +97,9 @@ extension NxHubDeploymentService {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
 
-            let scriptURL = URL(fileURLWithPath: "/Volumes/SSD FN501 PRO/Emulations/NativePort/nxnative/scripts/build_ipa_from_nsp.py")
-            let keysURL = URL(fileURLWithPath: "/Volumes/Nintendo/RiuJinx Roms/Riujinx/system/prod.keys")
+            let scriptURL = URL(fileURLWithPath: BundledTools.nxnativeRootPath).appendingPathComponent("scripts/build_ipa_from_nsp.py")
+            let keysPath = AppViewModel.shared?.prodKeysPath ?? SystemDetector.shared.detectProdKeys()?.path ?? "/Users/rennan/Library/Application Support/Ryujinx/system/prod.keys"
+            let keysURL = URL(fileURLWithPath: keysPath)
 
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/usr/bin/python3")

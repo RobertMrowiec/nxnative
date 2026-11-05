@@ -24,6 +24,7 @@ public final class SystemDetector {
     public static let shared = SystemDetector()
     public static let officialRepoURL = "https://gitlab.com/rennan-group2/nxnative_Launcher.git"
     public static let upstreamRepoURL = "https://github.com/seedds/nxnative.git"
+    public static let mirrorRepoURL = "https://gitlab.com/rennan-group2/nxnative_Launcher.git"
     
     private init() {}
     

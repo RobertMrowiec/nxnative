@@ -156,9 +156,13 @@ g_msl_dir = [NSString stringWithFormat:@"%@/b-%s", m ? @(m) : [NSString stringWi
             name: "Mac App Output Naming (build_ipa_from_nsp.py)",
             summary: "Defaults Mac output to <Game>.app and optimizes buffer check",
             relativePath: "scripts/build_ipa_from_nsp.py",
-            checkToken: "default_name = f'{mac_app_name(g.get(\"name\", g.id))}.app'",
+            checkToken: "mac_pack and not (args.out or OUT_IPA): out_ipa =",
             applyTransform: { content in
-                let target = "out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else nsp_dir / g.get('ipa')"
+                if content.contains("mac_pack and not (args.out or OUT_IPA): out_ipa =") {
+                    return content // Already merged upstream or applied
+                }
+                let target1 = "out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else nsp_dir / g.get('ipa')"
+                let target2 = "out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else work.parent / g.get('ipa')"
                 let repl = """
 if mac_pack:
         default_name = f'{mac_app_name(g.get("name", g.id))}.app'
@@ -166,8 +170,13 @@ if mac_pack:
     else:
         out_ipa = Path(os.path.expanduser(args.out or OUT_IPA)).resolve() if (args.out or OUT_IPA) else nsp_dir / (g.get('ipa') or f'{g.id}.ipa')
 """
-                guard content.contains(target) else { return nil }
-                return content.replacingOccurrences(of: target, with: repl)
+                if content.contains(target1) {
+                    return content.replacingOccurrences(of: target1, with: repl)
+                }
+                if content.contains(target2) {
+                    return content.replacingOccurrences(of: target2, with: repl)
+                }
+                return nil
             }
         ),
         
@@ -179,7 +188,8 @@ if mac_pack:
             relativePath: "dm/gfx/nvn/hle_nvn.c",
             checkToken: "hle_speed_sync_pacing",
             applyTransform: { content in
-                let target = "static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? (k && fstep_on() ? k : 60 / c) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }"
+                let targetOld = "static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? (k && fstep_on() ? k : 60 / c) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }"
+                let targetNew = "static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? (k && fstep_on() ? k : fstep_hz() / c) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }"
                 let repl = """
 __attribute__((weak)) int dm_fps_has_engine_lock(void) { return 0; }
 
@@ -206,15 +216,20 @@ static int hle_speed_sync_pacing(const win_t *o, int c, int k) {
                 return o->interval;
             }
         }
-        return 60 / c;
+        return fstep_hz() / c;
     }
-    return c ? 60 / c : (o->interval > 0 ? o->interval : 1);
+    return c ? fstep_hz() / c : (o->interval > 0 ? o->interval : 1);
 }
 
 static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_load(&g_fs_k); return c ? hle_speed_sync_pacing(o, c, k) : g_display_mode ? 1 : o->interval > 0 ? o->interval : 1; }
 """
-                guard content.contains(target) else { return nil }
-                return content.replacingOccurrences(of: target, with: repl)
+                if content.contains(targetNew) {
+                    return content.replacingOccurrences(of: targetNew, with: repl)
+                }
+                if content.contains(targetOld) {
+                    return content.replacingOccurrences(of: targetOld, with: repl)
+                }
+                return nil
             }
         ),
         
@@ -254,6 +269,27 @@ static int present_itv(const win_t *o) { int c = fps_present_cap(), k = atomic_l
                     return content.replacingOccurrences(of: corruptTarget, with: fixedRepl)
                 }
                 return nil
+            }
+        ),
+        
+        // 11. iOS Shell Shader Chain Fallback (build_shell.sh)
+        EnginePatchDefinition(
+            id: "build_shell_shader_chain_fallback",
+            name: "iOS Shell Shader Chain Fallback (build_shell.sh)",
+            summary: "Enables multi-game deployment using runtime shader chain fallback without re-extracting games.",
+            relativePath: "dm/ios/tools/build_shell.sh",
+            checkToken: "using runtime shader chain fallback",
+            applyTransform: { content in
+                let target = "if m.get('chain') != chain: sys.exit(f'[RED] {p}: built for shader chain {m.get(\"chain\")}, this checkout is {chain}: build the game again')"
+                let repl = """
+    if m.get('chain') != chain:
+        if os.environ.get('DM_ALLOW_OTHER_CHAIN', '1') == '0':
+            sys.exit(f'[RED] {p}: built for shader chain {m.get("chain")}, this checkout is {chain}: build the game again')
+        else:
+            sys.stderr.write(f'[WARN] {p}: built for shader chain {m.get("chain")}, this checkout is {chain} (using runtime shader chain fallback)\\n')
+"""
+                guard content.contains(target) else { return nil }
+                return content.replacingOccurrences(of: target, with: repl)
             }
         )
     ]

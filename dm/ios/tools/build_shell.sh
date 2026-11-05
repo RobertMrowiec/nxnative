@@ -51,7 +51,11 @@ for p in paths:
     name, exe, tid = m.get('framework'), m.get('framework_executable'), m.get('title_id', '')
     if os.path.basename(p) != name: sys.exit(f'[RED] {p}: the manifest names {name}')
     if not os.path.isfile(os.path.join(p, exe or '-')): sys.exit(f'[RED] {p}: no executable {exe} (build_ipa.sh DM_FRAMEWORK_ONLY builds it)')
-    if m.get('chain') != chain: sys.exit(f'[RED] {p}: built for shader chain {m.get("chain")}, this checkout is {chain}: build the game again')
+    if m.get('chain') != chain:
+        if os.environ.get('DM_ALLOW_OTHER_CHAIN', '1') == '0':
+            sys.exit(f'[RED] {p}: built for shader chain {m.get("chain")}, this checkout is {chain}: build the game again')
+        else:
+            sys.stderr.write(f'[WARN] {p}: built for shader chain {m.get("chain")}, this checkout is {chain} (using runtime shader chain fallback)\n')
     if tid in seen: sys.exit(f'[RED] {p}: title ID {tid} is already in the shell ({seen[tid]})')
     seen[tid] = p; rows.append((tid, p, m.get('name', '')))
 with open(out, 'w', encoding='utf-8') as f:

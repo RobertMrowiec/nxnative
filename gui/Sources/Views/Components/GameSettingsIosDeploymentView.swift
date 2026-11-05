@@ -61,12 +61,28 @@ public struct GameSettingsIosDeploymentView: View {
 
     // MARK: - Header
     private var headerBar: some View {
-        HStack {
+        HStack(spacing: 8) {
             Label(L10n.t("settings_modal.ios_deploy_title"), systemImage: "iphone.badge.play")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundColor(NXTheme.textPrimary)
 
             Spacer()
+
+            if AppViewModel.shared != nil {
+                Button(action: {
+                    SoundEffectService.shared.play(.click)
+                    showBatchModal = true
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.stack.3d.up.fill")
+                            .font(.system(size: 10))
+                        Text(L10n.t("nxn_launcher.btn_batch"))
+                            .font(.system(size: 10.5, weight: .semibold))
+                    }
+                }
+                .buttonStyle(NXSecondaryButtonStyle())
+                .controlSize(.mini)
+            }
 
             Button(action: {
                 SoundEffectService.shared.play(.click)
@@ -75,6 +91,7 @@ public struct GameSettingsIosDeploymentView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "folder")
                     Text(L10n.t("settings_modal.show_ipa"))
+                        .font(.system(size: 10.5, weight: .semibold))
                 }
             }
             .buttonStyle(NXSecondaryButtonStyle())
@@ -84,45 +101,31 @@ public struct GameSettingsIosDeploymentView: View {
 
     // MARK: - Mode Selector
     private var deploymentModeSelector: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "square.stack.3d.up.fill")
-                        .foregroundColor(NXTheme.primary)
-                        .font(.system(size: 12))
-                    Text("NxN Launcher")
-                        .font(.system(size: 11.5, weight: .bold, design: .rounded))
-                        .foregroundColor(NXTheme.textPrimary)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(NXTheme.glassSurfaceElevated.opacity(0.8))
-                .cornerRadius(8)
-
-                Spacer()
-
-                Toggle(isOn: $hubService.useExternalStorage) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "externaldrive.fill")
-                            .font(.system(size: 11))
-                            .foregroundColor(NXTheme.secondary)
-                        Text("SSD USB-C")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(NXTheme.textPrimary)
-                    }
-                }
-                .toggleStyle(SwitchToggleStyle(tint: NXTheme.secondary))
-            }
-
+        HStack(spacing: 10) {
             HStack(spacing: 6) {
-                if let installed = isHubInstalled {
-                    Image(systemName: installed ? "checkmark.circle.fill" : "arrow.down.app.fill")
-                        .foregroundColor(installed ? Color.green : NXTheme.primary)
+                Image(systemName: "square.stack.3d.up.fill")
+                    .foregroundColor(NXTheme.primary)
+                    .font(.system(size: 12))
+                Text("NxN Launcher")
+                    .font(.system(size: 11.5, weight: .bold, design: .rounded))
+                    .foregroundColor(NXTheme.textPrimary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(NXTheme.glassSurfaceElevated.opacity(0.8))
+            .cornerRadius(8)
+
+            if isHubInstalled == true {
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(Color.green)
                         .font(.system(size: 11))
-                    Text(installed ? "NxN Launcher pronto no iPhone / iPad" : "Instalação automática do NxN Launcher com ícone dark")
+                    Text(L10n.t("nxn_launcher.status_ready"))
                         .font(.system(size: 10.5, weight: .medium))
                         .foregroundColor(NXTheme.textSecondary)
-                } else {
+                }
+            } else if isHubInstalled == nil {
+                HStack(spacing: 5) {
                     Image(systemName: "circle.dotted")
                         .foregroundColor(NXTheme.textSecondary)
                         .font(.system(size: 11))
@@ -130,25 +133,21 @@ public struct GameSettingsIosDeploymentView: View {
                         .font(.system(size: 10.5))
                         .foregroundColor(NXTheme.textSecondary)
                 }
+            }
 
-                Spacer()
+            Spacer()
 
-                if AppViewModel.shared != nil {
-                    Button(action: {
-                        SoundEffectService.shared.play(.click)
-                        showBatchModal = true
-                    }) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "square.stack.3d.up.fill")
-                                .font(.system(size: 10))
-                            Text(L10n.t("nxn_launcher.btn_batch"))
-                                .font(.system(size: 10.5, weight: .semibold))
-                        }
-                    }
-                    .buttonStyle(NXSecondaryButtonStyle())
-                    .controlSize(.mini)
+            Toggle(isOn: $hubService.useExternalStorage) {
+                HStack(spacing: 4) {
+                    Image(systemName: "externaldrive.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(NXTheme.secondary)
+                    Text("SSD USB-C")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(NXTheme.textPrimary)
                 }
             }
+            .toggleStyle(SwitchToggleStyle(tint: NXTheme.secondary))
         }
     }
 

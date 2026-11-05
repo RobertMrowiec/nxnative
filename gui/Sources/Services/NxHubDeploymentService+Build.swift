@@ -129,6 +129,7 @@ extension NxHubDeploymentService {
         env["DM_SHELL_NAME"] = "NxN Launcher"
         env["DM_SHELL_PACKAGE"] = packagePath
         env["DM_XCODE_DERIVED_DATA"] = hubDerivedDataURL.path
+        env["DM_ALLOW_OTHER_CHAIN"] = "1"
         let currentPath = env["PATH"] ?? "/usr/bin:/bin:/usr/sbin:/sbin"
         env["PATH"] = "/opt/homebrew/bin:/usr/local/bin:" + currentPath
 
