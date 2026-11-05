@@ -9,5 +9,7 @@ QA/
 *.jpeg
 *.png
 *.webp
+!AppIcon.appiconset/*.png
+!Sources/ShellUI/Resources/*.png
 # A private build may carry banners in the app bundle (DemoArt/). The images stay out of git, the *.jpg rules above cover them.
 DemoArt/

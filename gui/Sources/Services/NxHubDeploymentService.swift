@@ -201,7 +201,7 @@ public final class NxHubDeploymentService: ObservableObject {
                         DeviceDeploymentService.shared.activeDeployment.phase = .installing
                         DeviceDeploymentService.shared.activeDeployment.progressFraction = 0.20
                         DeviceDeploymentService.shared.activeDeployment.statusMessage = "Installing NxN Launcher on \(device.name)..."
-                        DeviceDeploymentService.shared.activeDeployment.detailMessage = "First-time setup: Building & deploying NxN Launcher with dark icon..."
+                        DeviceDeploymentService.shared.activeDeployment.detailMessage = "First-time setup: Building & deploying NxN Launcher with official icon..."
                         DeviceDeploymentService.shared.activeDeployment.logLines.append("==> NxN Launcher not detected. Preparing & installing container app...")
                     }
 
