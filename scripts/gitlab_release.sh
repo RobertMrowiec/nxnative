@@ -90,13 +90,22 @@ if [ -n "$TOKEN" ]; then
 EOF
 )
 
-        curl -s -X POST \
+        POST_RESP=$(curl -s -w "\n%{http_code}" -X POST \
             --header "PRIVATE-TOKEN: $TOKEN" \
             --header "Content-Type: application/json" \
             --data "$RELEASE_PAYLOAD" \
-            "$RELEASE_API" > /dev/null || true
+            "$RELEASE_API")
+        POST_CODE=$(echo "$POST_RESP" | tail -n1)
+        if [ "$POST_CODE" = "409" ]; then
+            echo "==> Release $TAG_NAME already exists, updating via PUT..."
+            curl -s -X PUT \
+                --header "PRIVATE-TOKEN: $TOKEN" \
+                --header "Content-Type: application/json" \
+                --data "$RELEASE_PAYLOAD" \
+                "$RELEASE_API/$TAG_NAME" > /dev/null || true
+        fi
 
-        echo "✅ Release $TAG_NAME published on GitLab!"
+        echo "✅ Release $TAG_NAME published/updated on GitLab!"
     else
         echo "⚠️ Package upload returned HTTP $HTTP_CODE (Token may need 'api' or 'write_package_registry' scope)."
         echo "   Upload payload stored in /tmp/gl_upload.json"
