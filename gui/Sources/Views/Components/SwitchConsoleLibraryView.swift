@@ -35,62 +35,66 @@ public struct SwitchConsoleLibraryView: View {
     }
 
     public var body: some View {
-        let heroHeight: CGFloat = max(290, min(500, containerHeight * 0.46))
+        GeometryReader { geo in
+            let availableHeight = geo.size.height
+            let heroHeight: CGFloat = max(290, min(500, availableHeight * 0.46))
 
-        VStack(alignment: .leading, spacing: 0) {
-            heroSection(height: heroHeight)
-                .frame(maxWidth: .infinity, minHeight: heroHeight, maxHeight: heroHeight)
-                .clipped()
+            VStack(alignment: .leading, spacing: 0) {
+                heroSection(height: heroHeight)
+                    .frame(maxWidth: .infinity, minHeight: heroHeight, maxHeight: heroHeight)
+                    .clipped()
 
-            LibraryFilterSortBarView(viewModel: viewModel)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 2)
-                .padding(.bottom, 4)
+                LibraryFilterSortBarView(viewModel: viewModel)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 2)
+                    .padding(.bottom, 4)
 
-            ScrollViewReader { verticalProxy in
-                ScrollView(.vertical, showsIndicators: true) {
-                    catalogContent
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.bottom, 36)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .nxScrollEdgeEffect(edges: [.top, .bottom])
-                .onDrop(of: [.text, .plainText], isTargeted: nil) { _ in
-                    guard viewModel.draggedGame != nil else { return false }
-                    viewModel.draggedGame = nil
-                    hoveredTargetGamePath = nil
-                    return true
-                }
-                .onChange(of: viewModel.activeLibraryShelf) { newShelf in
-                    guard viewModel.activeGroupFilter != .all else { return }
-                    withAnimation(.easeInOut(duration: 0.20)) {
-                        switch newShelf {
-                        case .mac:
-                            verticalProxy.scrollTo("shelf_mac", anchor: .top)
-                        case .switch2:
-                            verticalProxy.scrollTo("shelf_switch2", anchor: .center)
-                        case .ios:
-                            verticalProxy.scrollTo("shelf_ios", anchor: .center)
-                        case .nonSwitch:
-                            verticalProxy.scrollTo("shelf_non_switch", anchor: .center)
-                        case .unportedSwitch:
-                            verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
+                ScrollViewReader { verticalProxy in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        catalogContent
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.bottom, 36)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .nxScrollEdgeEffect(edges: [.top, .bottom])
+                    .onDrop(of: [.text, .plainText], isTargeted: nil) { _ in
+                        guard viewModel.draggedGame != nil else { return false }
+                        viewModel.draggedGame = nil
+                        hoveredTargetGamePath = nil
+                        return true
+                    }
+                    .onChange(of: viewModel.activeLibraryShelf) { newShelf in
+                        guard viewModel.activeGroupFilter != .all else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            switch newShelf {
+                            case .mac:
+                                verticalProxy.scrollTo("shelf_mac", anchor: .top)
+                            case .switch2:
+                                verticalProxy.scrollTo("shelf_switch2", anchor: .center)
+                            case .ios:
+                                verticalProxy.scrollTo("shelf_ios", anchor: .center)
+                            case .nonSwitch:
+                                verticalProxy.scrollTo("shelf_non_switch", anchor: .center)
+                            case .unportedSwitch:
+                                verticalProxy.scrollTo("shelf_unported", anchor: .bottom)
+                            }
+                        }
+                    }
+                    .onChange(of: viewModel.focusedUnifiedIndex) { newIdx in
+                        guard viewModel.activeGroupFilter == .all else { return }
+                        let items = viewModel.unifiedItems(for: games)
+                        let targetId: String? = items.indices.contains(newIdx)
+                            ? items[newIdx].stableId
+                            : (newIdx == items.count ? "unified_card_add" : nil)
+                        guard let scrollId = targetId else { return }
+                        withAnimation(.easeInOut(duration: 0.20)) {
+                            let isFirstRow = newIdx < max(1, viewModel.unifiedGridColumnsCount)
+                            verticalProxy.scrollTo(scrollId, anchor: isFirstRow ? .top : .center)
                         }
                     }
                 }
-                .onChange(of: viewModel.focusedUnifiedIndex) { newIdx in
-                    guard viewModel.activeGroupFilter == .all else { return }
-                    let items = viewModel.unifiedItems(for: games)
-                    let targetId: String? = items.indices.contains(newIdx)
-                        ? items[newIdx].stableId
-                        : (newIdx == items.count ? "unified_card_add" : nil)
-                    guard let scrollId = targetId else { return }
-                    withAnimation(.easeInOut(duration: 0.20)) {
-                        let isFirstRow = newIdx < max(1, viewModel.unifiedGridColumnsCount)
-                        verticalProxy.scrollTo(scrollId, anchor: isFirstRow ? .top : .center)
-                    }
-                }
             }
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .onAppear {

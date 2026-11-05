@@ -44,49 +44,52 @@ public struct MainView: View {
                 Color.clear
                     .frame(width: 1, height: 1)
             } else {
-                ZStack {
-                    NXWindowGlassBackground(viewModel: viewModel)
-                        .ignoresSafeArea()
+                GeometryReader { windowGeo in
+                    let winWidth = max(880, windowGeo.size.width)
+                    let winHeight = max(620, windowGeo.size.height)
 
-                    atmosphericGlows(in: CGSize(width: windowWidth, height: windowHeight))
+                    ZStack {
+                        NXWindowGlassBackground(viewModel: viewModel)
+                            .ignoresSafeArea()
 
-                    VStack(spacing: 0) {
-                        ZStack(alignment: .top) {
-                            selectedTabContent
-                                .padding(.top, viewModel.selectedTab == 0 ? 0 : 58)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .clipped()
+                        atmosphericGlows(in: CGSize(width: winWidth, height: winHeight))
 
-                            navigationHeader
+                        VStack(spacing: 0) {
+                            ZStack(alignment: .top) {
+                                selectedTabContent(containerHeight: max(560, winHeight - 48))
+                                    .padding(.top, viewModel.selectedTab == 0 ? 0 : 58)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                    .clipped()
+
+                                navigationHeader
+                                    .frame(maxWidth: .infinity)
+                                    .zIndex(10)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                            ControllerPromptBar(viewModel: viewModel)
                                 .frame(maxWidth: .infinity)
                                 .zIndex(10)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                        ControllerPromptBar(viewModel: viewModel)
-                            .frame(maxWidth: .infinity)
-                            .zIndex(10)
+                        .id(viewModel.launcherLanguage)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .id(viewModel.launcherLanguage)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    GeometryReader { proxy in
-                        Color.clear
-                            .preference(key: MainWindowSizePreferenceKey.self, value: proxy.size)
+                    .frame(width: winWidth, height: winHeight)
+                    .onAppear {
+                        self.windowWidth = winWidth
+                        self.windowHeight = winHeight
+                        self.animatedTabPill = viewModel.selectedTab
                     }
-                )
-                .onPreferenceChange(MainWindowSizePreferenceKey.self) { newSize in
-                    if newSize.width > 0 && abs(self.windowWidth - newSize.width) > 1 { self.windowWidth = newSize.width }
-                    if newSize.height > 0 && abs(self.windowHeight - newSize.height) > 1 { self.windowHeight = newSize.height }
-                }
-                .onAppear {
-                    self.animatedTabPill = viewModel.selectedTab
-                }
-                .onChange(of: viewModel.selectedTab) { newTab in
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.76, blendDuration: 0.10)) {
-                        self.animatedTabPill = newTab
+                    .onChange(of: winWidth) { newW in
+                        self.windowWidth = newW
+                    }
+                    .onChange(of: winHeight) { newH in
+                        self.windowHeight = newH
+                    }
+                    .onChange(of: viewModel.selectedTab) { newTab in
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.76, blendDuration: 0.10)) {
+                            self.animatedTabPill = newTab
+                        }
                     }
                 }
             }
@@ -165,8 +168,8 @@ public struct MainView: View {
     }
     
     @ViewBuilder
-    private var selectedTabContent: some View {
-        let libraryContainerHeight = max(560, windowHeight - 48)
+    private func selectedTabContent(containerHeight: CGFloat) -> some View {
+        let libraryContainerHeight = containerHeight
         switch viewModel.selectedTab {
         case 0:
             LibraryView(viewModel: viewModel, containerHeight: libraryContainerHeight)
@@ -186,16 +189,6 @@ public struct MainView: View {
             }
         default:
             LibraryView(viewModel: viewModel, containerHeight: libraryContainerHeight)
-        }
-    }
-}
-
-private struct MainWindowSizePreferenceKey: PreferenceKey {
-    static var defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
-        let next = nextValue()
-        if next != .zero {
-            value = next
         }
     }
 }
