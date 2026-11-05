@@ -19,11 +19,13 @@ struct NXNativeGUIApp: App {
     var body: some Scene {
         WindowGroup {
             MainView(viewModel: viewModel)
+                .frame(minWidth: 880, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
                 .preferredColorScheme(.dark)
         }
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unifiedCompact)
         .defaultSize(width: 1180, height: 760)
+        .windowResizability(.contentMinSize)
         .commands {
             SidebarCommands()
             

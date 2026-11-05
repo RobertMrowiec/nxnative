@@ -58,11 +58,13 @@ public struct MainView: View {
                                 .clipped()
 
                             navigationHeader
+                                .frame(maxWidth: .infinity)
                                 .zIndex(10)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
                         ControllerPromptBar(viewModel: viewModel)
+                            .frame(maxWidth: .infinity)
                             .zIndex(10)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -76,8 +78,8 @@ public struct MainView: View {
                     }
                 )
                 .onPreferenceChange(MainWindowSizePreferenceKey.self) { newSize in
-                    if newSize.width > 0 { self.windowWidth = newSize.width }
-                    if newSize.height > 0 { self.windowHeight = newSize.height }
+                    if newSize.width > 0 && abs(self.windowWidth - newSize.width) > 1 { self.windowWidth = newSize.width }
+                    if newSize.height > 0 && abs(self.windowHeight - newSize.height) > 1 { self.windowHeight = newSize.height }
                 }
                 .onAppear {
                     self.animatedTabPill = viewModel.selectedTab
@@ -89,7 +91,7 @@ public struct MainView: View {
                 }
             }
         }
-        .frame(minWidth: 880, minHeight: 620)
+        .frame(minWidth: 880, maxWidth: .infinity, minHeight: 620, maxHeight: .infinity)
         .environment(\.nxLiquidGlass, viewModel.liquidGlassEnvironment)
         .preferredColorScheme(.dark)
         .background(

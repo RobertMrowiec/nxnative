@@ -20,6 +20,7 @@ extension MainView {
             }
             .padding(.horizontal, useFloatingGlassBars ? 14 : 18)
             .padding(.vertical, useFloatingGlassBars ? 8 : 10)
+            .frame(maxWidth: .infinity)
             .frame(minHeight: 54)
             .background(
                 Group {

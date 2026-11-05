@@ -27,7 +27,7 @@ echo "==> [1/3] Building production Swift GUI..."
 "$SCRIPT_DIR/build_gui.sh"
 
 # Extract Version from Info.plist
-VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "1.9.3")
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "1.9.4")
 TAG_NAME="v$VERSION"
 
 echo "==> Target Version: $TAG_NAME"
@@ -56,6 +56,26 @@ if [ -z "$TOKEN" ]; then
 fi
 
 if [ -n "$TOKEN" ]; then
+    # Clean up older releases so ONLY the latest version is kept on GitLab
+    echo "==> Cleaning up older releases on GitLab (keeping only $TAG_NAME)..."
+    OLD_RELEASES=$(curl -s --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/$GITLAB_PROJECT/releases" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    target = sys.argv[1]
+    for r in data:
+        tag = r.get("tag_name", "")
+        if tag and tag != target:
+            print(tag)
+except Exception:
+    pass
+' "$TAG_NAME")
+
+    for old_tag in $OLD_RELEASES; do
+        echo "   -> Removing older release $old_tag from GitLab..."
+        curl -s -X DELETE --header "PRIVATE-TOKEN: $TOKEN" "$GITLAB_URL/api/v4/projects/$GITLAB_PROJECT/releases/$old_tag" > /dev/null || true
+    done
+
     echo "==> Uploading $DMG_NAME to GitLab Generic Package Registry..."
     PACKAGE_URL="$GITLAB_URL/api/v4/projects/$GITLAB_PROJECT/packages/generic/nxnative-launcher/$VERSION/$DMG_NAME"
     
@@ -75,7 +95,7 @@ if [ -n "$TOKEN" ]; then
 {
   "name": "NxNative Launcher $TAG_NAME",
   "tag_name": "$TAG_NAME",
-  "description": "### 🚀 NxNative Launcher $TAG_NAME - Official Release\n\nOfficial native Apple Silicon build for macOS 13+ (Ventura, Sonoma, Sequoia, Golden Gate).\n\n- **Package**: \`$DMG_NAME\` ($DMG_SIZE)\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\n\n---\n\n### 🌟 Highlights & Fixes in $TAG_NAME\n\n- **🖥️ Responsive Multi-Screen Layout**: Complete overhaul across all tabs (Settings, Personalization, Controls, Compatibility, Logs, Game Settings, Library). Removed 1/4 screen constraints; all glass cards, headers, grids, and sliders now adapt fluidly to any window size and ultrawide monitors.\n- **🔄 Automated Conflict-Free Upstream Sync**: Configured \`sync_upstream.sh\` with automated merge drivers (\`merge=ours\`) to seamlessly pull engine updates from upstream without merge conflicts or regressions.\n- **🌐 Complete 14-Language Translations**: Full native localization across English, Portuguese (BR & PT), Spanish, French, German, Italian, Japanese, Korean, Polish, Russian, Swedish, and Chinese (Simplified & Traditional).\n- **📱 Unified NxN Launcher for iOS / iPadOS**: Multi-game hub launcher supporting batch game deployment, live storage calculation, and seamless iCloud save migration.\n- **⚡ Zero-Hang Invariant**: Guaranteed 6-second watchdog protection, bounded subprocess timeouts, and unblocked main thread execution.\n- **🎮 Apple Liquid Glass Design System**: Glass refractions, physical droplet sliders, and full gamepad navigation.\n\n---\n\n### ⚖️ Game Preservation Notice (\"for those who come after\")\n\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No copyrighted game copies, ROMs, keys, or proprietary firmwares are distributed.",
+  "description": "### 🚀 NxNative Launcher $TAG_NAME - Official Release\n\nOfficial native Apple Silicon build for macOS 13+ (Ventura, Sonoma, Sequoia, Golden Gate).\n\n- **Package**: \`$DMG_NAME\` ($DMG_SIZE)\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\n\n---\n\n### 🌟 Highlights & Fixes in $TAG_NAME\n\n- **🖥️ Dynamic Window Scaling & Full Responsive Layout**: Fixed root view frame bounds and window resizability. The entire interface (all tabs, headers, controls, and glass cards) now dynamically scales to 100% of any window size, ultrawide screen, and full-screen workspace without clipping or 880x620 constraints.\n- **🎨 Official NxN Launcher ClearDark 1024x1024 Icon**: Updated iOS and iPadOS icon sets with the official Apple Icon Composer asset and high-resolution ClearDark icon across all springboard and in-app surfaces.\n- **🔄 Automated Conflict-Free Upstream Sync**: Configured \`sync_upstream.sh\` with automated merge drivers (\`merge=ours\`) to seamlessly pull engine updates from upstream without merge conflicts or regressions.\n- **🌐 Complete 14-Language Translations**: Full native localization across English, Portuguese (BR & PT), Spanish, French, German, Italian, Japanese, Korean, Polish, Russian, Swedish, and Chinese (Simplified & Traditional).\n- **📱 Unified NxN Launcher for iOS / iPadOS**: Multi-game hub launcher supporting batch game deployment, live storage calculation, and seamless iCloud save migration.\n- **⚡ Zero-Hang Invariant**: Guaranteed 6-second watchdog protection, bounded subprocess timeouts, and unblocked main thread execution.\n\n---\n\n### ⚖️ Game Preservation Notice (\"for those who come after\")\n\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No copyrighted game copies, ROMs, keys, or proprietary firmwares are distributed.",
   "assets": {
     "links": [
       {
