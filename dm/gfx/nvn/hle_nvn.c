@@ -1358,8 +1358,6 @@ static void nvn_nop(void) {}
 static const char *const g_nops[] = {
     "nvnCommandBufferSetPatchSize",
     "nvnCommandBufferSetDepthBounds",
-    // A scheduling hint between graphics and compute work. The host submits both to one ordered Metal queue, so the priority has no distinct work to reorder.
-    "nvnCommandBufferSetComputeWorkloadPriority",
     "nvnCommandBufferWaitSync",
     "nvnCommandBufferSetShaderScratchMemory",
     "nvnCommandBufferPushDebugGroupDynamic",
