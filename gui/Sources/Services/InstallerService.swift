@@ -158,12 +158,10 @@ public final class InstallerService {
             let askPassURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("nxnative_askpass.sh")
             let askPassScript = """
             #!/bin/bash
-            exec osascript -e 'display dialog "NxNative Launcher requires administrator privileges to install dependencies:" default answer "" with hidden answer' -e 'text returned of result'
+            exec osascript -e 'display dialog "NxNative Launcher requires administrator privileges to install dependencies.\\n\\nPlease enter your macOS administrator password:" default answer "" with hidden answer with icon caution with title "NxNative Launcher"' -e 'text returned of result'
             """
-            if !FileManager.default.fileExists(atPath: askPassURL.path) {
-                try? askPassScript.write(to: askPassURL, atomically: true, encoding: .utf8)
-                chmod(askPassURL.path, 0o755)
-            }
+            try? askPassScript.write(to: askPassURL, atomically: true, encoding: .utf8)
+            chmod(askPassURL.path, 0o755)
             env["SUDO_ASKPASS"] = askPassURL.path
             process.environment = env
             

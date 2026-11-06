@@ -6,8 +6,8 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 GUI_DIR="$REPO_ROOT/gui"
 WORKSPACE_DIR="$(cd "$REPO_ROOT/.." && pwd)"
 
-if [ ! -d "$GUI_DIR/Resources/python" ] || [ ! -d "$GUI_DIR/Resources/tools" ]; then
-    echo "==> Recursos standalone de Python e ferramentas ausentes. Executando bundle_tools.sh..."
+if [ ! -d "$GUI_DIR/Resources/python" ] || [ ! -d "$GUI_DIR/Resources/tools" ] || ! "$GUI_DIR/Resources/python/bin/python3" -c "import zbic" 2>/dev/null; then
+    echo "==> Recursos standalone de Python e ferramentas ausentes ou incompletos (zbic). Executando bundle_tools.sh..."
     "$SCRIPT_DIR/bundle_tools.sh" "$GUI_DIR/Resources"
 fi
 

@@ -57,14 +57,40 @@ public final class SystemDetector {
         }
     }
     
+    /// Checks whether the specified Python interpreter has all required modules for building games (lz4, capstone, fontTools, zbic).
+    public static func hasRequiredPythonModules(_ pyPath: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: pyPath)
+        process.arguments = ["-B", "-c", "import lz4.block, capstone, fontTools, zbic; print('OK')"]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+        do {
+            try process.run()
+            process.waitUntilExit()
+            if process.terminationStatus == 0 {
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+                return output.contains("OK")
+            }
+        } catch {}
+        return false
+    }
+    
     /// Determines the best available Python interpreter with strict stability prioritization.
     public static func findBestPython() -> PythonRuntimeInfo {
         let fm = FileManager.default
         
-        // 1. Bundled Standalone Python runtime (inside .app/Contents/Resources/python)
+        // 1. Check Bundled Standalone Python runtime (inside .app/Contents/Resources/python)
+        var bundledCandidate: PythonRuntimeInfo? = nil
         if let bundled = BundledTools.python(), fm.fileExists(atPath: bundled),
            let ver = queryPythonVersion(bundled) {
-            return PythonRuntimeInfo(path: bundled, version: "Python \(ver.versionStr)", isSufficient: true, isStable: true, isBundled: true, isExperimental: false)
+            let hasModules = hasRequiredPythonModules(bundled)
+            let info = PythonRuntimeInfo(path: bundled, version: "Python \(ver.versionStr)", isSufficient: hasModules, isStable: true, isBundled: true, isExperimental: false)
+            if hasModules {
+                return info
+            }
+            bundledCandidate = info
         }
         
         // 2. Custom user-specified Python override (via UserDefaults)
@@ -74,11 +100,12 @@ public final class SystemDetector {
             let isSufficient = (ver.major > 3) || (ver.major == 3 && ver.minor >= 12)
             let isStable = (ver.major == 3 && ver.minor >= 12 && ver.minor <= 14)
             let isExp = (ver.major == 3 && ver.minor >= 15)
-            return PythonRuntimeInfo(path: custom, version: "Python \(ver.versionStr)", isSufficient: isSufficient && !isExp, isStable: isStable, isBundled: false, isExperimental: isExp)
+            let hasModules = hasRequiredPythonModules(custom)
+            return PythonRuntimeInfo(path: custom, version: "Python \(ver.versionStr)", isSufficient: isSufficient && !isExp && hasModules, isStable: isStable, isBundled: false, isExperimental: isExp)
         }
         
-        // 3. Search system paths in strict priority order (Stable versions 3.13, 3.14, 3.12 first)
-        let prioritizedCandidates = [
+        // 3. Search system & environment paths in strict priority order (Stable versions 3.13, 3.14, 3.12 first)
+        var prioritizedCandidates = [
             "/opt/homebrew/bin/python3.13", "/opt/homebrew/opt/python@3.13/libexec/bin/python3",
             "/opt/homebrew/opt/python@3.13/bin/python3.13", "/opt/homebrew/opt/python@3.13/bin/python3",
             "/usr/local/bin/python3.13", "/usr/local/opt/python@3.13/libexec/bin/python3",
@@ -94,14 +121,36 @@ public final class SystemDetector {
             "/opt/homebrew/bin/python3", "/usr/local/bin/python3", "/usr/bin/python3"
         ]
         
+        // Include Pyenv shims and installed versions if present in user home
+        if let home = ProcessInfo.processInfo.environment["HOME"] {
+            prioritizedCandidates.insert("\(home)/.pyenv/shims/python3", at: 0)
+            if let pyenvVersions = try? fm.contentsOfDirectory(atPath: "\(home)/.pyenv/versions") {
+                for v in pyenvVersions.sorted().reversed() {
+                    let pyBin = "\(home)/.pyenv/versions/\(v)/bin/python3"
+                    if fm.isExecutableFile(atPath: pyBin) {
+                        prioritizedCandidates.append(pyBin)
+                    }
+                }
+            }
+        }
+        
+        var workingSystemCandidate: PythonRuntimeInfo? = nil
+        var fallbackStableCandidate: PythonRuntimeInfo? = nil
         var experimentalCandidate: (path: String, version: String)? = nil
         var outdatedCandidate: (path: String, version: String)? = nil
         
-        for candidate in prioritizedCandidates where fm.fileExists(atPath: candidate) {
+        for candidate in prioritizedCandidates where fm.isExecutableFile(atPath: candidate) {
             guard let ver = queryPythonVersion(candidate) else { continue }
             let verStr = "Python \(ver.versionStr)"
             if ver.major == 3 && ver.minor >= 12 && ver.minor <= 14 {
-                return PythonRuntimeInfo(path: candidate, version: verStr, isSufficient: true, isStable: true, isBundled: false, isExperimental: false)
+                let hasModules = hasRequiredPythonModules(candidate)
+                let info = PythonRuntimeInfo(path: candidate, version: verStr, isSufficient: hasModules, isStable: true, isBundled: false, isExperimental: false)
+                if hasModules {
+                    workingSystemCandidate = info
+                    break
+                } else if fallbackStableCandidate == nil {
+                    fallbackStableCandidate = info
+                }
             } else if ver.major == 3 && ver.minor >= 15 {
                 if experimentalCandidate == nil { experimentalCandidate = (candidate, verStr) }
             } else if ver.major == 3 && ver.minor < 12 {
@@ -109,6 +158,15 @@ public final class SystemDetector {
             }
         }
         
+        if let working = workingSystemCandidate {
+            return working
+        }
+        if let bundled = bundledCandidate {
+            return bundled
+        }
+        if let fallback = fallbackStableCandidate {
+            return fallback
+        }
         if let exp = experimentalCandidate {
             return PythonRuntimeInfo(path: exp.path, version: exp.version, isSufficient: false, isStable: false, isBundled: false, isExperimental: true)
         }

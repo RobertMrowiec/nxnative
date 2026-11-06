@@ -37,9 +37,6 @@ HLE_FORCE("nnsslFinalize", "pairs with nnsslInitialize (cut)", Result, h_ssl_Fin
 // Not cut: Inet* / nnsocketInet* byte order and address text conversion (pure computation), and eventfd. Eventfd is a local synchronization primitive rather than
 // network access. gRPC in SDK 22-era titles probes it before choosing its poll engine; reporting ENETDOWN there leaves no poll engine and makes gRPC abort at startup.
 #define SK_ENETDOWN 50                  // Horizon sockets use FreeBSD error codes
-#define SK_EBADF 9
-#define SK_EAGAIN 35
-#define SK_EINVAL 22
 static __thread int t_skerr = SK_ENETDOWN;
 static int sk_fail(void) { t_skerr = SK_ENETDOWN; return -1; }
 #define SKF(m, cname, ...) HLE_FORCE(m, "bsd socket service (cut): returns -1/ENETDOWN", int, cname, __VA_ARGS__)
