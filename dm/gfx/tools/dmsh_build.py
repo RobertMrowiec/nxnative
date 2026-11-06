@@ -51,6 +51,24 @@ XC = ['--msl', '--msl-version', '20300', '--msl-argument-buffers', '--msl-textur
 # GX lighting takes max(0, NaN) from light directions left at zero, and the half of Mario its fill light faces came out white on the iPhone (GitHub issue 72; vk_shaders.py PRECISE)
 def precise(msl): return re.sub(r'\bfast::(min|max|clamp)\(', r'precise::\1(', msl)
 
+# Loop guard: every loop in a shader also ends once the function has run LOOP_CAP iterations in all, so a loop that never ends on the host (a wrong translation,
+# an uninitialized bound, a value the replay does not fill) cannot hang the GPU. On macOS a command buffer that never completes is not always reclaimed when the
+# process exits: PRAGMATA's first frames left one and the whole Mac stopped (WindowServer watchdog) minutes later, twice. One counter per function, so nested loops
+# cannot multiply past the cap; 2^18 iterations per invocation is far beyond what a frame's shader does (PRAGMATA's longest bounded loop: 255)
+LOOP_CAP = 1 << 18
+def loop_guard(msl):
+    lines, out = msl.split('\n'), []
+    cap = f'++dm_lg < {LOOP_CAP}u'
+    for i, l in enumerate(lines):
+        if l == '{' and i and lines[i - 1].rstrip().endswith(')'):   # a function body (SPIRV-Cross puts its brace alone in column 0; a struct's header does not end in ')')
+            out += [l, '    uint dm_lg = 0u; (void)dm_lg;']; continue
+        if (m := re.fullmatch(r'(\s*)\} while \((.*)\);\s*', l)): l = f'{m.group(1)}}} while (({m.group(2)}) && {cap});'
+        elif (m := re.fullmatch(r'(\s*)for \(;;\)\s*', l)): l = f'{m.group(1)}for (; {cap};)'
+        elif (m := re.fullmatch(r'(\s*)while \((.*)\)\s*', l)): l = f'{m.group(1)}while (({m.group(2)}) && {cap})'
+        elif (m := re.fullmatch(r'(\s*)for \(([^;]*);([^;]*);([^;]*)\)\s*', l)): l = f'{m.group(1)}for ({m.group(2)}; ({m.group(3).strip() or "true"}) && {cap};{m.group(4)})'
+        out.append(l)
+    return '\n'.join(out)
+
 # Ampere HMMA.16816 with an f16 accumulator (agl's upscaler networks, the NDVE video networks) reaches the MSL as calls of dmsh_hmma16816_f16(lane, block, A0..A3, B0, B1, C0, C1,
 # flags, A's LDSM address, A0..A3's offsets, A's row stride, out D1) → D0, the subgroup's 256-word block of the scratch shared memory as the last argument (InstEmitAmpereTensor.AHmma,
 # TensorPass, HelperFunctionManager.GenerateHmma16816F16). The translator's body computes D lane by lane from the block; here it becomes simdgroup_matrix code over the same block:
