@@ -114,7 +114,7 @@ fi
 if [ "$MERGE_OK" -eq 1 ]; then
     echo ""
     echo "🛡️ Running Mandatory Anti-Regression Verification (dmhost smoke test)..."
-    if ! make -C "$REPO_ROOT/dm/host" GAME=040074A01BF12000 >/tmp/sync_verify.log 2>&1; then
+    if ! make -C "$REPO_ROOT/dm/host" GAME=040074A01BF12000 >/tmp/sync_verify.log 2>&1 || ! make -C "$REPO_ROOT/dm/host" GAME=0100DCA0064A6000 >/tmp/sync_verify.log 2>&1; then
         echo "❌ ERROR: Regression detected! dmhost failed to compile after upstream sync."
         tail -n 25 /tmp/sync_verify.log
         echo "⚠️ Rolling back merge to protect production stability..."
