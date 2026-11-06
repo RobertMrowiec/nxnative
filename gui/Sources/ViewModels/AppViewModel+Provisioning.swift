@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 
 extension AppViewModel {
-    static let provisioningVersion = "1.9.7"
+    static let provisioningVersion = "1.9.8"
     private static let provisioningVersionKey = "NXNative_ProvisioningVersion"
 
     /// True when no game launch or port is in progress, so background work may run.
