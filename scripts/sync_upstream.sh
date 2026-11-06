@@ -113,8 +113,22 @@ fi
 
 if [ "$MERGE_OK" -eq 1 ]; then
     echo ""
-    echo "🎉 Merge completed successfully!"
-    echo "All NxNative Launcher customizations have been preserved."
+    echo "🛡️ Running Mandatory Anti-Regression Verification (dmhost smoke test)..."
+    if ! make -C "$REPO_ROOT/dm/host" GAME=040074A01BF12000 >/tmp/sync_verify.log 2>&1; then
+        echo "❌ ERROR: Regression detected! dmhost failed to compile after upstream sync."
+        tail -n 25 /tmp/sync_verify.log
+        echo "⚠️ Rolling back merge to protect production stability..."
+        git reset --hard HEAD~1
+        MERGE_OK=0
+    else
+        echo "✅ dmhost compilation smoke test passed successfully!"
+    fi
+fi
+
+if [ "$MERGE_OK" -eq 1 ]; then
+    echo ""
+    echo "🎉 Merge completed successfully and verified!"
+    echo "All NxNative Launcher customizations and host binaries are verified."
     echo ""
     echo "🎮 Regenerating SUPPORTED_GAMES.md from upstream game definitions..."
     python3 "$REPO_ROOT/scripts/generate_supported_games.py" 2>/dev/null || python3 "$REPO_ROOT/nxnative/scripts/generate_supported_games.py" 2>/dev/null || true
@@ -125,8 +139,7 @@ if [ "$MERGE_OK" -eq 1 ]; then
     fi
 else
     echo ""
-    echo "⚠️ Conflict could not be automatically resolved. Restoring clean state..."
-    git merge --abort || true
+    echo "⚠️ Sync failed or was rolled back due to compilation regression."
     echo "Main branch remains safe."
 fi
 
