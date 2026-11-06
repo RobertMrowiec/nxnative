@@ -1,72 +1,104 @@
 # The Legend of Zelda: Ocarina of Time (`0400486024DEC000`)
 
-Switch 2, update v131072 over base v65536 (or base v0). Nintendo EPD's engine (`sead` / `agl` / `gsys`, Phive, Havok and CRIWARE), SDK components at 22.2.8, on NVN2. Modules `main`, `subsdk0` (NintendoSDK_movie) and `sdk`. **The Mac host reaches the frame loop, renders the AV1 opening through the selected Metal shaders, and enters playable gameplay in Kokiri Forest, Deku Tree, and Ocarina note-playing sequences.**
-
-The ordered rebuild and validation checklist is in [`PLAN.md`](PLAN.md). The NUP and every extracted or compiled game artifact stay in the private external work folder.
+A Switch 2 game: update v131072, SDK 22.2.8 (`Ounce`). Nintendo EPD's engine (sead, agl, gsys, Havok, CRIWARE; project `Owl`, with Tears of the Kingdom's file layout) on NVN2. Modules `main`, `subsdk0` (NintendoSDK_movie) and `sdk`, no rewriter patches. Status: plays on the Mac through the title, the opening, a new file's first scene, Link's house and Kokiri Forest, with saves, at about 59 fps with the picture close to console video. Mac only so far.
 
 ## What it needs
 
 | Setting | Where | Why |
 |---|---|---|
-| `pad_layout full` | [`game.tsv`](game.tsv) | a 3D game with camera control on the right stick |
-| `render_cond on` | [`game.tsv`](game.tsv) | OOT's agl passes use conditional rendering; PR [#1299](https://github.com/seedds/nxnative/pull/1299) found that running the main opaque pass unconditionally left its `EQUAL` depth test failing across the scene |
-| `pool_skip_retired on` | [`game.tsv`](game.tsv) | skips recreating retired texture views during scene transitions (`Kokiri Forest -> Inside the Deku Tree`), preventing a 2.5 GB texture rebuild spike |
-| `mem_used 0x6800000` | `game.tsv` | the rewritten `main`, `subsdk0` and `sdk` need 104 MB, above the 64 MB default |
-| Provisional `mem_reserve 0x650000000`, `mem_alias 0x400000000`, `mem_stack 0x10000000`, `app_pool 0x240000000` | `game.tsv` | the NPDM declares 48 MB of system resource, so virtual address memory is on, and `main` imports `SetMemoryHeapSize`; the first heap and address-region checks must replace this starting layout with measurements |
-
-The selected modules are 64-bit ARM. Their registered build IDs are `main` `e0f3ccfa…`, `subsdk0` `b0110087…` and `sdk` `1643a838…`.
+| `mem_reserve 0x320000000`, `mem_alias 0x100000000`, `mem_stack 0x10000000`, `app_pool 0x240000000` | [`game.tsv`](game.tsv) | the game asks `SetHeapSize` for 0x18ce00000; the rest as Donkey Kong Bananza, the Switch 2's 9 GB |
+| `mem_map_limit on` | [`game.tsv`](game.tsv) | a map past the application pool fails with ResultLimitReached, as on Horizon. The SDK's allocator keeps freed pages mapped until a map fails, then gives them back ([PR 1444](https://github.com/seedds/nxnative/pull/1444) reports a black screen leaving the Deku Tree without it; not reached here) |
+| `sys_resource 0x3000000` | `game.tsv` | 48 MB, as the NPDM declares |
+| `render_cond on` | `game.tsv` | agl clears a copy of the prepass depth again under a render condition the console skips. Run unconditionally, the opaque pass's `EQUAL` test fails everywhere ([PR 1299](https://github.com/seedds/nxnative/pull/1299)'s finding) |
+| `gpu_timestamps segment` | `game.tsv` | the game's dynamic resolution decides from GPU timestamps, and with one time per submission it never lowers its resolution ([why](../../../docs/reference/frame-rate.md#dynamic-resolution-that-never-moves-and-draw-passes-that-wait-for-each-other)) |
+| `draw_barriers game` | `game.tsv` | about 180 full barriers a frame NVN does not ask for: GPU 25 → 18 ms at full resolution |
+| `tex_flush_upload on`, `tex_dirty_upload on` | `game.tsv` | as Tears of the Kingdom: the CPU writes the terrain tiles' height (R32F), blend and hole (RGBA8) maps into textures after creating them. Without the keys those textures stay zero: flat blue holes in the ground around the path with grass floating in them, and grey stone where the console shows dirt |
+| `shader_groups`, `shader_note` | `game.tsv` | shaders grouped as `/Shader/`, `/Effect/`, `/Lib/`, `/UI/` |
+| `pad_layout full` | `game.tsv` | a 3D field and both sticks |
 
 ## Files
 
-- One private NUP container of 24 GB: a base record at v65536 and update v131072, no DLC. The update has its own ExeFS and a whole RomFS of 26,236,422,768 bytes and 186,583 files. The NUP carries a name record but no NACP or icon, so the app takes the profile's name and has no source icon.
-- RomFS: 102,185 `.zs` files (16.46 GB), 46,324 `.extm` files (5.71 GB), 26,378 `.bwav` files (2.03 GB) and 26 WebM movies (1.64 GB). The largest file is the 404 MB staff-credit movie.
-- The largest trees are `TerrainArc`, `PreComputedCulling`, `Tex`, `Sound`, `Bake`, `Phive`, `Voice`, `Pack` and `Model`. `Pack/ZsDic.pack.zs` is the profile's marker and holds the zstd dictionaries.
-
-## Static survey
-
-- `main`: 63,201,744-byte text, build `e0f3ccfaf50065ae4ea01eb5aeb13b1a`, 1,183 imports. The instruction census found 50,390 uses of `x18` and 1,264 reads of `tpidr_el0`.
-- `subsdk0`: build `b0110087a7b339ef74588d3bd0b4dd5d`; the census found 3,369 uses of `x18`.
-- `sdk`: build `1643a838814f9c10c696f930ed681e7f`; the census found 25,435 uses of `x18`, 441 reads of `tpidrro_el0`, 57 SVC stubs, 45 counter reads and five thread-pointer reads/writes.
-- The SDK components name NVN, G3d2, UI, FreeType, HarfBuzz, NPLN, libcurl and the movie library at 22.2.8. The code names `sead`, `agl`, `gsys`, Havok and CRIWARE.
-
-## Rewrite
-
-- All three selected modules rewrite successfully. The rewriter accounts exactly for every instruction-census site: `main`'s 50,390 `x18` uses, `subsdk0`'s 3,369 and `sdk`'s 25,435, plus the thread-pointer, timer and SVC sites above.
-- The SDK-wide function matcher found the SDK 22.2.8 `AddressRegionManager` constructor and cut its node area from 1 GB to 62 MB at `sdk+0x16ba48` and `sdk+0x16bad4`. Its observation gates for address regions and `StandardAllocator` also matched.
-- The matcher for SDK 20-style 2 MB alignment of address regions found no implementation in this SDK. Nothing was patched for it; the address-region check will show whether this version needs a new general implementation.
-- The rewritten modules require `mem_used 0x6800000` (104 MB).
+One [NUP container](../../../docs/development.md#the-packing-script-in-detail) of 25.6 GB: `scripts/pack_nup.py` unpacks it to `extract/v131072/`. The RomFS keeps most files as zstd with dictionaries from `Pack/ZsDic.pack.zs`. The movies are AV1.
 
 ## Shaders
 
-- The named archives are `Shader/*.Nin_Ounce_NVN2.bfsha.zs`, `Shader/ApplicationPackage.Nin_Ounce_NVN2.release.sarc.zs` and `Layout2Shader/MergeShader.Product.100.Nin_Ounce_NVN2.bfsha.zs`. They are BNSH inputs with Ampere code, compressed through the RomFS's zstd dictionaries.
-- The v131072 RomFS produces 42,851 shader stages: 4,123 compute, 500 mesh, 22,356 pixel, 20 task and 15,852 vertex. Their ordinary BNSH source groups are joined by 22 compute stages from `Movie/Ndve/Ndve-Nvn2-vid_seq5.dat.zs`.
-- The checked-in discovery tables contain all 42,851 stages, 4,123 compute-shader facts, 26,894 variation pairs and 6,296 candidate pipeline pairs. The split binary package in the private work folder is an intermediate input, not a compiled Metal library.
-- [`shader_seen.tsv`](shader_seen.tsv) records boot coverage only. Eleven program keys first dumped at run time are compute shaders in the movie's `NDVE` container, whose embedded `NDSR` block holds 22 NVN2 shaders. `shader_split.py` now parses that format, and all eleven keys resolve through the regenerated map.
-- The selected Mac build produced 16,885 Metal libraries in the current chain directory. Its selected pass reported 3,493 successful shaders (3,471 cache hits and 22 rebuilt), 697 generated variants and 134 compiled variants, with no translation failure or undecoded binding slot. It is deliberately not stamped as a full 42,343-stage build; the host therefore rejects `c1_full.tsv` and `cb_extent.tsv` until a full `dmsh_build.py` run completes.
+- About 42,850 in [`shader_map.tsv`](shader_map.tsv), including 500 mesh and 20 task shaders in the BNSH programs ([Task and mesh shaders in BNSH](../../../docs/reference/shaders.md#task-and-mesh-shaders-in-bnsh-and-indirect-mesh-draws)), and the movie library's in an NDVE pack ([`nn::ndve`](../../../docs/reference/shaders.md#nnndves-movie-enhancement-file)).
+- The runs here used a partial Mac library of the keys the playtests asked for, listed in [`shader_seen.tsv`](shader_seen.tsv) (7,276; building them took about 10 minutes when most came from the previous chain's libraries).
+- Current: [`RED.F32.FTZ.RN`](../../../docs/reference/shaders.md#float-atomics-in-storage-memory) translates. The build's `Attribute offset 0x5C is not valid` (about 2,300 shaders) is a vertex shader's write to an output the translator drops, probably a shading rate, as `nvnCommandBufferBindShadingRateImage` and its family are no-ops: everything shades at full rate, which is right to look at and costs GPU time. Not verified against the hardware.
+
+## Frame rate
+
+Measured on an M6 Mac with 16 GB, headless, on one walk with camera turns (`walk.sh` in the work folder).
+
+- Current: the title and menu, a movie behind them, are a locked 60 fps (p50 16.67 ms, GPU span 15.6 ms).
+- Current: walking the village at the game's top internal resolution, 1536x864: a locked 60 fps, mean 16.67 ms over each settled window. Per 2,700 frames: 0-8 frames over 25 ms and 0-2 over 33 ms. Frame p95 17.8-18.9 ms with no window, as the game's own loop moves around its fence wait; in a window p95 17.8 ms, 3 over 25 ms and 5-16 over 18 ms per 600. GPU span p50 16.5 ms, summed GPU 15.8 ms, CPU 6 ms, about 101 passes a frame. The heavy stretch where the village opens (about 1,560 draws) holds 16.65-16.8 ms by lowering its resolution, then returns to full. The main pass used to sit at 763x429 at the same GPU time: [marked shaders tested depth late](../../../docs/reference/frame-rate.md#a-hosts-own-store-in-a-fragment-shader-moves-its-depth-test).
+- Before [pool shaders stopped counting as depth readers](../../../docs/reference/rendering.md#pool-shaders-taken-as-depth-readers): passes 118, 104, 219, 224 in a four-frame cycle, frame times 15, 15, 18, 18.5 ms, mean 16.9 ms. Half the frames rendered the reflection probe's faces with one draw a pass.
+- The host's GPU figure adds up command buffers, which overlap, so it reads above the real span: 17.5 ms was never a frame's real time. The real span is `@gpu_end_ms − @gpu_beg_ms` in `DM_NVN_TSV`, or the `first start to last end` of `DM_NVN_GPUPROF`.
+- The roughly 1 ms the [wind fix](../../../docs/reference/shaders.md#dead-code-removal-dropped-a-coordinate-of-a-multi-output-instruction) seemed to add: 0.66 ms of it is the upscaler, 416 → 1076 µs, because its variants then read what they had lost. It is doing its real work.
+- Attachment traffic was not the cost it looked: 254 MB load and 277 MB store remain, and the cheapest passes move 20 MB in about 30 µs. The pass count was the cost.
+- Resolved: 25-40 ms frames while the GPU sat idle with the next command buffer committed, 51-75 per 2,700 in a bad run: [the GPU idles with the next command buffer already committed](../../../docs/reference/frame-rate.md#the-gpu-idles-with-the-next-command-buffer-already-committed). What holds Metal's submission queue in the kernel is still unknown.
+- The title movie's network takes 15.4 ms of compute a frame here, so the title holds 60 fps with almost nothing to spare, and slower GPUs fall below it: [issue 1375](https://github.com/seedds/nxnative/issues/1375), 35 ms on an M1 Max.
+- In a run that takes shots, each shot costs its frame 60–100 ms, and `DM_NVN_GPUPROF` and pass dumps slow the frames they cover.
+- Open: frames of 100–650 ms when an area first loads (640 first uploads, 321 MB, in one frame of 294 ms; another 640 ms of submit with 68 MB).
+- `DM_NVN_TBDR=1` was tried and does not help: p95 19 ms on the same walk, against 17.8.
+- The first long run on a new chain is slower (p50 60–114 ms), while `MTLCompilerService` compiles pipelines; the next run is not.
+- With a window, the first start on a new chain runs the pipeline prebuild first: 33,190 shader pairs, 691 s on this Mac. A run with no window skips it.
+- The opening movie runs at the movie's own 24 fps pace during the story section and cannot be skipped: about 8 minutes on a new file.
+
+## Memory
+
+- Current: on the walk, run from an external drive with a 3.5 GB pipeline archive: resident 10.9-11.4 GB, wired about 9.4 GB, on a 16 GB Mac. `vmmap` and `footprint`: 6.4 GB of guest memory and 3.8 GB of Metal textures and targets, 1 GB of IOAccelerator memory. [Reading the archive into memory](../../../docs/reference/memory.md#a-pipeline-archive-on-an-external-drive-is-read-into-memory) used to add 3.5 GB (footprint 15.0, peak 16.7). `mem_map_limit on`: a map past the application pool fails as on Horizon, and the SDK's allocator then gives back the pages it keeps. Other apps' memory adds to the swap: other games running beside it can push the Mac over.
+- This game took the Mac down before the fixes (kernel panic in `IOGPUGroupMemory` at 14.7 GB wired): [raw pool table](../../../docs/reference/memory.md#memory-pools-nothing-gave-an-address-to-stay-out-of-the-raw-pool-table), [textures made only when read](../../../docs/reference/memory.md#shaders-report-which-textures-they-read-through-a-pool), [out-of-memory exit](../../../docs/reference/memory.md#repeated-gpu-out-of-memory-failures-end-the-game).
+- Why so much: the game's own memory is about the console's 9 GB application pool, and on the Mac its textures also exist as Metal textures, as Metal cannot sample the guest's block-linear storage.
+- Open: render targets that move in the game's pool and change size with its dynamic resolution (1580 → 1579 → 1578 …) get a new Metal texture each time, about 2 GB added to the residency set per 300 frames. It costs about 0.5 ms a frame once settled, so recycling them is a smaller win than the walk, but [a report of a GPU driver panic](https://github.com/seedds/nxnative/pull/1299) lines up with this churn.
+
+## Saves
+
+The game autosaves into `slot_00` and `slot_01`, with `option.sav` and `account.sav`. The Load screen lists them and reloading works. A save's thumbnail is a 543x306 JPEG in `caption.sav`, made from a copy of a texture to a buffer. A manual save (Menu, System, Save) on the current build has the picture (slot 02, mean colour 138 / 123 / 86). The autosaves in the work folder's saves, made on older chains, hold a black one. Open: an autosave made on the current build has not been looked at.
+
+## Driving it on the Mac
+
+Run headless, `DM_CTL` at a control file. The work folder has `boot.sh <secs> <log>` (with a guard that kills the host past 12.5 GB wired or 16 GB of swap; do not run without it), `ctl.sh`, `seq.sh`, `snap.sh`, `keys.sh <logs>` (adds and builds the keys the logs ask for), `white.py` (share of near-white pixels in a shot) and `run/save_ref` (autosaves in Kokiri Forest).
+
+From an empty save: at about 45 s `A` (title), `A` (New Game), then the movie. From `save_ref`: at about 58 s `A~0.2`, 5 s later `A~0.2` (Load), 30 s later three `A~0.1` 3 s apart, then 12 s to the bridge outside Link's house. There `LUp~3.5`, `A~0.2` (Climb Down) and `LDown~4` three or four times reach the village floor.
 
 ## Open
 
-- Run and stamp the full Metal shader build, then expand coverage from gameplay.
-- Reach the first controllable scene and make a reproducible title/gameplay route.
-- Measure the heap request and address regions, then replace the provisional memory layout.
-- Validate services, input, audio, movies, saves, rendering, shader coverage and performance through gameplay.
-
-## First Mac boot
-
-- The first diagnostic host build loaded all three rewritten modules, completed `nnosInitialize` / `nninitStartup`, entered `nnMain`, mounted all 187,182 packed RomFS entries and initialized an NVN 231.40 Switch 2 device on Metal. It requested a `0x18a600000`-byte heap (6.166 GiB).
-- With an empty Metal cache it discovered 2,324 shader keys before the run stopped; missing libraries were expected in this discovery run and are the input to the first selected shader build.
-- The first real abort was Result `0xa99` in SDK 22.2.8's `audio::detail::ListVirtualInputDevices` (`sdk+0x1f61ac`), after it tried to open the Switch 2 `auddmg:u` service. The host now answers the public virtual-input list as empty, consistent with its existing no-microphone AudioIn behavior.
-- Resolved startup regression after integrating the shared input-stream implementation: both it and the original port registered `ListVirtualInputDevices`, so the loader aborted with `duplicate entry in the forced takeover list` before SDK initialization. The port now uses the single shared input-stream handler with the same empty-device result.
-- The next abort came from the title's bundled gRPC initialization. It probes `nn::socket::EventFd(0, 0)` before selecting its `poll` engine; the offline host returned `ENETDOWN`, disabled that engine and then had no poll strategy. The host now provides the local event counter, read/write/close and poll semantics without enabling network sockets. The next run created the `npln-grpc` timer and executor threads normally.
-- A five-second discovery run passed the service boundary, decoded the 1920x1080 AV1 opening, created the resource/scene/decompression/presentation/background workers, and reached frame 86. The watchdog stopped a live process; there was no game abort.
-- The title calls `nvnCommandBufferSetComputeWorkloadPriority`, a GPU scheduling hint new to this NVN2 surface. The host has one ordered Metal queue, so it accepts the hint as an empty state operation. An empty provisional `pso_manifest.tsv` also keeps device prewarm state readable until real first-use rows can be recorded.
-- With the selected library, all eleven NDVE compute keys load. A cold pipeline archive spent about 27 seconds compiling the first four movie compute pipelines; the warm archive has no compilation stall and renders the opening at about 35 ms GPU time per frame on this Mac.
-- Early captures were black because the movie itself encodes black through about timestamp 1.68 s. A decoder trace showed two one-picture pools registered at image index 0, each decoded image delivered to and read from the matching pool, and changing luma fingerprints after the encoded black lead-in. Captures at presented frames 240 and 300 show the night landscape and moon, confirming AV1 decode, NV12 upload, all NDVE compute passes and final presentation together.
-- The NDVE raw-pointer stores originally overflowed the 1,024-page write log on every dispatch, leaving all GPU writes conservative. The general log now holds 8,192 exact pages: it learns the movie output's one pool over 11 dispatches with no overflow. On a warm archive this lowers the opening's GPU time from about 35 ms to 15 ms per frame (frames 300–600: p50 15.30 ms, p95 15.64 ms); presentation stays at about 16.67 ms. The chain change's first compute-pipeline build took 42.3 seconds once.
-- Decoder input reaches ordinary protocol back-pressure at the 12-picture host queue during startup. The game handles the returned busy result, retries, and continues releasing and reading pictures; this is no longer reported as a red fault. The remaining red diagnostics are the intentionally unstamped partial shader library and its missing generated constant-buffer tables.
+- Open: 2 of about 42,850 shaders do not compile (`1f78730053feb036`, `e172bd7ec218ab8e`: `bracket nesting level exceeded maximum of 256`). Neither has shown up in a run so far.
+- Open: [the movie network](https://github.com/seedds/nxnative/issues/1375) takes 35 ms a frame on an M1 Max, so movies and the title run at about 28 fps there. It fits on this M6, with about 1 ms to spare.
+- Current: against a frame of console video of Navi's close-up the picture matches: hair and sign within 1–2 % in red and green. The causes, each general: [float atomics](../../../docs/reference/shaders.md#float-atomics-in-storage-memory) (too bright, yellow skin, a pale veil: the exposure read back from buffers that stayed 0), the terrain's CPU-written maps (holes, wrong materials; the profile keys above), [the gather offsets](../../../docs/reference/shaders.md#texturegatheroffsets-and-a-loop-over-its-offsets) (the dotted rows in blurred areas, born in the NDSR upscaler, three pictures from one input), and [image atomics on RGBA8](../../../docs/reference/shaders.md#image-atomics-on-a-32-bit-colour-texture) (the anti-aliasing's blend weights).
+- Current: the grass no longer flickers. Its blades shifted at 10 Hz because the wind's pressure solve read one neighbour at an undefined row ([dead-code removal](../../../docs/reference/shaders.md#dead-code-removal-dropped-a-coordinate-of-a-multi-output-instruction)), so the velocity field (512x512 RGBA16F, a two-buffer ring) held strong stripes up to ±11 with a 6-frame cycle. In the moss on the bridge, the mean difference between adjacent frames fell from 5.97 to 0.70 of 255, and it now grows smoothly with the lag.
+- Open, small differences from that same console frame: Navi's core has a harder edge and a narrower glow here (the bloom texture peaks at 0.44; the ball's HDR is about 0.9 with a tiny spot at 45); shadows are less blue, and the far grass about 1.4 times brighter. One frame of compressed video is weak evidence for either. The falling leaves look dark near the camera, not compared.
+- A red `texture type mismatch` on `9b310b3349825e9a` (a UI merge shader): a 3D texture left bound in a slot its active branch does not sample. Harmless so far.
+- `nn::codec AV1: a packet refused with 12 pictures waiting` (4 lines a run): the decoder's queue is full and the game retries; movies play.
+- The `pipeline archive` red line is [issue 342](https://github.com/seedds/nxnative/issues/342), a limit of this system build. `c1_full.tsv is stale` holds on partial libraries, which no full build has stamped.
+- The "Navi" name label in the Great Deku Tree scene was missing on an earlier chain and has not been checked since. Not played yet: the Deku Tree dungeon, combat, later areas. Sound opens with no red line; movies and speech were not listened to. Physics issues reported in PR 1299 were not seen on this route (walking, the ladder, the camera).
+- No iOS shader build or iPhone run has been done. Its memory use makes an iPhone unlikely as it stands.
 
 ## Found on this game
 
-- [No audio input devices](../../../docs/reference/audio.md#no-audio-input-devices): SDK 22's virtual-input list opened `auddmg:u` and aborted when no microphone service existed.
-- [Local `eventfd` while network sockets are offline](../../../docs/reference/services.md#local-eventfd-while-network-sockets-are-offline): the bundled gRPC runtime disabled its only poll engine when the offline host rejected its local event counter.
-- [Global memory at an address loaded from memory](../../../docs/reference/shaders.md#global-memory-at-an-address-loaded-from-memory): seven NDVE compute shaders write image surfaces through loaded pointers, exceeding the original 1,024-page write log on every dispatch.
+- [Raw global memory lookups that start from their last entry](../../../docs/reference/shaders.md#raw-global-memory-lookups-that-start-from-their-last-entry): the foliage, vertex and compute shaders read structures word by word through loaded addresses; about 2 ms less GPU a frame at the spawn point.
+- [The GPU idles with the next command buffer already committed](../../../docs/reference/frame-rate.md#the-gpu-idles-with-the-next-command-buffer-already-committed): the 25-40 ms frames.
+- [Pool tables and readback buffers made anew each frame](../../../docs/reference/memory.md#pool-tables-and-readback-buffers-made-anew-each-frame): about 1,500 residency changes per 300 frames.
+- [Pool shaders taken as depth readers](../../../docs/reference/rendering.md#pool-shaders-taken-as-depth-readers): about 80 extra passes a frame, and half the frames over budget.
+- [A pipeline archive on an external drive is read into memory](../../../docs/reference/memory.md#a-pipeline-archive-on-an-external-drive-is-read-into-memory): 3.5 GB of swapped memory, now mapped.
+- [A texture in a sparse pool came out CPU-written at its first use](../../../docs/reference/memory.md#a-texture-in-a-sparse-pool-came-out-cpu-written-at-its-first-use): found by the unit test, on this profile's `tex_dirty_upload`.
+- [`EventFd` needs no network](../../../docs/reference/services.md#eventfd-needs-no-network)
+- [No virtual audio input devices (SDK 22)](../../../docs/reference/audio.md#no-virtual-audio-input-devices-sdk-22)
+- [`nn::ndve`'s movie enhancement file](../../../docs/reference/shaders.md#nnndves-movie-enhancement-file)
+- [Task and mesh shaders in BNSH, and indirect mesh draws](../../../docs/reference/shaders.md#task-and-mesh-shaders-in-bnsh-and-indirect-mesh-draws)
+- [Indirect task / mesh draws on the encode thread](../../../docs/reference/rendering.md#indirect-task--mesh-draws-on-the-encode-thread): the iOS app aborted when a save loaded.
+- [F2IP](../../../docs/reference/shaders.md#f2ip)
+- [A shader that writes a whole frame through raw global memory](../../../docs/reference/frame-rate.md#a-shader-that-writes-a-whole-frame-through-raw-global-memory)
+- [Memory pools nothing gave an address to stay out of the raw pool table](../../../docs/reference/memory.md#memory-pools-nothing-gave-an-address-to-stay-out-of-the-raw-pool-table)
+- [Shaders report which textures they read through a pool](../../../docs/reference/memory.md#shaders-report-which-textures-they-read-through-a-pool)
+- [Repeated GPU out-of-memory failures end the game](../../../docs/reference/memory.md#repeated-gpu-out-of-memory-failures-end-the-game)
+- [Texture IDs of one storage share one packaged texture](../../../docs/reference/nvn-objects.md#texture-ids-of-one-storage-share-one-packaged-texture)
+- [Finalizing a copy of a texture object](../../../docs/reference/nvn-objects.md#finalizing-a-copy-of-a-texture-object)
+- [Dynamic resolution that never moves, and draw passes that wait for each other](../../../docs/reference/frame-rate.md#dynamic-resolution-that-never-moves-and-draw-passes-that-wait-for-each-other)
+- [A full table of running GPU writes ends passes for nothing](../../../docs/reference/frame-rate.md#a-full-table-of-running-gpu-writes-ends-passes-for-nothing)
+- [Float atomics in storage memory](../../../docs/reference/shaders.md#float-atomics-in-storage-memory)
+- [textureGatherOffsets and a loop over its offsets](../../../docs/reference/shaders.md#texturegatheroffsets-and-a-loop-over-its-offsets)
+- [Image atomics on a 32-bit colour texture](../../../docs/reference/shaders.md#image-atomics-on-a-32-bit-colour-texture)
+- [A host's own store in a fragment shader moves its depth test](../../../docs/reference/frame-rate.md#a-hosts-own-store-in-a-fragment-shader-moves-its-depth-test)
+- [Dead-code removal dropped a coordinate of a multi-output instruction](../../../docs/reference/shaders.md#dead-code-removal-dropped-a-coordinate-of-a-multi-output-instruction)
