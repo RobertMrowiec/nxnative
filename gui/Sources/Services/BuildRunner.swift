@@ -155,6 +155,7 @@ public final class BuildRunner {
         let basePaths = env["PATH"] != nil ? "\(brewPaths):\(env["PATH"]!)" : brewPaths
         env["PATH"] = BundledTools.augmentedPath(base: basePaths, python: pythonPath)
         env["PYTHONUNBUFFERED"] = "1"
+        env["DM_UPDATE_PROFILE_TABLES"] = "1"
         for (k, v) in BundledTools.environment(for: pythonPath) {
             env[k] = v
         }
