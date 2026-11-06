@@ -31,7 +31,18 @@ public struct SwitchConsoleLibraryView: View {
     }
 
     internal var sortedUnportedGames: [SelectableGame] {
-        viewModel.unportedGames
+        var list = viewModel.unportedGames
+        if viewModel.activeGroupFilter == .switch2 {
+            list = list.filter { $0.isSwitch2 || $0.isNup }
+        }
+        let query = viewModel.librarySearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !query.isEmpty {
+            list = list.filter {
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                ($0.titleId?.localizedCaseInsensitiveContains(query) == true)
+            }
+        }
+        return list
     }
 
     public var body: some View {
@@ -215,7 +226,7 @@ public struct SwitchConsoleLibraryView: View {
                         .id("shelf_non_switch")
                     }
 
-                    if viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .switchFiles {
+                    if viewModel.activeGroupFilter == .categories || viewModel.activeGroupFilter == .switchFiles || viewModel.activeGroupFilter == .switch2 {
                         unportedShelf
                             .id("shelf_unported")
                     }

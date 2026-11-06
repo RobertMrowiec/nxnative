@@ -114,7 +114,7 @@ if [ ! -x "$DEST_RES/python/bin/python3" ]; then
     find "$DEST_RES/python" -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 
     echo "==> Verifying standalone Python packages..."
-    "$PY_BIN" -I -c "import lz4.block, capstone, fontTools, nsz, ssl, sqlite3, zlib, lzma, bz2; print('All core modules OK')"
+    "$PY_BIN" -I -c "import lz4.block, capstone, fontTools, nsz, zbic, ssl, sqlite3, zlib, lzma, bz2; print('All core modules OK')"
 else
     echo "--> Standalone Python already prepared at $DEST_RES/python"
 fi

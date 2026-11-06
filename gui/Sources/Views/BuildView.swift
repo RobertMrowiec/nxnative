@@ -37,6 +37,11 @@ public struct BuildView: View {
             .padding(20)
         }
         .nxScrollEdgeEffect(edges: [.top, .bottom])
+        .onAppear {
+            if !viewModel.gameFolders.isEmpty && !viewModel.isBuilding {
+                viewModel.scanAllGameFolders()
+            }
+        }
         .alert("Apple Command Line Tools", isPresented: $viewModel.showCltInstallAlert) {
             Button(viewModel.tr("common.ok"), role: .cancel) {}
         } message: {

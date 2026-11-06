@@ -58,43 +58,64 @@ public struct BuildOptionsSection: View {
     
     private func platformCard(platform: TargetPlatform, icon: String, titleKey: String, descKey: String) -> some View {
         let isSelected = viewModel.platform == platform
+        let isSwitch2OrNup = (viewModel.selectedGame?.isSwitch2 == true) || (viewModel.selectedGame?.isNup == true)
+        let isIosDisabled = (platform == .ios && isSwitch2OrNup)
+
         return Button(action: {
+            guard !isIosDisabled else { return }
             SoundEffectService.shared.play(.click)
             viewModel.platform = platform
         }) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: icon)
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundColor(isSelected ? NXTheme.primary : NXTheme.textSecondary)
-                    
-                    Text(viewModel.tr(titleKey))
-                        .font(.system(size: 13, weight: .bold, design: .rounded))
-                        .foregroundColor(NXTheme.textPrimary)
-                    
-                    Spacer()
-                    
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                            .font(.system(size: 16))
+            ZStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Image(systemName: icon)
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundColor(isSelected && !isIosDisabled ? NXTheme.primary : NXTheme.textSecondary)
+                        
+                        Text(viewModel.tr(titleKey))
+                            .font(.system(size: 13, weight: .bold, design: .rounded))
+                            .foregroundColor(NXTheme.textPrimary)
+                        
+                        Spacer()
+                        
+                        if isSelected && !isIosDisabled {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
+                                .font(.system(size: 16))
+                        }
                     }
+                    
+                    Text(viewModel.tr(descKey))
+                        .font(.system(size: 11))
+                        .foregroundColor(NXTheme.textSecondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                
-                Text(viewModel.tr(descKey))
-                    .font(.system(size: 11))
-                    .foregroundColor(NXTheme.textSecondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+                .opacity(isIosDisabled ? 0.35 : 1.0)
+
+                if isIosDisabled {
+                    Text(viewModel.tr("port_modal.coming_soon"))
+                        .font(.system(size: 10, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3.5)
+                        .nxGlassBar(
+                            in: Capsule(),
+                            tint: Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.75),
+                            fallbackFill: Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.90)
+                        )
+                        .shadow(color: Color.black.opacity(0.65), radius: 5, x: 0, y: 2)
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(isSelected ? NXTheme.primary.opacity(0.18) : NXTheme.glassSurfaceElevated.opacity(0.5))
+                    .fill(isSelected && !isIosDisabled ? NXTheme.primary.opacity(0.18) : NXTheme.glassSurfaceElevated.opacity(0.5))
             )
             .overlay {
-                if isSelected {
+                if isSelected && !isIosDisabled {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(NXTheme.primary.opacity(0.6), lineWidth: 1)
                 } else {
@@ -104,6 +125,7 @@ public struct BuildOptionsSection: View {
             }
         }
         .buttonStyle(NXPressableButtonStyle())
+        .disabled(isIosDisabled)
         .nxNoFocusRing()
     }
     

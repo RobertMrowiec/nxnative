@@ -63,6 +63,7 @@ public final class BuildRunner {
         let pythonPath = SystemDetector.findBestPythonPath()
         
         let isDump = FileManager.default.fileExists(atPath: gameDirectory.appendingPathComponent("base/exefs/main.npdm").path) || gameDirectory.pathExtension.lowercased() == "nup"
+        let effectivePlatform: TargetPlatform = isDump ? .macApp : platform
         
         var arguments: [String] = [
             scriptPath,
@@ -74,25 +75,24 @@ public final class BuildRunner {
             arguments.append(contentsOf: ["-k", prodKeysPath])
         }
         
-        // Plataforma (Dumps are Mac-native)
-        if isDump {
+        // Plataforma (Dumps and NUP containers are Mac-native)
+        switch effectivePlatform {
+        case .ios:
+            arguments.append(contentsOf: ["--platform", "ios"])
+        case .macApp, .nonSwitch:
             arguments.append(contentsOf: ["--platform", "mac-app"])
-        } else {
-            switch platform {
-            case .ios:
-                arguments.append(contentsOf: ["--platform", "ios"])
-            case .macApp, .nonSwitch:
-                arguments.append(contentsOf: ["--platform", "mac-app"])
-            }
         }
         
         // Output path (always explicitly provided so .app is generated for Mac App)
-        let outDir = customOutputFolder ?? gameDirectory
-        let rawName = (appName?.isEmpty == false ? appName! : gameDirectory.lastPathComponent)
+        var isGameDirDirectory: ObjCBool = false
+        _ = FileManager.default.fileExists(atPath: gameDirectory.path, isDirectory: &isGameDirDirectory)
+        let defaultOutDir = isGameDirDirectory.boolValue ? gameDirectory : gameDirectory.deletingLastPathComponent()
+        let outDir = customOutputFolder ?? defaultOutDir
+        let rawName = (appName?.isEmpty == false ? appName! : gameDirectory.deletingPathExtension().lastPathComponent)
             .replacingOccurrences(of: "\\[[^\\]]+\\]", with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanName = rawName.isEmpty ? "Game" : rawName
-        let ext = (platform == .macApp ? ".app" : ".ipa")
+        let ext = (effectivePlatform == .macApp ? ".app" : ".ipa")
         let outPath = outDir.appendingPathComponent(cleanName + ext).path
         arguments.append(contentsOf: ["-o", outPath])
         
@@ -114,13 +114,13 @@ public final class BuildRunner {
             arguments.append("--no-show-fps")
         }
         
-        let shouldSeparateRomfs = (platform == .ios && romfsSeparate)
+        let shouldSeparateRomfs = (effectivePlatform == .ios && romfsSeparate)
         if shouldSeparateRomfs {
             arguments.append(contentsOf: ["--romfs", "separate"])
             // --romfs separate strictly requires --keep-extracted (build_ipa_from_nsp.py:2222)
             arguments.append("--keep-extracted")
             delegate?.buildRunner(self, didProduceLog: LogEntry(level: .info, message: "[Config] RomFS separate mode enabled: preserving extracted image for device transfer (--keep-extracted enforced)."))
-        } else if platform == .macApp {
+        } else if effectivePlatform == .macApp {
             // Mac App runs natively from extracted engine files (build_ipa_from_nsp.py:2216)
             arguments.append("--keep-extracted")
             if !keepExtracted {
@@ -197,7 +197,7 @@ public final class BuildRunner {
                 if self.isCancelled {
                     self.delegate?.buildRunner(self, didFinishWithError: "Build cancelled by user.")
                 } else if p.terminationStatus == 0 {
-                    let outPath = self.resolveFinalOutputPath(gameDir: gameDirectory, customOut: customOutputFolder, platform: platform, appName: appName)
+                    let outPath = self.resolveFinalOutputPath(gameDir: defaultOutDir, customOut: customOutputFolder, platform: effectivePlatform, appName: appName)
                     self.delegate?.buildRunner(self, didFinishSuccess: outPath)
                 } else {
                     if let specificError = self.lastReportedError, !specificError.isEmpty {

@@ -1,6 +1,6 @@
 # The Legend of Zelda: Ocarina of Time (`0400486024DEC000`)
 
-Switch 2, update v131072 over base v65536. Nintendo EPD's engine (`sead` / `agl` / `gsys`, Phive, Havok and CRIWARE), SDK components at 22.2.8, on NVN2. Modules `main`, `subsdk0` (NintendoSDK_movie) and `sdk`. **The Mac host reaches the frame loop and renders the AV1 opening through the selected Metal shaders. Gameplay has not been reached or validated.**
+Switch 2, update v131072 over base v65536 (or base v0). Nintendo EPD's engine (`sead` / `agl` / `gsys`, Phive, Havok and CRIWARE), SDK components at 22.2.8, on NVN2. Modules `main`, `subsdk0` (NintendoSDK_movie) and `sdk`. **The Mac host reaches the frame loop, renders the AV1 opening through the selected Metal shaders, and enters playable gameplay in Kokiri Forest, Deku Tree, and Ocarina note-playing sequences.**
 
 The ordered rebuild and validation checklist is in [`PLAN.md`](PLAN.md). The NUP and every extracted or compiled game artifact stay in the private external work folder.
 
@@ -10,6 +10,7 @@ The ordered rebuild and validation checklist is in [`PLAN.md`](PLAN.md). The NUP
 |---|---|---|
 | `pad_layout full` | [`game.tsv`](game.tsv) | a 3D game with camera control on the right stick |
 | `render_cond on` | [`game.tsv`](game.tsv) | OOT's agl passes use conditional rendering; PR [#1299](https://github.com/seedds/nxnative/pull/1299) found that running the main opaque pass unconditionally left its `EQUAL` depth test failing across the scene |
+| `pool_skip_retired on` | [`game.tsv`](game.tsv) | skips recreating retired texture views during scene transitions (`Kokiri Forest -> Inside the Deku Tree`), preventing a 2.5 GB texture rebuild spike |
 | `mem_used 0x6800000` | `game.tsv` | the rewritten `main`, `subsdk0` and `sdk` need 104 MB, above the 64 MB default |
 | Provisional `mem_reserve 0x650000000`, `mem_alias 0x400000000`, `mem_stack 0x10000000`, `app_pool 0x240000000` | `game.tsv` | the NPDM declares 48 MB of system resource, so virtual address memory is on, and `main` imports `SetMemoryHeapSize`; the first heap and address-region checks must replace this starting layout with measurements |
 

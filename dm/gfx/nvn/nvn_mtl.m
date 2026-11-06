@@ -4513,7 +4513,7 @@ static int clear_rect_zero(int i) {
 static os_unfair_lock g_rmu = OS_UNFAIR_LOCK_INIT;
 // ---------- Shader mapping table: Switch control section hash → PC metallib (produced by dm/gfx/tools/shader_map.py) ----------
 static NSMutableDictionary<NSString *, NSString *> *g_shmap;
-static NSString *g_shmap_path, *g_msl_dir;
+static NSString *g_shmap_path, *g_msl_dir, *g_active_chain;
 // The library may be one file beside its folder, b-<chain>.img (dm/tools/shader_lib.py, msl_image.h), read in place. Each file comes from the folder first: what a partial dmsh_build.py run rebuilt goes
 // over the image, a build folder from before the image works as it did, and a host running from a folder goes on when a build packs it (the image is whole before the folder goes). So the image is
 // opened at the first file the folder lacks, and tried again each time while it is not there. img: the image the entry is in
@@ -4571,6 +4571,24 @@ static void shmap_read(void) {
     const char *m = getenv("DM_MSL_DIR");
     // Library directory = <DM_MSL_DIR or default cache>/b-<translation chain version>: the version comes from dm/gfx/nvn/dmsh_chain.h (tools/dmsh_chain.py), one for every game; a host built from an old source tree only accepts libraries of the old version
     g_msl_dir = [NSString stringWithFormat:@"%@/b-%s", m ? @(m) : [NSString stringWithFormat:@"%s%s/build/cache/metal_shader_cache", getenv("DM_ROOT") ?: getenv("HOME"), getenv("DM_ROOT") ? "" : "/dm-work"], DMSH_CHAIN];
+    g_active_chain = @DMSH_CHAIN;
+    if (![NSFileManager.defaultManager fileExistsAtPath:g_msl_dir] && ![NSFileManager.defaultManager fileExistsAtPath:[g_msl_dir stringByAppendingString:@".img"]] && m) {
+        NSArray *sub = [NSFileManager.defaultManager contentsOfDirectoryAtPath:@(m) error:nil];
+        for (NSString *s in sub) {
+            if ([s hasPrefix:@"b-"]) {
+                NSString *stem = [s hasSuffix:@".img"] ? [s substringToIndex:s.length - 4] : s;
+                NSString *candidate = [@(m) stringByAppendingPathComponent:stem];
+                BOOL isDir = NO;
+                if (([NSFileManager.defaultManager fileExistsAtPath:candidate isDirectory:&isDir] && isDir) ||
+                    [NSFileManager.defaultManager fileExistsAtPath:[candidate stringByAppendingString:@".img"]]) {
+                    g_msl_dir = candidate;
+                    g_active_chain = [stem substringFromIndex:2];
+                    MLOG("using packaged shader library directory %s (chain %s)", g_msl_dir.UTF8String, g_active_chain.UTF8String);
+                    break;
+                }
+            }
+        }
+    }
     if (![NSFileManager.defaultManager fileExistsAtPath:g_msl_dir]) {
         NSString *image = [g_msl_dir stringByAppendingString:@".img"];
         if ([NSFileManager.defaultManager fileExistsAtPath:image]) MLOG("shader libraries: one file, %s", image.UTF8String);
@@ -12225,7 +12243,7 @@ static int ndve_scale(id<MTLTexture> in, id<MTLTexture> out, const tex_t *desc) 
         !(out.usage & MTLTextureUsageRenderTarget)) return 0;
     zskip_del(desc->serial);
     sparse_gpu_wrote(desc);
-    mtl_pool_gpu_written(desc->pool);
+    mtl_tex_gpu_written(desc->pool, desc->mem, desc->L.size);
     rp_end();
     if (g_blit) { enc_b_end(g_blit); g_blit = nil; }
     ubd_land_compute();

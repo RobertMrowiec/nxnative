@@ -12,19 +12,24 @@ extension SwitchConsoleLibraryView {
 
         VStack(alignment: .leading, spacing: 6) {
             shelfHeader(
-                title: "Nintendo Switch (Unported ROMs)",
-                icon: "gamecontroller.fill",
+                title: viewModel.activeGroupFilter == .switch2
+                    ? "Nintendo Switch 2 / NUP (Unported)"
+                    : "Nintendo Switch (Unported ROMs & NUP)",
+                icon: viewModel.activeGroupFilter == .switch2 ? "sparkles.tv.fill" : "gamecontroller.fill",
                 count: items.count,
                 suffix: items.count == 1 ? "ROM" : "ROMs",
-                color: NXTheme.secondary
+                color: viewModel.activeGroupFilter == .switch2
+                    ? Color(red: 0.95, green: 0.48, blue: 0.16)
+                    : NXTheme.secondary
             )
 
             ScrollViewReader { horizontalProxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(alignment: .center, spacing: cardSpacing) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { idx, game in
+                            let globalIdx = viewModel.unportedGames.firstIndex(where: { $0.id == game.id }) ?? idx
                             let isFocused = (viewModel.activeLibraryShelf == .unportedSwitch) &&
-                                            (viewModel.focusedUnportedGameIndex == idx)
+                                            (viewModel.focusedUnportedGame?.id == game.id)
 
                             UnportedGameCardView(
                                 game: game,
@@ -43,7 +48,7 @@ extension SwitchConsoleLibraryView {
                                         viewModel.gameForPortModal = game
                                     } else {
                                         viewModel.isFocusOnHeroBar = false
-                                        viewModel.selectUnportedGame(at: idx)
+                                        viewModel.selectUnportedGame(at: globalIdx)
                                     }
                                 }
                             )

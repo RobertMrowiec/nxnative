@@ -71,7 +71,7 @@ public struct LibraryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            if viewModel.detectedGames.isEmpty && !viewModel.gameFolders.isEmpty {
+            if !viewModel.gameFolders.isEmpty && !viewModel.isBuilding {
                 viewModel.scanAllGameFolders()
             }
             viewModel.reconcileLibraryFocusState()

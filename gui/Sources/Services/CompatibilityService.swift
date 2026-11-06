@@ -118,10 +118,19 @@ public final class CompatibilityService {
             guard let self = self else { return }
             
             if let d = data, let text = String(data: d, encoding: .utf8), !text.isEmpty {
-                let games = self.parseMarkdownTable(text)
+                var games = self.parseMarkdownTable(text)
                 if !games.isEmpty {
-                    DispatchQueue.main.async {
-                        completion(games, true) // Online
+                    self.loadFromLocal(nxnativePath: localNxnativePath) { localGames in
+                        let existingIds = Set(games.map { $0.titleId.uppercased() })
+                        let extras = localGames.filter { !existingIds.contains($0.titleId.uppercased()) }
+                        if !extras.isEmpty {
+                            games.append(contentsOf: extras)
+                            games.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                        }
+                        self.cachedGames = games
+                        DispatchQueue.main.async {
+                            completion(games, true) // Online + local profile merge
+                        }
                     }
                     return
                 }

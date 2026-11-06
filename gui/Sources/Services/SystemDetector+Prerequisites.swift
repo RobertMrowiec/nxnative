@@ -78,9 +78,9 @@ extension SystemDetector {
         let pipUninstallCmd: String
         
         if let pyPath = chosenPyPath {
-            pipInstallCmd = "if \"\(pyPath)\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip install --break-system-packages lz4 capstone fonttools && (\"\(pyPath)\" -m pip install --break-system-packages nsz 2>/dev/null || true); else \"\(pyPath)\" -m pip install lz4 capstone fonttools && (\"\(pyPath)\" -m pip install nsz 2>/dev/null || true); fi"
-            pipRepairCmd = "if \"\(pyPath)\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip install --force-reinstall --break-system-packages lz4 capstone fonttools && (\"\(pyPath)\" -m pip install --force-reinstall --break-system-packages nsz 2>/dev/null || true); else \"\(pyPath)\" -m pip install --force-reinstall lz4 capstone fonttools && (\"\(pyPath)\" -m pip install --force-reinstall nsz 2>/dev/null || true); fi"
-            pipUninstallCmd = "if \"\(pyPath)\" -m pip uninstall --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip uninstall -y --break-system-packages lz4 capstone fonttools nsz 2>/dev/null || true; else \"\(pyPath)\" -m pip uninstall -y lz4 capstone fonttools nsz 2>/dev/null || true; fi"
+            pipInstallCmd = "if \"\(pyPath)\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip install --break-system-packages lz4 capstone fonttools zbic && (\"\(pyPath)\" -m pip install --break-system-packages nsz 2>/dev/null || true); else \"\(pyPath)\" -m pip install lz4 capstone fonttools zbic && (\"\(pyPath)\" -m pip install nsz 2>/dev/null || true); fi"
+            pipRepairCmd = "if \"\(pyPath)\" -m pip install --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip install --force-reinstall --break-system-packages lz4 capstone fonttools zbic && (\"\(pyPath)\" -m pip install --force-reinstall --break-system-packages nsz 2>/dev/null || true); else \"\(pyPath)\" -m pip install --force-reinstall lz4 capstone fonttools zbic && (\"\(pyPath)\" -m pip install --force-reinstall nsz 2>/dev/null || true); fi"
+            pipUninstallCmd = "if \"\(pyPath)\" -m pip uninstall --help 2>&1 | grep -q -- '--break-system-packages'; then \"\(pyPath)\" -m pip uninstall -y --break-system-packages lz4 capstone fonttools zbic nsz 2>/dev/null || true; else \"\(pyPath)\" -m pip uninstall -y lz4 capstone fonttools zbic nsz 2>/dev/null || true; fi"
         } else {
             pipInstallCmd = "brew install python@3.13"
             pipRepairCmd = "brew reinstall python@3.13"
@@ -89,24 +89,24 @@ extension SystemDetector {
 
         if pyInfo.isBundled, let pyPath = chosenPyPath {
             prereqs.python = DependencyStatus(id: "python", name: "Python 3", isAvailable: true, details: "\(chosenPyVersion) (Isolated Standalone)", recommendation: nil, installCommand: "", repairCommand: "", uninstallCommand: nil, isProtected: true)
-            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools; print('OK')"])
+            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools, zbic; print('OK')"])
             let nszCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import nsz; print('OK')"])
             let hasPackages = pyCheck.success && pyCheck.output.contains("OK")
             let nszNote = nszCheck.success ? " + nsz" : ""
             prereqs.pythonPackages = DependencyStatus(
                 id: "python_packages", name: "Python Modules", isAvailable: hasPackages,
-                details: hasPackages ? "lz4, capstone, fonttools\(nszNote) (Pre-bundled)" : "Bundled packages need verification",
+                details: hasPackages ? "lz4, capstone, fonttools, zbic\(nszNote) (Pre-bundled)" : "Bundled packages need verification",
                 recommendation: nil, installCommand: pipInstallCmd, repairCommand: pipRepairCmd, uninstallCommand: pipUninstallCmd, isProtected: true
             )
         } else if pyInfo.isSufficient, let pyPath = chosenPyPath {
             prereqs.python = DependencyStatus(id: "python", name: "Python 3", isAvailable: true, details: "\(chosenPyVersion) (\(pyPath))", recommendation: nil, installCommand: "brew install python@3.13", repairCommand: "brew reinstall python@3.13", uninstallCommand: nil, isProtected: false)
-            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools; print('OK')"])
+            let pyCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import lz4, capstone, fontTools, zbic; print('OK')"])
             if pyCheck.success && pyCheck.output.contains("OK") {
                 let nszCheck = runQuickCommand(pyPath, args: ["-B", "-c", "import nsz; print('OK')"])
                 let nszNote = nszCheck.success ? " + nsz" : " (nsz optional)"
                 prereqs.pythonPackages = DependencyStatus(
                     id: "python_packages", name: "Python Modules", isAvailable: true,
-                    details: "lz4, capstone, fonttools\(nszNote) installed",
+                    details: "lz4, capstone, fonttools, zbic\(nszNote) installed",
                     recommendation: nszCheck.success ? nil : "Note: Compressed .nsz/.xcz files require standalone nsz or Python <= 3.14",
                     installCommand: pipInstallCmd, repairCommand: pipRepairCmd, uninstallCommand: pipUninstallCmd, isProtected: false
                 )

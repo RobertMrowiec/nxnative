@@ -62,9 +62,9 @@ extension AppViewModel {
             ))
         }
         
-        if (sel.isSwitch2 || sel.isNup), let firstFile = sel.files.first?.url {
+        if (sel.isSwitch2 || sel.isNup), let firstFile = (sel.baseFile?.url ?? sel.files.first?.url) {
             targetGameDirectory = firstFile
-            let label = sel.isSwitch2 ? "Nintendo Switch 2 package" : "NUP container"
+            let label = sel.isNup ? "NUP container" : "Nintendo Switch 2 package"
             logs.append(LogEntry(level: .info, message: "\(label) identified: '\(firstFile.path)'."))
         } else if detectedGames.count > 1 || sel.files.count < detectedFiles.count || hasSubfolderFiles {
             let safeName = sel.name.replacingOccurrences(of: "[^a-zA-Z0-9._-]", with: "_", options: .regularExpression)
@@ -190,14 +190,22 @@ extension AppViewModel {
     
     public func selectGameFolder() {
         let panel = NSOpenPanel()
-        panel.canChooseFiles = false
+        panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Choose Game Folder"
-        panel.message = "Select a folder holding your game NSP, NSZ, XCI, or NUP files."
+        panel.treatsFilePackagesAsDirectories = false
+        panel.allowedContentTypes = []
+        panel.delegate = GameFilePickerDelegate.sharedRomsOnly
+        panel.prompt = tr("common.choose")
+        panel.message = "Select a game file (.nsp, .nsz, .xci, .xcz, .nup) or a folder holding your games."
         
         if panel.runModal() == .OK, let url = panel.url {
-            self.selectedGameFolder = url
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir), !isDir.boolValue {
+                addGameFolder(url.deletingLastPathComponent(), preferredFileURL: url, openPortModalIfFound: false)
+            } else {
+                addGameFolder(url, preferredFolderURL: url, openPortModalIfFound: false)
+            }
         }
     }
     

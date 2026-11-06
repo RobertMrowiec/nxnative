@@ -37,11 +37,11 @@ public struct SelectableGame: Identifiable, Hashable {
     }
     
     public var updateCount: Int {
-        files.filter { $0.type == .update }.count
+        files.filter { $0.type == .update }.count + files.reduce(0) { $0 + $1.nupUpdateCount }
     }
     
     public var dlcCount: Int {
-        files.filter { $0.type == .dlc }.count
+        files.filter { $0.type == .dlc }.count + files.reduce(0) { $0 + $1.nupDlcCount }
     }
     
     public var summaryText: String {

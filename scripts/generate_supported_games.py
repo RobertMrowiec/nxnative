@@ -138,7 +138,9 @@ def parse_game_profile_ram(tid, engine):
         min_ram = 8
 
     # Min iOS Silicon
-    if min_ram == 4 or min_ram == 6:
+    if tid.upper().startswith("0400"):
+        ios_chip = "Mac only (Switch 2)"
+    elif min_ram == 4 or min_ram == 6:
         ios_chip = "A17 Pro+ (8GB)"
     elif min_ram == 8:
         if is_unreal or tid.upper() in A18_OPTIMIZED_TIDS or max_resident_gb >= 2.75:
@@ -190,7 +192,7 @@ def parse_games_table():
                     note = gallery_notes.get(tid.upper(), "")
 
                     # Relative link to profile inside nxnative
-                    clean_doc_link = f"nxnative/dm/games/{tid}/README.md"
+                    clean_doc_link = f"dm/games/{tid}/README.md"
 
                     games.append({
                         "name": name,
@@ -288,7 +290,17 @@ def generate_markdown(games):
 
     timeline = [
         {
-            "version": "Current Build (v1.8.3 / Latest)",
+            "version": "Current Build (v1.9.6 / Latest)",
+            "date": "November 2026",
+            "tagline": "The Legend of Zelda: Ocarina of Time (Switch 2), Bundled ZBIC NSO Decompression & 144+ Native macOS Games",
+            "features": [
+                "**The Legend of Zelda: Ocarina of Time (`0400486024DEC000` - Switch 2) Support**: Full Switch 2 profile (`v0` & `v131072`), NVN2 task/mesh shader translation to Metal, Ampere `F2IP`/`LDSM` fixes, NDVE compute movie scaling, `pool_skip_retired` scene transition memory optimization, Kokiri Forest GPU heightmap preservation, and SDK 22 Ocarina note-playing service stubs.",
+                "**Bundled `zbic` Module for SDK 22+ Switch 2 Games**: Pre-bundled `zbic` in the isolated standalone Python runtime and added prerequisite verification so ZBIC-compressed NSOs (`ExeFS/main`) unpack out of the box.",
+                "**144+ Verified Native macOS & iOS Games**: Expanded catalog covering 10 Nintendo Switch 2 titles (`0400...`) and 134+ Nintendo Switch 1 titles (`0100...`)."
+            ]
+        },
+        {
+            "version": "v1.8.3",
             "date": "October 2026",
             "tagline": "macOS Game Mode, Game Launch Fix, Auto-Signing & Mouse Drag & Drop",
             "features": [

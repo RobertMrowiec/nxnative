@@ -16,6 +16,7 @@ pad_layout	full
 
 # ---- Versions ----
 # The NUP has no control data to name a display version.
+build	v0	v0	main=33fa6c2c23848282a77e8b88a0a93f48	subsdk0=ecf61f74a892d5b55be2ad09888179ed	sdk=5fd6d40b36fb19c82ef24a03dbcb474c
 build	v131072	v131072	main=e0f3ccfaf50065ae4ea01eb5aeb13b1a	subsdk0=b0110087a7b339ef74588d3bd0b4dd5d	sdk=1643a838814f9c10c696f930ed681e7f
 package	v131072
 shader_versions	v131072
@@ -37,6 +38,7 @@ sys_resource	0x3000000
 
 # ---- Rendering ----
 render_cond	on
+pool_skip_retired	on
 
 # ---- Shader split ----
 shader_groups	/Shader/ApplicationPackage=layout /Shader/=shader /Layout2Shader/=layout /Effect/=effect /Lib/=lib /UI/=layout

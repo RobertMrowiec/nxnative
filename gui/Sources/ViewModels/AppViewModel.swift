@@ -73,11 +73,14 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
     @Published public var isProdKeysValid: Bool = false
     
     // MARK: - Game Selection
+    internal var isUpdatingSelectedGameFolderFromAdd: Bool = false
     @Published public var selectedGameFolder: URL? {
         didSet {
             if let folder = selectedGameFolder {
                 UserDefaults.standard.set(folder.path, forKey: StorageKeys.savedGameFolder)
-                addGameFolder(folder)
+                if !isUpdatingSelectedGameFolderFromAdd {
+                    addGameFolder(folder)
+                }
             } else {
                 UserDefaults.standard.removeObject(forKey: StorageKeys.savedGameFolder)
             }
@@ -96,6 +99,9 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
             if let game = selectedGame {
                 self.appName = game.name
                 self.userDidManuallyOverrideRomfsSeparate = false
+                if (game.isSwitch2 || game.isNup) && self.platform != .macApp {
+                    self.platform = .macApp
+                }
                 self.evaluateAutoRomfsSplit()
             }
         }
@@ -677,6 +683,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         detectEnvironment()
         
         // Load Game Folders
+        self.isUpdatingSelectedGameFolderFromAdd = true
         if let savedFolders = UserDefaults.standard.stringArray(forKey: StorageKeys.savedGameFolders) {
             let urls = savedFolders.compactMap { path -> URL? in
                 var isDir: ObjCBool = false
@@ -695,6 +702,7 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
                 self.gameFolders = [singleURL]
             }
         }
+        self.isUpdatingSelectedGameFolderFromAdd = false
         
         // Load Non-Switch Games
         if let savedNonSwitch = UserDefaults.standard.stringArray(forKey: StorageKeys.savedNonSwitchAppPaths) {
@@ -743,6 +751,15 @@ public final class AppViewModel: ObservableObject, BuildRunnerDelegate, Installe
         loadCompatibleGames()
         updateDockIcon()
         setupWindowMinimizeIconObserver()
+        
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self, !self.isBuilding, !self.gameFolders.isEmpty else { return }
+            self.scanAllGameFolders()
+        }
         
         NotificationService.shared.requestAuthorization()
         setupControllerNavigation()

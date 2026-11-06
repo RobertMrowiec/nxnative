@@ -11,7 +11,7 @@ public struct BuildReadinessPill: View {
         Group {
             if !viewModel.isNxnativeValid {
                 missingNxnativeCard
-            } else if !viewModel.isProdKeysValid {
+            } else if !viewModel.isProdKeysValid && viewModel.selectedGame?.isSwitch2 != true && viewModel.selectedGame?.isNup != true {
                 missingKeysCard
             } else if !viewModel.prerequisites.allSatisfied {
                 missingToolsCard

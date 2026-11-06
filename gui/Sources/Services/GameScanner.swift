@@ -1,13 +1,35 @@
 import Foundation
 
+public struct NupMetadata {
+    public let titleId: String?
+    public let embeddedTitle: String?
+    public let versionString: String?
+    public let updateCount: Int
+    public let dlcCount: Int
+}
+
 public final class GameScanner {
     public static let shared = GameScanner()
+    public static let allowedExtensions: Set<String> = ["nsp", "nsz", "xci", "xcz", "nup"]
+    
+    private static let skippedDirectoryNames: Set<String> = [
+        "staging", "shader", "extract", "romfs", "exefs", "pso", "logs", "tools", "font", "aoc", ".git", "node_modules", ".build", "build"
+    ]
     
     private init() {}
     
     public func scan(directory: URL) -> [GameFileItem] {
         let fm = FileManager.default
-        let allowedExtensions = Set(["nsp", "nsz", "xci", "xcz", "nup"])
+        
+        // Support passing a single ROM / .nup file directly
+        var isDir: ObjCBool = false
+        guard fm.fileExists(atPath: directory.path, isDirectory: &isDir) else { return [] }
+        if !isDir.boolValue {
+            if let single = scanFile(url: directory) {
+                return [single]
+            }
+            return []
+        }
         
         // Check if directory itself is a game dump folder
         let rootDumpItems = inspectDumpItems(url: directory)
@@ -28,10 +50,26 @@ public final class GameScanner {
         let versionRegex = try? NSRegularExpression(pattern: "\\[v([0-9]+)\\]|v([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)", options: [.caseInsensitive])
         
         for case let fileURL as URL in enumerator {
+            let filename = fileURL.lastPathComponent
+            if filename.hasPrefix("._") { continue }
+            
             let resourceValues = try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey, .fileSizeKey])
             
-            // Check for game dumps (folders containing base/exefs/main.npdm)
             if resourceValues?.isDirectory == true {
+                let dirLower = filename.lowercased()
+                if dirLower.hasSuffix("_build") ||
+                   dirLower.hasSuffix("-work") ||
+                   dirLower.hasSuffix("_survey") ||
+                   dirLower.hasSuffix(".app") ||
+                   dirLower.hasSuffix(".framework") ||
+                   dirLower.hasSuffix(".xcarchive") ||
+                   dirLower.hasPrefix("patched_") ||
+                   Self.skippedDirectoryNames.contains(dirLower) {
+                    enumerator.skipDescendants()
+                    continue
+                }
+                
+                // Check for game dumps (folders containing base/exefs/main.npdm)
                 let dumpItems = inspectDumpItems(url: fileURL)
                 if !dumpItems.isEmpty {
                     enumerator.skipDescendants()
@@ -40,89 +78,9 @@ public final class GameScanner {
                 }
             }
             
-            let ext = fileURL.pathExtension.lowercased()
-            guard allowedExtensions.contains(ext) else { continue }
-            guard resourceValues?.isRegularFile == true else { continue }
-            let size = Int64(resourceValues?.fileSize ?? 0)
-            let filename = fileURL.lastPathComponent
-            
-            // Extrai Title ID (1. Tag [0100...] no nome, 2. Header PFS0 .tik, 3. Busca por nome no banco)
-            var titleId: String? = nil
-            var hasExplicitTitleId = false
-            if let regex = titleIdRegex,
-               let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)),
-               let range = Range(match.range(at: 1), in: filename) {
-                titleId = String(filename[range]).uppercased()
-                hasExplicitTitleId = true
-            } else if ext == "nup", let nupTid = extractTitleIdFromNup(url: fileURL) {
-                titleId = nupTid
-                hasExplicitTitleId = true
-            } else if let headerTid = extractTitleIdFromPFS0(url: fileURL) {
-                titleId = headerTid.uppercased()
-                hasExplicitTitleId = true
-            } else {
-                let clean = cleanGameTitle(filename)
-                if let matchedTid = CompatibilityService.shared.findTitleId(forGameTitle: clean) {
-                    titleId = matchedTid.uppercased()
-                }
+            if let item = scanFile(url: fileURL, preloadedValues: resourceValues, titleIdRegex: titleIdRegex, versionRegex: versionRegex) {
+                results.append(item)
             }
-            
-            // Extract Version
-            var versionString: String? = nil
-            if let regex = versionRegex,
-               let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)) {
-                if match.range(at: 1).location != NSNotFound, let r = Range(match.range(at: 1), in: filename) {
-                    versionString = "v" + String(filename[r])
-                } else if match.range(at: 2).location != NSNotFound, let r = Range(match.range(at: 2), in: filename) {
-                    versionString = "v" + String(filename[r])
-                }
-            }
-            
-            // Determina tipo (Base, Update ou DLC)
-            let lower = filename.lowercased()
-            let parentFolderLower = fileURL.deletingLastPathComponent().lastPathComponent.lowercased()
-            let type: GameFileType
-            if ext == "nup" {
-                if let tid = titleId, tid.hasPrefix("0400") || lower.contains("switch 2") || lower.contains("switch2") {
-                    type = .switch2Dump
-                } else {
-                    type = .base
-                }
-            } else if hasExplicitTitleId, let tid = titleId, let val = UInt64(tid, radix: 16) {
-                let low = val & 0xFFF
-                if low == 0 {
-                    type = .base
-                } else if low == 0x800 {
-                    type = .update
-                } else {
-                    type = .dlc
-                }
-            } else if lower.contains("dlc") || parentFolderLower == "dlc" || parentFolderLower == "dlcs" {
-                type = .dlc
-            } else if lower.contains("update") || lower.contains("patch") || parentFolderLower == "update" || parentFolderLower == "updates" || (versionString != nil && versionString != "v0" && !lower.contains("base")) {
-                type = .update
-            } else if let tid = titleId {
-                if tid.hasSuffix("000") {
-                    type = .base
-                } else if tid.hasSuffix("800") {
-                    type = .update
-                } else {
-                    type = .dlc
-                }
-            } else if lower.contains("base") || versionString == "v0" || ext == "nsp" || ext == "xci" {
-                type = .base
-            } else {
-                type = .unknown
-            }
-            
-            results.append(GameFileItem(
-                url: fileURL,
-                name: filename,
-                sizeBytes: size,
-                type: type,
-                titleId: titleId,
-                versionString: versionString
-            ))
         }
         
         // Sort: Base and Switch 2 Dumps first, then Update, then DLC
@@ -134,6 +92,123 @@ public final class GameScanner {
             if scoreA != scoreB { return scoreA < scoreB }
             return a.name.localizedStandardCompare(b.name) == .orderedAscending
         }
+    }
+    
+    public func scanFile(
+        url fileURL: URL,
+        preloadedValues: URLResourceValues? = nil,
+        titleIdRegex: NSRegularExpression? = nil,
+        versionRegex: NSRegularExpression? = nil
+    ) -> GameFileItem? {
+        let filename = fileURL.lastPathComponent
+        guard !filename.hasPrefix("._") else { return nil }
+        let ext = fileURL.pathExtension.lowercased()
+        guard Self.allowedExtensions.contains(ext) else { return nil }
+        
+        let resourceValues = preloadedValues ?? (try? fileURL.resourceValues(forKeys: [.isRegularFileKey, .isDirectoryKey, .fileSizeKey]))
+        guard resourceValues?.isRegularFile == true else { return nil }
+        let size = Int64(resourceValues?.fileSize ?? 0)
+        
+        let tidRegex = titleIdRegex ?? (try? NSRegularExpression(pattern: "\\[([0-9A-Fa-f]{16})\\]", options: []))
+        let verRegex = versionRegex ?? (try? NSRegularExpression(pattern: "\\[v([0-9]+)\\]|v([0-9]+\\.[0-9]+(?:\\.[0-9]+)?)", options: [.caseInsensitive]))
+        
+        let nupMeta: NupMetadata? = (ext == "nup") ? inspectNupMetadata(url: fileURL) : nil
+        
+        // Extrai Title ID (1. Tag [0100...] no nome, 2. Header NUP / PFS0 .tik, 3. Busca por nome no banco)
+        var titleId: String? = nil
+        var hasExplicitTitleId = false
+        if let regex = tidRegex,
+           let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)),
+           let range = Range(match.range(at: 1), in: filename) {
+            titleId = String(filename[range]).uppercased()
+            hasExplicitTitleId = true
+        } else if let nupTid = nupMeta?.titleId ?? (ext == "nup" ? extractTitleIdFromNup(url: fileURL) : nil) {
+            titleId = nupTid.uppercased()
+            hasExplicitTitleId = true
+        } else if let headerTid = extractTitleIdFromPFS0(url: fileURL) {
+            titleId = headerTid.uppercased()
+            hasExplicitTitleId = true
+        } else {
+            let clean = cleanGameTitle(filename)
+            if let matchedTid = CompatibilityService.shared.findTitleId(forGameTitle: clean) {
+                titleId = matchedTid.uppercased()
+            } else if let embeddedName = nupMeta?.embeddedTitle,
+                      let matchedTid = CompatibilityService.shared.findTitleId(forGameTitle: embeddedName) {
+                titleId = matchedTid.uppercased()
+            }
+        }
+        
+        // Extract Version
+        var versionString: String? = nil
+        if let regex = verRegex,
+           let match = regex.firstMatch(in: filename, range: NSRange(filename.startIndex..., in: filename)) {
+            if match.range(at: 1).location != NSNotFound, let r = Range(match.range(at: 1), in: filename) {
+                versionString = "v" + String(filename[r])
+            } else if match.range(at: 2).location != NSNotFound, let r = Range(match.range(at: 2), in: filename) {
+                versionString = "v" + String(filename[r])
+            }
+        }
+        if versionString == nil, let nupVer = nupMeta?.versionString {
+            versionString = nupVer
+        }
+        
+        // Determina tipo (Base, Update ou DLC)
+        let lower = filename.lowercased()
+        let parentFolderLower = fileURL.deletingLastPathComponent().lastPathComponent.lowercased()
+        let type: GameFileType
+        if ext == "nup" {
+            if let tid = titleId, tid.hasPrefix("0400") || lower.contains("switch 2") || lower.contains("switch2") || parentFolderLower.contains("switch 2") || parentFolderLower.contains("switch2") {
+                type = .switch2Dump
+            } else {
+                type = .base
+            }
+        } else if hasExplicitTitleId, let tid = titleId, let val = UInt64(tid, radix: 16) {
+            let low = val & 0xFFF
+            if low == 0 {
+                type = .base
+            } else if low == 0x800 {
+                type = .update
+            } else {
+                type = .dlc
+            }
+        } else if lower.contains("dlc") || parentFolderLower == "dlc" || parentFolderLower == "dlcs" {
+            type = .dlc
+        } else if lower.contains("update") || lower.contains("patch") || parentFolderLower == "update" || parentFolderLower == "updates" || (versionString != nil && versionString != "v0" && !lower.contains("base")) {
+            type = .update
+        } else if let tid = titleId {
+            if tid.hasSuffix("000") {
+                type = .base
+            } else if tid.hasSuffix("800") {
+                type = .update
+            } else {
+                type = .dlc
+            }
+        } else if lower.contains("base") || versionString == "v0" || ext == "nsp" || ext == "xci" {
+            type = .base
+        } else {
+            type = .unknown
+        }
+        
+        let cleanFromFilename = cleanGameTitle(filename)
+        let displayFilename: String
+        if ext == "nup",
+           (cleanFromFilename.isEmpty || cleanFromFilename.count <= 4),
+           let embedded = nupMeta?.embeddedTitle, !embedded.isEmpty {
+            displayFilename = embedded
+        } else {
+            displayFilename = filename
+        }
+        
+        return GameFileItem(
+            url: fileURL,
+            name: displayFilename,
+            sizeBytes: size,
+            type: type,
+            titleId: titleId,
+            versionString: versionString,
+            nupUpdateCount: nupMeta?.updateCount ?? 0,
+            nupDlcCount: nupMeta?.dlcCount ?? 0
+        )
     }
     
     /// Scans multiple directories and all their subdirectories recursively, aggregating and deduplicating game files.
@@ -210,6 +285,11 @@ public final class GameScanner {
     
     /// Lê os cabeçalhos de um contêiner .nup para extrair o Title ID do primeiro pacote registrado (SPEC v1).
     public func extractTitleIdFromNup(url: URL) -> String? {
+        return inspectNupMetadata(url: url)?.titleId
+    }
+    
+    /// Inspeciona o cabeçalho TOC e os registros de metadados TLV de um contêiner .nup (SPEC v1) sem descompactar o arquivo.
+    public func inspectNupMetadata(url: URL) -> NupMetadata? {
         guard let handle = try? FileHandle(forReadingFrom: url) else { return nil }
         defer { try? handle.close() }
         
@@ -221,18 +301,85 @@ public final class GameScanner {
         guard tocSize >= 48 + 64 else { return nil }
         
         guard (try? handle.seek(toOffset: tocOff)) != nil else { return nil }
-        guard let tocHead = try? handle.read(upToCount: 48 + 128), tocHead.count >= 48 + 64 else { return nil }
+        let readCap = Int(min(tocSize, 48 + 32 * 64))
+        guard let tocHead = try? handle.read(upToCount: readCap), tocHead.count >= 48 + 64 else { return nil }
         guard tocHead[0] == 0x54, tocHead[1] == 0x4F, tocHead[2] == 0x43, tocHead[3] == 0x01 else { return nil } // "TOC\x01"
         
         let numPkgs = tocHead.subdata(in: 4..<8).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
         guard numPkgs > 0 else { return nil }
         
-        var tid = tocHead.subdata(in: 48..<56).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
-        if tid == 0 && numPkgs > 1 && tocHead.count >= 48 + 128 {
-            tid = tocHead.subdata(in: (48 + 64)..<(48 + 72)).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+        let pkgLimit = min(Int(numPkgs), (tocHead.count - 48) / 64)
+        var resolvedBaseTid: String? = nil
+        var fallbackTid: String? = nil
+        var updateCount = 0
+        var dlcCount = 0
+        var maxVersion: UInt32 = 0
+        var metaTarget: (off: UInt64, size: UInt32)? = nil
+        
+        for i in 0..<pkgLimit {
+            let offset = 48 + i * 64
+            let pkgTid = tocHead.subdata(in: offset..<(offset + 8)).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+            let pkgVer = tocHead.subdata(in: (offset + 20)..<(offset + 24)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+            let pkgKind = tocHead[offset + 24]
+            let metaOff = tocHead.subdata(in: (offset + 32)..<(offset + 40)).withUnsafeBytes { $0.load(as: UInt64.self).littleEndian }
+            let metaSize = tocHead.subdata(in: (offset + 40)..<(offset + 44)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian }
+            
+            if pkgTid != 0 {
+                let hexTid = String(format: "%016llX", pkgTid).uppercased()
+                if pkgKind == 0 || (pkgTid & 0xFFF) == 0 {
+                    if resolvedBaseTid == nil {
+                        resolvedBaseTid = hexTid
+                    }
+                } else if fallbackTid == nil {
+                    fallbackTid = baseApplicationTitleId(for: hexTid) ?? hexTid
+                }
+            }
+            
+            if pkgKind == 1 {
+                updateCount += 1
+                if pkgVer > maxVersion {
+                    maxVersion = pkgVer
+                }
+            } else if pkgKind == 2 {
+                dlcCount += 1
+            } else if pkgKind == 0 && pkgVer > maxVersion {
+                maxVersion = pkgVer
+            }
+            
+            if metaTarget == nil && metaOff > 0 && metaSize >= 8 && metaSize <= 524_288 {
+                metaTarget = (metaOff, metaSize)
+            }
         }
-        guard tid != 0 else { return nil }
-        return String(format: "%016llX", tid).uppercased()
+        
+        var embeddedTitle: String? = nil
+        if let meta = metaTarget, (try? handle.seek(toOffset: meta.off)) != nil,
+           let metaData = try? handle.read(upToCount: Int(meta.size)) {
+            var pos = 0
+            while pos + 8 <= metaData.count {
+                let tlvType = metaData.subdata(in: pos..<(pos + 2)).withUnsafeBytes { $0.load(as: UInt16.self).littleEndian }
+                let tlvLen = Int(metaData.subdata(in: (pos + 4)..<(pos + 8)).withUnsafeBytes { $0.load(as: UInt32.self).littleEndian })
+                pos += 8
+                guard tlvLen >= 0 && pos + tlvLen <= metaData.count else { break }
+                if tlvType == 5, tlvLen > 0 {
+                    let payload = metaData.subdata(in: pos..<(pos + tlvLen))
+                    if let str = String(data: payload, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !str.isEmpty {
+                        embeddedTitle = str
+                        break
+                    }
+                }
+                pos += tlvLen
+            }
+        }
+        
+        let finalTid = resolvedBaseTid ?? fallbackTid
+        let verStr = maxVersion > 0 ? "v\(maxVersion)" : nil
+        return NupMetadata(
+            titleId: finalTid,
+            embeddedTitle: embeddedTitle,
+            versionString: verStr,
+            updateCount: updateCount,
+            dlcCount: dlcCount
+        )
     }
     
     /// Inspeciona pasta de dump e seus updates embutidos (updates/<version>), retornando o item base e os updates
@@ -246,14 +393,7 @@ public final class GameScanner {
                 guard (try? u.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { continue }
                 let verName = u.lastPathComponent
                 if fm.fileExists(atPath: u.appendingPathComponent("exefs").path) || fm.fileExists(atPath: u.appendingPathComponent("romfs").path) {
-                    var uSize: Int64 = 0
-                    if let en = fm.enumerator(at: u, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles]) {
-                        for case let file as URL in en {
-                            if let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
-                                uSize += Int64(vals.fileSize ?? 0)
-                            }
-                        }
-                    }
+                    let uSize = fastDumpSubfolderSize(url: u, parentDumpURL: url, titleId: baseItem.titleId, verName: verName)
                     items.append(GameFileItem(
                         url: u,
                         name: "\(url.lastPathComponent) (Update v\(verName))",
@@ -303,15 +443,8 @@ public final class GameScanner {
             }
         }
         
-        // Calcula tamanho total dos arquivos
-        var totalSize: Int64 = 0
-        if let sizeEnumerator = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles]) {
-            for case let file as URL in sizeEnumerator {
-                if let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
-                    totalSize += Int64(vals.fileSize ?? 0)
-                }
-            }
-        }
+        // Fast instant size calculation (avoids walking 100,000+ shader/cache or extracted files inside *_build)
+        let totalSize = fastDumpFolderSize(url: url, titleId: tidString)
         
         let isSwitch2 = tidString.hasPrefix("0400")
         let fileType: GameFileType = isSwitch2 ? .switch2Dump : .base
@@ -324,6 +457,85 @@ public final class GameScanner {
             titleId: tidString,
             versionString: versionString
         )
+    }
+    
+    /// Calcula rapidamente o tamanho de um dump sem varrer pastas *_build ou centenas de milhares de arquivos soltos.
+    private func fastDumpFolderSize(url: URL, titleId: String) -> Int64 {
+        let fm = FileManager.default
+        var totalSize: Int64 = 0
+        
+        // 1. Sum base/exefs (typically ~5 files)
+        let exefsURL = url.appendingPathComponent("base/exefs")
+        if let exefsFiles = try? fm.contentsOfDirectory(at: exefsURL, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]) {
+            for f in exefsFiles {
+                if let vals = try? f.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
+                    totalSize += Int64(vals.fileSize ?? 0)
+                }
+            }
+        }
+        
+        // 2. Check if a packed RomFS.img already exists in <titleId>_build/extract/*/RomFS.img (1 stat call!)
+        let buildExtractURL = url.appendingPathComponent("\(titleId)_build/extract")
+        if let verDirs = try? fm.contentsOfDirectory(at: buildExtractURL, includingPropertiesForKeys: [.isDirectoryKey]) {
+            var maxImgSize: Int64 = 0
+            for vDir in verDirs {
+                let imgURL = vDir.appendingPathComponent("RomFS.img")
+                if let imgSize = (try? imgURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                    maxImgSize = max(maxImgSize, Int64(imgSize))
+                }
+            }
+            if maxImgSize > 0 {
+                return totalSize + maxImgSize
+            }
+        }
+        
+        // 3. Otherwise do a bounded sample of base/romfs (max 300 files / 20ms)
+        let romfsURL = url.appendingPathComponent("base/romfs")
+        totalSize += boundedDirectorySize(at: romfsURL, maxFiles: 300)
+        return totalSize
+    }
+    
+    private func fastDumpSubfolderSize(url: URL, parentDumpURL: URL, titleId: String?, verName: String) -> Int64 {
+        let fm = FileManager.default
+        var totalSize: Int64 = 0
+        let exefsURL = url.appendingPathComponent("exefs")
+        if let exefsFiles = try? fm.contentsOfDirectory(at: exefsURL, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey]) {
+            for f in exefsFiles {
+                if let vals = try? f.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
+                    totalSize += Int64(vals.fileSize ?? 0)
+                }
+            }
+        }
+        if let tid = titleId {
+            let imgURL = parentDumpURL.appendingPathComponent("\(tid)_build/extract/v\(verName)/RomFS.img")
+            if let imgSize = (try? imgURL.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                return totalSize + Int64(imgSize)
+            }
+        }
+        let romfsURL = url.appendingPathComponent("romfs")
+        totalSize += boundedDirectorySize(at: romfsURL, maxFiles: 200)
+        return totalSize
+    }
+    
+    private func boundedDirectorySize(at url: URL, maxFiles: Int) -> Int64 {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: url.path),
+              let en = fm.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else {
+            return 0
+        }
+        var total: Int64 = 0
+        var count = 0
+        let deadline = DispatchTime.now() + 0.025 // 25ms hard cap
+        for case let file as URL in en {
+            count += 1
+            if let vals = try? file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]), vals.isRegularFile == true {
+                total += Int64(vals.fileSize ?? 0)
+            }
+            if count >= maxFiles || (count % 50 == 0 && DispatchTime.now() >= deadline) {
+                break
+            }
+        }
+        return total
     }
     
     public func groupFilesIntoGames(files: [GameFileItem]) -> [SelectableGame] {

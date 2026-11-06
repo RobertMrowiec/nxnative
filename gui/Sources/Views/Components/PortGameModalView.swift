@@ -135,11 +135,11 @@ public struct PortGameModalView: View {
                             .foregroundColor(NXTheme.textSecondary)
                     }
                     
-                    if game.isSwitch2 {
+                    if game.isSwitch2 || game.isNup {
                         HStack(spacing: 4) {
                             Image(systemName: "sparkles.tv.fill")
                                 .font(.system(size: 9, weight: .bold))
-                            Text("Switch 2 Dump · No Keys Needed")
+                            Text(game.isNup ? "NUP Container · No Keys Needed" : "Switch 2 Dump · No Keys Needed")
                                 .font(.system(size: 9, weight: .bold, design: .rounded))
                         }
                         .foregroundColor(.white)

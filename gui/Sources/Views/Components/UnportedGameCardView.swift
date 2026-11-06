@@ -179,6 +179,20 @@ public struct UnportedGameCardView: View {
     // MARK: - Bottom Badges
     private var bottomBadges: some View {
         HStack(spacing: 4) {
+            if game.isNup || game.isSwitch2 {
+                Text(game.isNup ? "NUP" : "SW2")
+                    .font(.system(size: 8, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2.5)
+                    .nxGlassBar(
+                        in: Capsule(),
+                        tint: Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.85),
+                        fallbackFill: Color(red: 0.95, green: 0.48, blue: 0.16).opacity(0.92),
+                        fallbackStroke: Color.white.opacity(0.25)
+                    )
+            }
+
             Text(viewModel.tr("library.unported_badge"))
                 .font(.system(size: 8, weight: .black, design: .rounded))
                 .foregroundColor(.white)

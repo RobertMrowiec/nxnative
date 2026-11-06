@@ -57,6 +57,8 @@ public final class LibraryScanner {
             ) else { continue }
             
             for case let itemURL as URL in enumerator {
+                let itemName = itemURL.lastPathComponent
+                if itemName.hasPrefix("._") { continue }
                 let ext = itemURL.pathExtension.lowercased()
                 
                 if ext == "app" {
@@ -73,6 +75,21 @@ public final class LibraryScanner {
                         if let game = parseIPA(at: itemURL) {
                             games.append(game)
                         }
+                    }
+                } else if (try? itemURL.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                    let dirLower = itemName.lowercased()
+                    if dirLower.hasSuffix("_build") ||
+                       dirLower.hasSuffix("-work") ||
+                       dirLower.hasSuffix("_survey") ||
+                       dirLower.hasPrefix("patched_") ||
+                       dirLower == "staging" ||
+                       dirLower == "shader" ||
+                       dirLower == "extract" ||
+                       dirLower == "romfs" ||
+                       dirLower == "exefs" ||
+                       dirLower == ".git" ||
+                       dirLower == "node_modules" {
+                        enumerator.skipDescendants()
                     }
                 }
             }

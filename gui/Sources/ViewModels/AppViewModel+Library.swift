@@ -125,28 +125,55 @@ extension AppViewModel {
     public func deletePortedGame(_ game: PortedGame) { deleteGameToTrash(game) }
     
     // MARK: - Multiple Game Folders & Subfolder Scanning
-    public func addGameFolder(_ url: URL) {
-        let standardized = url.standardizedFileURL
-        if !gameFolders.contains(where: { $0.standardizedFileURL.path == standardized.path }) {
-            gameFolders.append(standardized)
+    public func addGameFolder(
+        _ url: URL,
+        preferredFileURL: URL? = nil,
+        preferredFolderURL: URL? = nil,
+        openPortModalIfFound: Bool = false
+    ) {
+        var isDir: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir)
+        let folderURL: URL
+        let targetFileURL: URL?
+        if exists && !isDir.boolValue {
+            folderURL = url.deletingLastPathComponent().standardizedFileURL
+            targetFileURL = preferredFileURL ?? url
+        } else {
+            folderURL = url.standardizedFileURL
+            targetFileURL = preferredFileURL
         }
-        if selectedGameFolder == nil {
-            selectedGameFolder = standardized
+
+        if !gameFolders.contains(where: { $0.standardizedFileURL.path == folderURL.path }) {
+            gameFolders.append(folderURL)
         }
-        scanAllGameFolders()
+        isUpdatingSelectedGameFolderFromAdd = true
+        selectedGameFolder = folderURL
+        isUpdatingSelectedGameFolderFromAdd = false
+
+        scanAllGameFolders(
+            preferredFileURL: targetFileURL,
+            preferredFolderURL: preferredFolderURL ?? (isDir.boolValue ? folderURL : nil),
+            openPortModalIfFound: openPortModalIfFound
+        )
     }
     
     public func removeGameFolder(_ url: URL) {
         let path = url.standardizedFileURL.path
         gameFolders.removeAll { $0.standardizedFileURL.path == path }
         if selectedGameFolder?.standardizedFileURL.path == path {
+            isUpdatingSelectedGameFolderFromAdd = true
             selectedGameFolder = gameFolders.first
+            isUpdatingSelectedGameFolderFromAdd = false
         }
         scanAllGameFolders()
     }
     
-    public func scanAllGameFolders() {
-        guard !gameFolders.isEmpty else {
+    public func scanAllGameFolders(
+        preferredFileURL: URL? = nil,
+        preferredFolderURL: URL? = nil,
+        openPortModalIfFound: Bool = false
+    ) {
+        guard !gameFolders.isEmpty || preferredFileURL != nil else {
             detectedFiles = []
             detectedGames = []
             if !isBuilding {
@@ -157,18 +184,56 @@ extension AppViewModel {
         }
         let folders = gameFolders
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let files = GameScanner.shared.scan(directories: folders)
+            var files = GameScanner.shared.scan(directories: folders)
+            if let prefFile = preferredFileURL {
+                let prefStdPath = prefFile.standardizedFileURL.path
+                if !files.contains(where: { $0.url.standardizedFileURL.path == prefStdPath }) {
+                    let extraItems = GameScanner.shared.scan(directory: prefFile)
+                    for item in extraItems where !files.contains(where: { $0.url.standardizedFileURL.path == item.url.standardizedFileURL.path }) {
+                        files.append(item)
+                    }
+                }
+            }
             let games = GameScanner.shared.groupFilesIntoGames(files: files)
             DispatchQueue.main.async {
                 guard let self = self else { return }
                 self.detectedFiles = files
                 self.detectedGames = games
                 if !self.isBuilding {
-                    if self.selectedGame == nil || !games.contains(where: { $0.id == self.selectedGame?.id }) {
-                        self.selectedGame = self.unportedGames.first ?? games.first
+                    var explicitlyMatched: SelectableGame? = nil
+                    if let prefFile = preferredFileURL {
+                        let prefStdPath = prefFile.standardizedFileURL.path
+                        explicitlyMatched = games.first(where: { game in
+                            game.files.contains(where: { $0.url.standardizedFileURL.path == prefStdPath })
+                        })
+                    } else if let prefFolder = preferredFolderURL {
+                        let folderPrefix = prefFolder.standardizedFileURL.path
+                        let gamesInFolder = games.filter { game in
+                            game.files.contains { file in
+                                let filePath = file.url.standardizedFileURL.path
+                                return filePath == folderPrefix || filePath.hasPrefix(folderPrefix + "/")
+                            }
+                        }
+                        explicitlyMatched = gamesInFolder.first(where: { !self.isGameAlreadyPorted($0) }) ?? gamesInFolder.first
                     }
-                    if let firstGame = (self.unportedGames.first ?? games.first), self.appName.isEmpty {
-                        self.appName = firstGame.name
+
+                    if let matched = explicitlyMatched {
+                        self.selectedGame = matched
+                        self.appName = matched.name
+                        if let uIdx = self.unportedGames.firstIndex(where: { $0.id == matched.id }) {
+                            self.activeLibraryShelf = .unportedSwitch
+                            self.focusedUnportedGameIndex = uIdx
+                        }
+                        if openPortModalIfFound && self.selectedTab == 0 {
+                            self.gameForPortModal = matched
+                        }
+                    } else {
+                        if self.selectedGame == nil || !games.contains(where: { $0.id == self.selectedGame?.id }) {
+                            self.selectedGame = self.unportedGames.first ?? games.first
+                        }
+                        if let firstGame = (self.unportedGames.first ?? games.first), self.appName.isEmpty {
+                            self.appName = firstGame.name
+                        }
                     }
                 }
                 self.reconcileLibraryFocusState()
@@ -182,16 +247,17 @@ extension AppViewModel {
     
     public func selectAdditionalGameFolder() {
         let panel = NSOpenPanel()
-        panel.canChooseFiles = false
+        panel.canChooseFiles = true
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
-        panel.prompt = "Choose Game Folders"
-        panel.message = "Select folders holding your game NSP, NSZ, XCI, or NUP files."
+        panel.treatsFilePackagesAsDirectories = false
+        panel.allowedContentTypes = []
+        panel.delegate = GameFilePickerDelegate.sharedRomsOnly
+        panel.prompt = tr("common.choose")
+        panel.message = "Select game files (.nsp, .nsz, .xci, .xcz, .nup) or folders holding them."
         
         if panel.runModal() == .OK {
-            for url in panel.urls {
-                addGameFolder(url)
-            }
+            handleDroppedURLs(panel.urls, openPortModalForSingleGame: selectedTab == 0)
         }
     }
     
@@ -251,7 +317,17 @@ extension AppViewModel {
 
     public func unifiedItems(for games: [PortedGame]) -> [UnifiedLibraryItem] {
         let portedItems = games.map { UnifiedLibraryItem.ported($0) }
-        let unportedItems = unportedGames.map { UnifiedLibraryItem.unported($0) }
+        let query = librarySearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let filteredUnported: [SelectableGame]
+        if query.isEmpty {
+            filteredUnported = unportedGames
+        } else {
+            filteredUnported = unportedGames.filter {
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                ($0.titleId?.localizedCaseInsensitiveContains(query) == true)
+            }
+        }
+        let unportedItems = filteredUnported.map { UnifiedLibraryItem.unported($0) }
         var combined = portedItems + unportedItems
 
         switch activeSortOption {

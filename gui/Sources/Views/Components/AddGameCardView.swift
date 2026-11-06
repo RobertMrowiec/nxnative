@@ -92,7 +92,7 @@ public struct AddGameCardView: View {
             group.notify(queue: .main) {
                 if !urls.isEmpty {
                     SoundEffectService.shared.play(.click)
-                    viewModel.handleDroppedURLs(urls)
+                    viewModel.handleDroppedURLs(urls, openPortModalForSingleGame: true)
                 }
             }
             return true
@@ -100,24 +100,6 @@ public struct AddGameCardView: View {
     }
     
     private func openFileOrFolderPicker() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = true
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = true
-        panel.allowedContentTypes = [
-            UTType(filenameExtension: "nsp") ?? .data,
-            UTType(filenameExtension: "nsz") ?? .data,
-            UTType(filenameExtension: "xci") ?? .data,
-            UTType(filenameExtension: "xcz") ?? .data,
-            UTType(filenameExtension: "nup") ?? .data,
-            UTType.application,
-            .folder
-        ]
-        panel.prompt = viewModel.tr("common.choose")
-        panel.message = viewModel.tr("library.empty_drop_subtitle")
-        
-        if panel.runModal() == .OK {
-            viewModel.handleDroppedURLs(panel.urls)
-        }
+        viewModel.openUnifiedGamePicker()
     }
 }

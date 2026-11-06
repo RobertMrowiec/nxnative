@@ -6,11 +6,11 @@
 # 🎮 Supported Games & Platform Features Timeline
 > **Live Upstream Synchronization**: Verified compatibility matrix directly derived from [`seedds/nxnative`](https://github.com/seedds/nxnative) game profiles and host bring-up suites.
 
-[![Total Games](https://img.shields.io/badge/Verified%20Titles-143%20Playable-success.svg)](#complete-verified-games-catalog) [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-informational.svg)](https://github.com/seedds/nxnative) [![4GB Ready](https://img.shields.io/badge/4GB%20RAM-34%20Games-blue.svg)](#hardware-tier-guide) [![8GB Ready](https://img.shields.io/badge/8GB%20RAM-107%20Games-purple.svg)](#hardware-tier-guide) [![16GB Enthusiast](https://img.shields.io/badge/16GB%20RAM-143%20Games-orange.svg)](#hardware-tier-guide)
+[![Total Games](https://img.shields.io/badge/Verified%20Titles-144%20Playable-success.svg)](#complete-verified-games-catalog) [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-informational.svg)](https://github.com/seedds/nxnative) [![4GB Ready](https://img.shields.io/badge/4GB%20RAM-34%20Games-blue.svg)](#hardware-tier-guide) [![8GB Ready](https://img.shields.io/badge/8GB%20RAM-107%20Games-purple.svg)](#hardware-tier-guide) [![16GB Enthusiast](https://img.shields.io/badge/16GB%20RAM-144%20Games-orange.svg)](#hardware-tier-guide)
 
 ### 📑 Quick Navigation
 - [💻 Hardware & RAM Tier Guide](#hardware-ram-tier-guide)
-- [📚 Complete Verified Games Catalog (143 Titles)](#complete-verified-games-catalog)
+- [📚 Complete Verified Games Catalog (144 Titles)](#complete-verified-games-catalog)
 - [🚀 Platform Features Timeline (Newest to Oldest)](#platform-features-timeline-newest-to-oldest)
 - [🔄 How to Port an Unlisted Game](#how-to-port-an-unlisted-game)
 
@@ -24,7 +24,7 @@ Because NxNative performs **ahead-of-time native recompilation** into ARM64 Mach
 | **4 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **34 games** | Native 60 FPS • Lightweight 2D/3D |
 | **6 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **86 games** | Native 60 FPS • Standard 3D Titles |
 | **8 GB RAM** | M1/M2/M3/M4 with 8GB+ RAM | iPhone 15 Pro / 16 / 16 Pro, iPad Air/Pro M1+ | **107 games** | 1080p/4K 60 FPS • Flagship 3D Open World |
-| **16 GB+ RAM**| M1 Pro/Max, M2 Pro/Max, M3 Pro/Max, M4 Pro | iPhone 16 Pro / iPad Pro M2/M4 | **143 games (100%)** | 4K 60 FPS • Heavyweight Unreal / Monolith Games |
+| **16 GB+ RAM**| M1 Pro/Max, M2 Pro/Max, M3 Pro/Max, M4 Pro | iPhone 16 Pro / iPad Pro M2/M4 | **144 games (100%)** | 4K 60 FPS • Heavyweight Unreal / Monolith Games |
 
 > [!TIP]
 > **Unified Memory Advantage**: macOS and iOS share memory dynamically between the CPU and Metal GPU. A Mac with 8GB Unified Memory can run 83% of the catalog, while 16GB handles 100% of tested titles with high-resolution textures.
@@ -32,160 +32,168 @@ Because NxNative performs **ahead-of-time native recompilation** into ARM64 Mach
 ---
 ## 📚 Complete Verified Games Catalog
 
-Currently tracking **143 tested game profiles** (137 NVN, 3 OpenGL, 4 Vulkan):
+Currently tracking **144 tested game profiles** (138 NVN, 3 OpenGL, 4 Vulkan):
 
 | Game Title | Title ID | Tested Build | Engine & Backend | Min RAM (Mac) | Min iOS Silicon | Highlights & Notes |
 | :--- | :---: | :---: | :--- | :---: | :---: | :--- |
-| [13 Sentinels: Aegis Rim](nxnative/dm/games/01003FC01670C000/README.md) | `01003FC01670C000` | 1.10 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [13 Sentinels: Aegis Rim, Asian release](nxnative/dm/games/01008D7016438000/README.md) | `01008D7016438000` | 1.00 (base) | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [13 Sentinels: Aegis Rim, Japanese release](nxnative/dm/games/010045C014650000/README.md) | `010045C014650000` | 1.00 (base) | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Absolum](nxnative/dm/games/0100A83022A22000/README.md) | `0100A83022A22000` | 1.1.2 | FNA / .NET NativeAOT (FNA3D's NVN driver) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [Ace Attorney Investigations Collection](nxnative/dm/games/010005501E68C000/README.md) | `010005501E68C000` | 1.0.0.2 | Unity 2022.3.17f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Advance Wars 1+2: Re-Boot Camp](nxnative/dm/games/0100300012F2A000/README.md) | `0100300012F2A000` | 1.0.0 (base) | Unity 2020.2.1f3 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [AI: THE SOMNIUM FILES](nxnative/dm/games/010089B00D09C000/README.md) | `010089B00D09C000` | 1.0.1 | Unity 2017.4.17f1 IL2CPP • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [ASTRAL CHAIN](nxnative/dm/games/01007300020FA000/README.md) | `01007300020FA000` | 1.0.1 | PlatinumGames' engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps target with 1.0.1** |
-| [AI: THE SOMNIUM FILES - nirvanA Initiative](nxnative/dm/games/0100713016CCC000/README.md) | `0100713016CCC000` | 1.0.2 | Unity 2020.3.30f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [ANIMAL WELL](nxnative/dm/games/010020D01AD24000/README.md) | `010020D01AD24000` | 1.0.10 | its own (not named) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Animal Crossing: New Horizons](nxnative/dm/games/01006F8002326000/README.md) | `01006F8002326000` | 3.0.3 | Nintendo EPD (sead / agl / gsys) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Atelier Ryza: Ever Darkness & the Secret Hideout DX](nxnative/dm/games/0100199023B2E000/README.md) | `0100199023B2E000` | 1.2.0 | Gust's engine on Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Baba Is You](nxnative/dm/games/01002CD00A51C000/README.md) | `01002CD00A51C000` | 1.0.12 | Multimedia Fusion 2 game on MP2 Games' runtime (Lua) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [BALL x PIT](nxnative/dm/games/010086A022444000/README.md) | `010086A022444000` | 1.293 | Unity 6000.0.62f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [Balatro](nxnative/dm/games/0100CD801CE5E000/README.md) | `0100CD801CE5E000` | 1.1.3 | LÖVE 11.4 (love-nx, LuaJIT, SDL) • **OpenGL** | **4 GB** | A17 Pro+ (8GB) | 👆 *played by touch* |
-| [Bastion](nxnative/dm/games/010038600B27E000/README.md) | `010038600B27E000` | 1.0.0 (base) | Supergiant Games' engine on MonoGame 3.0 • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Batman: Arkham Knight](nxnative/dm/games/0100ACD0163D0000/README.md) | `0100ACD0163D0000` | 1.0.5 | Unreal Engine 3 (Rocksteady), Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Bayonetta](nxnative/dm/games/010076F0049A2000/README.md) | `010076F0049A2000` | 1.1 | PlatinumGames' engine (Wii U form) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Bayonetta 2](nxnative/dm/games/01007960049A0000/README.md) | `01007960049A0000` | 1.2 | PlatinumGames' engine (Wii U form) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Bayonetta 3](nxnative/dm/games/01004A4010FEA000/README.md) | `01004A4010FEA000` | 1.2.0 | PlatinumGames' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Big Brain Academy: Brain vs. Brain](nxnative/dm/games/0100620012D6E000/README.md) | `0100620012D6E000` | 1.2.0 | NintendoWare Bezel Engine 1.56 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Blasphemous](nxnative/dm/games/0100698009C6E000/README.md) | `0100698009C6E000` | 1.0.8 | Unity 2017.4.28f1 IL2CPP, FMOD • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Blasphemous 2](nxnative/dm/games/010040801A4C8000/README.md) | `010040801A4C8000` | 1.0.8 | Unity 2021.3.20f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Brain Memory Training Academy](nxnative/dm/games/0100F5D01DA3A000/README.md) | `0100F5D01DA3A000` | 1.0.0 (base) | Unity 2022.3.5f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Captain Toad: Treasure Tracker](nxnative/dm/games/01009BF0072D4000/README.md) | `01009BF0072D4000` | 1.4.2 | Nintendo EPD Tokyo (`al` over sead / agl) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Castlevania: Belmont's Curse](nxnative/dm/games/0100BA4026E94000/README.md) | `0100BA4026E94000` | 1.1.0 | Unity 2022.3.62f2 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Catherine: Full Body](nxnative/dm/games/0100BF00112C0000/README.md) | `0100BF00112C0000` | 1.0.1a | Atlus GFD (CRI middleware) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Celeste](nxnative/dm/games/01002B30028F6000/README.md) | `01002B30028F6000` | 1.4.1.1 | MonoGame (C# → C++ by BRUTE) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Cult of the Lamb](nxnative/dm/games/01002E7016C46000/README.md) | `01002E7016C46000` | 1.5.28 | Unity 2022.3.62f3 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Cuphead](nxnative/dm/games/0100A5C00D162000/README.md) | `0100A5C00D162000` | 1.3.7 | Unity 2017.4.9f1 IL2CPP • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [DARK SOULS: REMASTERED](nxnative/dm/games/01004AB00A260000/README.md) | `01004AB00A260000` | 1.0.3 | FromSoftware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.3** |
-| [DAVE THE DIVER](nxnative/dm/games/010097F018538000/README.md) | `010097F018538000` | 1.0.6.1267 | Unity 6000.0.52f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Dead Cells](nxnative/dm/games/0100646009FBE000/README.md) | `0100646009FBE000` | 1.25.0 | Heaps / HashLink (HL/C) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [Digimon Story Cyber Sleuth: Complete Edition](nxnative/dm/games/010014E00DB56000/README.md) | `010014E00DB56000` | 1.0.3 | Media.Vision MVGL • **OpenGL** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Donkey Kong Bananza](nxnative/dm/games/040074A01BF12000/README.md) | `040074A01BF12000` | v458752 (Switch 2) | Nintendo EPD (sead / agl / gsys) • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump |
-| [Splatoon Raiders](nxnative/dm/games/0400380020056000/README.md) | `0400380020056000` | v65536 (Switch 2) | Nintendo EPD (sead / agl / gsys) • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump |
-| [Star Fox](nxnative/dm/games/0400E88025B1A000/README.md) | `0400E88025B1A000` | v131072 (Switch 2) | Its own engine (`vrender`, `vfs`), Wwise • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a NUP |
-| [Donkey Kong Country Returns HD](nxnative/dm/games/01009D901BC56000/README.md) | `01009D901BC56000` | 1.1.0 | Unity 6000.0.28f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [Donkey Kong Country: Tropical Freeze](nxnative/dm/games/0100C1F0051B6000/README.md) | `0100C1F0051B6000` | 1.0.2 | Retro Studios' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [DRAGON QUEST BUILDERS 2](nxnative/dm/games/010042000A986000/README.md) | `010042000A986000` | 1.7.3d | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [DRAGON QUEST I & II HD-2D Remake](nxnative/dm/games/0100D7C01F254000/README.md) | `0100D7C01F254000` | 1.0.2 | Unreal Engine 4.27.2 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [DRAGON QUEST III HD-2D Remake](nxnative/dm/games/01003E601E324000/README.md) | `01003E601E324000` | 1.1.2 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.2** |
-| [DRAGON QUEST VII Reimagined](nxnative/dm/games/0100A9D01C446000/README.md) | `0100A9D01C446000` | 1.2.0 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.2.0** |
-| [DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition](nxnative/dm/games/01006C300E9F0000/README.md) | `01006C300E9F0000` | 1.0.4 | Unreal Engine 4.18 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.4** |
-| [EA SPORTS FC 27](nxnative/dm/games/0100C49025D3E000/README.md) | `0100C49025D3E000` | 1.8d.310c | Frostbite 2025.1.2 (its NVN renderer in an NRO) • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.8d.310c** |
-| [FINAL FANTASY CRYSTAL CHRONICLES Remastered Edition](nxnative/dm/games/0100CE4010AAC000/README.md) | `0100CE4010AAC000` | 1.0.3 | Unity 2018.4.2f1 IL2CPP, FMOD • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [FINAL FANTASY RESONANCE](nxnative/dm/games/0100606026F12000/README.md) | `0100606026F12000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.1** |
-| [FINAL FANTASY RESONANCE, Asian release](nxnative/dm/games/0100B8A026F14000/README.md) | `0100B8A026F14000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [FINAL FANTASY TACTICS - The Ivalice Chronicles](nxnative/dm/games/010038B015560000/README.md) | `010038B015560000` | 1.4.0 | Square Enix's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [FINAL FANTASY X/X-2 HD Remaster](nxnative/dm/games/0100BC300CB48000/README.md) | `0100BC300CB48000` | 1.0.0 (base) | PhyreEngine (Virtuos) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Fire Emblem Engage](nxnative/dm/games/0100A6301214E000/README.md) | `0100A6301214E000` | 2.0.0 | Unity 2020.3.18f1 IL2CPP, Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 2.0.0** |
-| [Fire Emblem Fortune's Weave](nxnative/dm/games/04007EF01F8AE000/README.md) | `04007EF01F8AE000` | v131072 (Switch 2) | Intelligent Systems' engine, NintendoWare • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump, up to 120 fps |
-| [Fire Emblem: Three Houses](nxnative/dm/games/010055D009F78000/README.md) | `010055D009F78000` | 1.2.0 | Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | ⚡ **60 fps with 1.2.0** |
-| [Ghost Trick: Phantom Detective](nxnative/dm/games/010029B018432000/README.md) | `010029B018432000` | 1.0.0 (base) | Capcom's RE Engine, Wwise • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Hades](nxnative/dm/games/0100535012974000/README.md) | `0100535012974000` | 1.0.38233 | Supergiant Games' engine (The Forge) • **Vulkan** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Hades II](nxnative/dm/games/0100A00019DE0000/README.md) | `0100A00019DE0000` | base game | Supergiant Games' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Hollow Knight](nxnative/dm/games/0100633007D48000/README.md) | `0100633007D48000` | 1.5.12620 | Unity 6000.0.61f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Hollow Knight: Silksong](nxnative/dm/games/010013C00E930000/README.md) | `010013C00E930000` | 1.0.30000 | Unity 6000.0.50f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Hyrule Warriors: Age of Calamity](nxnative/dm/games/01002B00111A2000/README.md) | `01002B00111A2000` | 1.3.0 | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.3.0** |
-| [Hyrule Warriors: Age of Imprisonment](nxnative/dm/games/04003F40232DE000/README.md) | `04003F40232DE000` | v196608 (Switch 2) | Koei Tecmo's KTGL • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a NUP |
-| [Hyrule Warriors: Definitive Edition](nxnative/dm/games/0100AE00096EA000/README.md) | `0100AE00096EA000` | 1.0.1 | Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Kirby and the Forgotten Land](nxnative/dm/games/01004D300C5AE000/README.md) | `01004D300C5AE000` | 1.1.0 | HAL Laboratory's engine (NintendoWare) • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Kirby Star Allies](nxnative/dm/games/01007E3006DDA000/README.md) | `01007E3006DDA000` | 4.0.0a | HAL Laboratory's engine (NintendoWare) • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Luigi's Mansion 3](nxnative/dm/games/0100DCA0064A6000/README.md) | `0100DCA0064A6000` | 1.4.0 | Next Level Games' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.4.0** |
-| [Mario & Luigi: Brothership](nxnative/dm/games/01006D0017F7A000/README.md) | `01006D0017F7A000` | 1.0.0 | Unreal Engine 4.27.2, Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | up to 120 fps |
-| [Mario Kart World](nxnative/dm/games/0400C3F00006E000/README.md) | `0400C3F00006E000` | v0 (Switch 2) | Nintendo EPD (sead / agl / gsys, Pia) • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump |
-| [Mario Tennis Fever](nxnative/dm/games/0400D4201C6EA000/README.md) | `0400D4201C6EA000` | v327680 (Switch 2) | Camelot's engine, NintendoWare • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump |
-| [Mario Kart 8 Deluxe](nxnative/dm/games/0100152000022000/README.md) | `0100152000022000` | 4.0.0, 4.0.1 | Nintendo (sead / agl / gsys, NintendoWare, Pia) • **NVN** | **6 GB** | A17 Pro+ (8GB) | no Mii heads |
-| [Mario + Rabbids Kingdom Battle](nxnative/dm/games/010067300059A000/README.md) | `010067300059A000` | 1.9.589692 | Ubisoft Snowdrop • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Mario + Rabbids Sparks of Hope](nxnative/dm/games/0100317013770000/README.md) | `0100317013770000` | 1.6.2225577 | Ubisoft Snowdrop • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Mario Party Superstars](nxnative/dm/games/01006FE013472000/README.md) | `01006FE013472000` | 1.1.1 | NintendoWare Bezel Engine 1.55 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Mario vs. Donkey Kong](nxnative/dm/games/0100B99019412000/README.md) | `0100B99019412000` | 1.0.1 (cartridge base) | Nintendo (sead / agl / gsys) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Metroid Dread](nxnative/dm/games/010093801237C000/README.md) | `010093801237C000` | 2.1.0 | MercurySteam's engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Metroid Prime Remastered](nxnative/dm/games/010012101468C000/README.md) | `010012101468C000` | 1.0.0 (base) | Retro Studios' engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Monster Hunter Rise](nxnative/dm/games/0100B04011742000/README.md) | `0100B04011742000` | 16.0.2 | Capcom's RE Engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 16.0.2** |
-| [Monster Train 2](nxnative/dm/games/010051701FB46000/README.md) | `010051701FB46000` | 1.1.1 | Unity 2022.3.54f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.1.1** |
-| [Need for Speed: Hot Pursuit Remastered](nxnative/dm/games/010029B0118E8000/README.md) | `010029B0118E8000` | 1.0.3 | Criterion's engine (Stellar Entertainment port) • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.3** |
-| [NieR:Automata The End of YoRHa Edition](nxnative/dm/games/010056B015FE8000/README.md) | `010056B015FE8000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.3** |
-| [NieR:Automata The End of YoRHa Edition, Asian release](nxnative/dm/games/0100B8E016F76000/README.md) | `0100B8E016F76000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [OCTOPATH TRAVELER](nxnative/dm/games/010057D006492000/README.md) | `010057D006492000` | 1.0.5 | Unreal Engine 4.18 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Octopath Traveler 0](nxnative/dm/games/01005270232F2000/README.md) | `01005270232F2000` | 1.0.5 | Unreal Engine 5 • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.5** |
-| [OCTOPATH TRAVELER II](nxnative/dm/games/0100A3501946E000/README.md) | `0100A3501946E000` | 1.1.1 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.1** |
-| [Paper Mario: The Origami King](nxnative/dm/games/0100A3900C3E2000/README.md) | `0100A3900C3E2000` | 1.0.1 | Intelligent Systems' engine on NintendoWare • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Paper Mario: The Thousand-Year Door](nxnative/dm/games/0100ECD018EBE000/README.md) | `0100ECD018EBE000` | 1.0.1 | Intelligent Systems' engine on NintendoWare • **NVN** | **8 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.1** |
-| [Patrick's Parabox](nxnative/dm/games/0100E44016C22000/README.md) | `0100E44016C22000` | 1.0.1 | Unity 2020.3.30f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Persona 4 Golden](nxnative/dm/games/010062B01525C000/README.md) | `010062B01525C000` | 1.0.2 | Atlus in-house (CRI middleware) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Persona 5 Royal](nxnative/dm/games/01005CA01580E000/README.md) | `01005CA01580E000` | 1.0.2 | Atlus GFD / Needle (CRI middleware) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Pikmin 4](nxnative/dm/games/0100B7C00933A000/README.md) | `0100B7C00933A000` | 1.1.1 | Unreal Engine 4.26.2 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Pokémon Brilliant Diamond](nxnative/dm/games/0100000011D90000/README.md) | `0100000011D90000` | 1.3.0 | Unity 2019.4.27f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.3.0** |
-| [Pokémon Legends: Arceus](nxnative/dm/games/01001F5010DFA000/README.md) | `01001F5010DFA000` | 1.1.1 | Game Freak's engine (between Sword's and Trinity) • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Pokémon Legends: Z-A](nxnative/dm/games/0100F43008C44000/README.md) | `0100F43008C44000` | 2.0.2 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Pokémon Pokopia](nxnative/dm/games/0400A3A01EE4C000/README.md) | `0400A3A01EE4C000` | v655360 (Switch 2) | Koei Tecmo's KTGL • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only, from a dump |
-| [Pokémon Scarlet](nxnative/dm/games/0100A3D008C5C000/README.md) | `0100A3D008C5C000` | 1.0.0 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Pokémon Shield](nxnative/dm/games/01008DB008C2C000/README.md) | `01008DB008C2C000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Pokémon Sword](nxnative/dm/games/0100ABF008968000/README.md) | `0100ABF008968000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Pokémon Violet](nxnative/dm/games/01008F6008C5E000/README.md) | `01008F6008C5E000` | 1.0.0 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Portal](nxnative/dm/games/01007BB017812000/README.md) | `01007BB017812000` | 1.0.3 | Valve's Source engine (28 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Portal 2](nxnative/dm/games/0100ABD01785C000/README.md) | `0100ABD01785C000` | 1.0.3 | Valve's Source engine (21 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Princess Peach: Showtime!](nxnative/dm/games/01007A3009184000/README.md) | `01007A3009184000` | 1.0.0 | Unreal Engine 4.27 (Good-Feel), Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.0** |
-| [Raging Loop](nxnative/dm/games/010020400E1C2000/README.md) | `010020400E1C2000` | 1.0.0 (base) | Unity 2018.3.10f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Return of the Obra Dinn](nxnative/dm/games/010032E00E6E2000/README.md) | `010032E00E6E2000` | 1.0.1 | Unity 2017.4.28f1 IL2CPP • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Rhythm Heaven Groove](nxnative/dm/games/0100D9F01D474000/README.md) | `0100D9F01D474000` | 1.0.0 (base) | Nintendo's own 2D engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [ROMANCE OF THE THREE KINGDOMS 8 REMAKE](nxnative/dm/games/0100C2A01A730000/README.md) | `0100C2A01A730000` | 1.1.3 | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | controller only |
-| [Sea of Stars](nxnative/dm/games/01008C0016544000/README.md) | `01008C0016544000` | 2.0.59001 | Unity 2021.3.25f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [SHIN MEGAMI TENSEI V: Vengeance](nxnative/dm/games/010069C01AB82000/README.md) | `010069C01AB82000` | 1.0.3 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.3** |
-| [Silver Pines](nxnative/dm/games/0100D5B026844000/README.md) | `0100D5B026844000` | 1.0.0 (base) | Unity 6000.3.15f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [STEINS;GATE RE:BOOT](nxnative/dm/games/01008BC024FDE000/README.md) | `01008BC024FDE000` | 1.0.3 | M2's ADV engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Stardew Valley](nxnative/dm/games/0100E65002BB8000/README.md) | `0100E65002BB8000` | 1.6.15.13 | MonoGame (C# → C++ by BRUTE) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [SteamWorld Dig](nxnative/dm/games/01009320084A4000/README.md) | `01009320084A4000` | 1.12.0 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [SteamWorld Dig 2](nxnative/dm/games/0100CA9002322000/README.md) | `0100CA9002322000` | 4.1.1 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [SteamWorld Heist II](nxnative/dm/games/010089C01E9CA000/README.md) | `010089C01E9CA000` | 1.5.1 | Thunderful's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [SteamWorld Heist: Ultimate Edition](nxnative/dm/games/010016100A186000/README.md) | `010016100A186000` | 2.2.1 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Streets of Rage 4](nxnative/dm/games/0100EC9010258000/README.md) | `0100EC9010258000` | 1.0.9 | MonoGame (C# → C++ by BRUTE) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Subnautica](nxnative/dm/games/0100429011144000/README.md) | `0100429011144000` | 1.23.83358 | Unity 2019.4.36f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Subnautica: Below Zero](nxnative/dm/games/010014C011146000/README.md) | `010014C011146000` | 1.23.55063 | Unity 2019.4.36f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario 3D All-Stars](nxnative/dm/games/010049900F546000/README.md) | `010049900F546000` | 1.1.4 | a launcher (sead / agl), [Super Mario 64](010049900F546001/README.md) (Nintendo's N64 layer), [Super Mario Sunshine](010049900F546002/README.md) (NERD's Hagi); Galaxy is 32-bit ARM • **NVN, Vulkan** | **6 GB** | A17 Pro+ (8GB) | Super Mario 64 and Sunshine; Galaxy is 32-bit ARM, which Apple silicon cannot run |
-| [Super Mario 3D World + Bowser's Fury](nxnative/dm/games/010028600EBDA000/README.md) | `010028600EBDA000` | 1.2.2 | Nintendo EPD (sead / agl, NintendoWare) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario Bros. Wonder](nxnative/dm/games/010015100B514000/README.md) | `010015100B514000` | 1.2.1 (and 1.0.0) | Nintendo EPD (sead / agl) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario Galaxy](nxnative/dm/games/010099C022B96000/README.md) | `010099C022B96000` | 1.3.1 | NERD's Hagi Wii layer (recompiled PowerPC) • **Vulkan** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario Galaxy 2](nxnative/dm/games/0100FD8022DAA000/README.md) | `0100FD8022DAA000` | 1.4.0 | NERD's Hagi Wii layer (recompiled PowerPC) • **Vulkan** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario Odyssey](nxnative/dm/games/0100000000010000/README.md) | `0100000000010000` | 1.4.1 | Nintendo EPD (sead / agl, NintendoWare) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario Party Jamboree](nxnative/dm/games/0100965017338000/README.md) | `0100965017338000` | 2.3.0 | NintendoWare Bezel Engine 2.9 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Mario RPG](nxnative/dm/games/0100BC0018138000/README.md) | `0100BC0018138000` | 1.0.1 | Unity 2021.3.15f1 IL2CPP, CRIWARE • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Monkey Ball Banana Rumble](nxnative/dm/games/010031F019294000/README.md) | `010031F019294000` | 2.20 | Unity 2022.3.30f1 IL2CPP, CRIWARE, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [SUPER ROBOT WARS Y](nxnative/dm/games/010063301BD50000/README.md) | `010063301BD50000` | 1.4.1 | Unity 2022.3.44f1 IL2CPP, CRIWARE • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [Super Smash Bros. Ultimate](nxnative/dm/games/01006A800016E000/README.md) | `01006A800016E000` | 13.0.5 | Bandai Namco / Sora's engine • **NVN** | **8 GB** | A18+ (8GB) | offline |
-| [Taiko Risshiden V DX](nxnative/dm/games/0100346017304000/README.md) | `0100346017304000` | 1.1.1 | Koei Tecmo's KTGL • **NVN** | **4 GB** | A17 Pro+ (8GB) | 👆 *Japanese · played by touch* |
-| [Team Sonic Racing](nxnative/dm/games/010092B0091D0000/README.md) | `010092B0091D0000` | 1.0.3 | Sumo Digital's engine, Wwise • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [The Great Ace Attorney Chronicles](nxnative/dm/games/010036E00FB20000/README.md) | `010036E00FB20000` | 1.0.0 (base) | Capcom's MT Framework • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [The Legend of Zelda: Breath of the Wild](nxnative/dm/games/01007EF00011E000/README.md) | `01007EF00011E000` | 1.9.0 | Nintendo EPD (sead / agl / gsys / ksys, Havok) • **NVN** | **8 GB** | A18+ (8GB) | ⚡ **60 fps with 1.9.0** |
-| [The Legend of Zelda: Echoes of Wisdom](nxnative/dm/games/01008CF01BAAC000/README.md) | `01008CF01BAAC000` | 1.1.0 | NintendoWare (G3d / Ui2d / Vfx) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [The Legend of Zelda: Link's Awakening](nxnative/dm/games/01006BB00C6F0000/README.md) | `01006BB00C6F0000` | 1.1.0 | Grezzo's engine on NintendoWare • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [The Legend of Zelda: Skyward Sword HD](nxnative/dm/games/01002DA013484000/README.md) | `01002DA013484000` | 1.0.1 | Nintendo's Wii-era engine, ported by Tantalus • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
-| [The Legend of Zelda: Tears of the Kingdom](nxnative/dm/games/0100F2C0115B6000/README.md) | `0100F2C0115B6000` | 1.4.3 | Nintendo EPD (sead / agl / gsys) • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.4.3** |
-| [TRIANGLE STRATEGY](nxnative/dm/games/0100CC80140F8000/README.md) | `0100CC80140F8000` | 1.1.1 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.1** |
-| [Unicorn Overlord](nxnative/dm/games/010069401ADB8000/README.md) | `010069401ADB8000` | 1.05 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Unicorn Overlord, Asian release](nxnative/dm/games/010054B01AD92000/README.md) | `010054B01AD92000` | 1.05 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Well Dweller](nxnative/dm/games/0100217023F6C000/README.md) | `0100217023F6C000` | 1.0.0 | GameMaker Studio 2 (its runner) • **OpenGL** | **6 GB** | A17 Pro+ (8GB) | Playable |
-| [Xenoblade Chronicles: Definitive Edition](nxnative/dm/games/0100FF500E34A000/README.md) | `0100FF500E34A000` | 1.1.2 | Monolith's engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Xenoblade Chronicles 2](nxnative/dm/games/0100E95004038000/README.md) | `0100E95004038000` | 2.1.0 | Monolith's engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
-| [Xenoblade Chronicles 3](nxnative/dm/games/010074F013262000/README.md) | `010074F013262000` | 2.2.1 | Monolith's engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
-| [Yoshi and the Mysterious Book](nxnative/dm/games/0400245021D2C000/README.md) | `0400245021D2C000` | 1.0.2 (Switch 2) | Unreal Engine 5.4.4 • **NVN2** | **16 GB** | A18 Pro (8GB) | Switch 2, Mac only |
-| [Yoshi's Crafted World](nxnative/dm/games/01006000040C2000/README.md) | `01006000040C2000` | 1.0.1 | Unreal Engine 4.18 era (Good-Feel) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [13 Sentinels: Aegis Rim](dm/games/01003FC01670C000/README.md) | `01003FC01670C000` | 1.10 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [13 Sentinels: Aegis Rim, Asian release](dm/games/01008D7016438000/README.md) | `01008D7016438000` | 1.00 (base) | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [13 Sentinels: Aegis Rim, Japanese release](dm/games/010045C014650000/README.md) | `010045C014650000` | 1.00 (base) | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Absolum](dm/games/0100A83022A22000/README.md) | `0100A83022A22000` | 1.1.2 | FNA / .NET NativeAOT (FNA3D's NVN driver) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [Ace Attorney Investigations Collection](dm/games/010005501E68C000/README.md) | `010005501E68C000` | 1.0.0.2 | Unity 2022.3.17f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Advance Wars 1+2: Re-Boot Camp](dm/games/0100300012F2A000/README.md) | `0100300012F2A000` | 1.0.0 (base) | Unity 2020.2.1f3 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [AI: THE SOMNIUM FILES](dm/games/010089B00D09C000/README.md) | `010089B00D09C000` | 1.0.1 | Unity 2017.4.17f1 IL2CPP • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [ASTRAL CHAIN](dm/games/01007300020FA000/README.md) | `01007300020FA000` | 1.0.1 | PlatinumGames' engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps target with 1.0.1** |
+| [AI: THE SOMNIUM FILES - nirvanA Initiative](dm/games/0100713016CCC000/README.md) | `0100713016CCC000` | 1.0.2 | Unity 2020.3.30f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [ANIMAL WELL](dm/games/010020D01AD24000/README.md) | `010020D01AD24000` | 1.0.10 | its own (not named) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Animal Crossing: New Horizons](dm/games/01006F8002326000/README.md) | `01006F8002326000` | 3.0.3 | Nintendo EPD (sead / agl / gsys) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Atelier Ryza: Ever Darkness & the Secret Hideout DX](dm/games/0100199023B2E000/README.md) | `0100199023B2E000` | 1.2.0 | Gust's engine on Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Baba Is You](dm/games/01002CD00A51C000/README.md) | `01002CD00A51C000` | 1.0.12 | Multimedia Fusion 2 game on MP2 Games' runtime (Lua) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [BALL x PIT](dm/games/010086A022444000/README.md) | `010086A022444000` | 1.293 | Unity 6000.0.62f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [Balatro](dm/games/0100CD801CE5E000/README.md) | `0100CD801CE5E000` | 1.1.3 | LÖVE 11.4 (love-nx, LuaJIT, SDL) • **OpenGL** | **4 GB** | A17 Pro+ (8GB) | 👆 *played by touch* |
+| [Bastion](dm/games/010038600B27E000/README.md) | `010038600B27E000` | 1.0.0 (base) | Supergiant Games' engine on MonoGame 3.0 • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Batman: Arkham Knight](dm/games/0100ACD0163D0000/README.md) | `0100ACD0163D0000` | 1.0.5 | Unreal Engine 3 (Rocksteady), Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Bayonetta](dm/games/010076F0049A2000/README.md) | `010076F0049A2000` | 1.1 | PlatinumGames' engine (Wii U form) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Bayonetta 2](dm/games/01007960049A0000/README.md) | `01007960049A0000` | 1.2 | PlatinumGames' engine (Wii U form) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Bayonetta 3](dm/games/01004A4010FEA000/README.md) | `01004A4010FEA000` | 1.2.0 | PlatinumGames' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Big Brain Academy: Brain vs. Brain](dm/games/0100620012D6E000/README.md) | `0100620012D6E000` | 1.2.0 | NintendoWare Bezel Engine 1.56 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Blasphemous](dm/games/0100698009C6E000/README.md) | `0100698009C6E000` | 1.0.8 | Unity 2017.4.28f1 IL2CPP, FMOD • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Blasphemous 2](dm/games/010040801A4C8000/README.md) | `010040801A4C8000` | 1.0.8 | Unity 2021.3.20f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Brain Memory Training Academy](dm/games/0100F5D01DA3A000/README.md) | `0100F5D01DA3A000` | 1.0.0 (base) | Unity 2022.3.5f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Captain Toad: Treasure Tracker](dm/games/01009BF0072D4000/README.md) | `01009BF0072D4000` | 1.4.2 | Nintendo EPD Tokyo (`al` over sead / agl) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Castlevania: Belmont's Curse](dm/games/0100BA4026E94000/README.md) | `0100BA4026E94000` | 1.1.0 | Unity 2022.3.62f2 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Catherine: Full Body](dm/games/0100BF00112C0000/README.md) | `0100BF00112C0000` | 1.0.1a | Atlus GFD (CRI middleware) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Celeste](dm/games/01002B30028F6000/README.md) | `01002B30028F6000` | 1.4.1.1 | MonoGame (C# → C++ by BRUTE) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Cult of the Lamb](dm/games/01002E7016C46000/README.md) | `01002E7016C46000` | 1.5.28 | Unity 2022.3.62f3 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Cuphead](dm/games/0100A5C00D162000/README.md) | `0100A5C00D162000` | 1.3.7 | Unity 2017.4.9f1 IL2CPP • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [DARK SOULS: REMASTERED](dm/games/01004AB00A260000/README.md) | `01004AB00A260000` | 1.0.3 | FromSoftware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.3** |
+| [DAVE THE DIVER](dm/games/010097F018538000/README.md) | `010097F018538000` | 1.0.6.1267 | Unity 6000.0.52f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Dead Cells](dm/games/0100646009FBE000/README.md) | `0100646009FBE000` | 1.25.0 | Heaps / HashLink (HL/C) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [Digimon Story Cyber Sleuth: Complete Edition](dm/games/010014E00DB56000/README.md) | `010014E00DB56000` | 1.0.3 | Media.Vision MVGL • **OpenGL** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Donkey Kong Bananza](dm/games/040074A01BF12000/README.md) | `040074A01BF12000` | v458752 (Switch 2) | Nintendo EPD (sead / agl / gsys) • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump |
+| [Splatoon Raiders](dm/games/0400380020056000/README.md) | `0400380020056000` | v65536 (Switch 2) | Nintendo EPD (sead / agl / gsys) • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump |
+| [Star Fox](dm/games/0400E88025B1A000/README.md) | `0400E88025B1A000` | v131072 (Switch 2) | Its own engine (`vrender`, `vfs`), Wwise • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a NUP |
+| [Donkey Kong Country Returns HD](dm/games/01009D901BC56000/README.md) | `01009D901BC56000` | 1.1.0 | Unity 6000.0.28f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [Donkey Kong Country: Tropical Freeze](dm/games/0100C1F0051B6000/README.md) | `0100C1F0051B6000` | 1.0.2 | Retro Studios' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [DRAGON QUEST BUILDERS 2](dm/games/010042000A986000/README.md) | `010042000A986000` | 1.7.3d | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [DRAGON QUEST I & II HD-2D Remake](dm/games/0100D7C01F254000/README.md) | `0100D7C01F254000` | 1.0.2 | Unreal Engine 4.27.2 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [DRAGON QUEST III HD-2D Remake](dm/games/01003E601E324000/README.md) | `01003E601E324000` | 1.1.2 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.2** |
+| [DRAGON QUEST VII Reimagined](dm/games/0100A9D01C446000/README.md) | `0100A9D01C446000` | 1.2.0 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.2.0** |
+| [DRAGON QUEST XI S: Echoes of an Elusive Age – Definitive Edition](dm/games/01006C300E9F0000/README.md) | `01006C300E9F0000` | 1.0.4 | Unreal Engine 4.18 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.4** |
+| [EA SPORTS FC 27](dm/games/0100C49025D3E000/README.md) | `0100C49025D3E000` | 1.8d.310c | Frostbite 2025.1.2 (its NVN renderer in an NRO) • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.8d.310c** |
+| [FINAL FANTASY CRYSTAL CHRONICLES Remastered Edition](dm/games/0100CE4010AAC000/README.md) | `0100CE4010AAC000` | 1.0.3 | Unity 2018.4.2f1 IL2CPP, FMOD • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [FINAL FANTASY RESONANCE](dm/games/0100606026F12000/README.md) | `0100606026F12000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.1** |
+| [FINAL FANTASY RESONANCE, Asian release](dm/games/0100B8A026F14000/README.md) | `0100B8A026F14000` | 1.0.1 | Unreal Engine 5.6.1 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [FINAL FANTASY TACTICS - The Ivalice Chronicles](dm/games/010038B015560000/README.md) | `010038B015560000` | 1.4.0 | Square Enix's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [FINAL FANTASY X/X-2 HD Remaster](dm/games/0100BC300CB48000/README.md) | `0100BC300CB48000` | 1.0.0 (base) | PhyreEngine (Virtuos) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Fire Emblem Engage](dm/games/0100A6301214E000/README.md) | `0100A6301214E000` | 2.0.0 | Unity 2020.3.18f1 IL2CPP, Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 2.0.0** |
+| [Fire Emblem Fortune's Weave](dm/games/04007EF01F8AE000/README.md) | `04007EF01F8AE000` | v131072 (Switch 2) | Intelligent Systems' engine, NintendoWare • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump, up to 120 fps |
+| [Fire Emblem: Three Houses](dm/games/010055D009F78000/README.md) | `010055D009F78000` | 1.2.0 | Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | ⚡ **60 fps with 1.2.0** |
+| [Ghost Trick: Phantom Detective](dm/games/010029B018432000/README.md) | `010029B018432000` | 1.0.0 (base) | Capcom's RE Engine, Wwise • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Hades](dm/games/0100535012974000/README.md) | `0100535012974000` | 1.0.38233 | Supergiant Games' engine (The Forge) • **Vulkan** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Hades II](dm/games/0100A00019DE0000/README.md) | `0100A00019DE0000` | base game | Supergiant Games' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Hollow Knight](dm/games/0100633007D48000/README.md) | `0100633007D48000` | 1.5.12620 | Unity 6000.0.61f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Hollow Knight: Silksong](dm/games/010013C00E930000/README.md) | `010013C00E930000` | 1.0.30000 | Unity 6000.0.50f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Hyrule Warriors: Age of Calamity](dm/games/01002B00111A2000/README.md) | `01002B00111A2000` | 1.3.0 | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.3.0** |
+| [Hyrule Warriors: Age of Imprisonment](dm/games/04003F40232DE000/README.md) | `04003F40232DE000` | v196608 (Switch 2) | Koei Tecmo's KTGL • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a NUP |
+| [Hyrule Warriors: Definitive Edition](dm/games/0100AE00096EA000/README.md) | `0100AE00096EA000` | 1.0.1 | Koei Tecmo's KTGL • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Kirby and the Forgotten Land](dm/games/01004D300C5AE000/README.md) | `01004D300C5AE000` | 1.1.0 | HAL Laboratory's engine (NintendoWare) • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Kirby Star Allies](dm/games/01007E3006DDA000/README.md) | `01007E3006DDA000` | 4.0.0a | HAL Laboratory's engine (NintendoWare) • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Luigi's Mansion 3](dm/games/0100DCA0064A6000/README.md) | `0100DCA0064A6000` | 1.4.0 | Next Level Games' engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.4.0** |
+| [Mario & Luigi: Brothership](dm/games/01006D0017F7A000/README.md) | `01006D0017F7A000` | 1.0.0 | Unreal Engine 4.27.2, Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | up to 120 fps |
+| [Mario Kart World](dm/games/0400C3F00006E000/README.md) | `0400C3F00006E000` | v0 (Switch 2) | Nintendo EPD (sead / agl / gsys, Pia) • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump |
+| [Mario Tennis Fever](dm/games/0400D4201C6EA000/README.md) | `0400D4201C6EA000` | v327680 (Switch 2) | Camelot's engine, NintendoWare • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump |
+| [Mario Kart 8 Deluxe](dm/games/0100152000022000/README.md) | `0100152000022000` | 4.0.0, 4.0.1 | Nintendo (sead / agl / gsys, NintendoWare, Pia) • **NVN** | **6 GB** | A17 Pro+ (8GB) | no Mii heads |
+| [Mario + Rabbids Kingdom Battle](dm/games/010067300059A000/README.md) | `010067300059A000` | 1.9.589692 | Ubisoft Snowdrop • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Mario + Rabbids Sparks of Hope](dm/games/0100317013770000/README.md) | `0100317013770000` | 1.6.2225577 | Ubisoft Snowdrop • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Mario Party Superstars](dm/games/01006FE013472000/README.md) | `01006FE013472000` | 1.1.1 | NintendoWare Bezel Engine 1.55 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Mario vs. Donkey Kong](dm/games/0100B99019412000/README.md) | `0100B99019412000` | 1.0.1 (cartridge base) | Nintendo (sead / agl / gsys) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Metroid Dread](dm/games/010093801237C000/README.md) | `010093801237C000` | 2.1.0 | MercurySteam's engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Metroid Prime Remastered](dm/games/010012101468C000/README.md) | `010012101468C000` | 1.0.0 (base) | Retro Studios' engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Monster Hunter Rise](dm/games/0100B04011742000/README.md) | `0100B04011742000` | 16.0.2 | Capcom's RE Engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 16.0.2** |
+| [Monster Train 2](dm/games/010051701FB46000/README.md) | `010051701FB46000` | 1.1.1 | Unity 2022.3.54f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.1.1** |
+| [Need for Speed: Hot Pursuit Remastered](dm/games/010029B0118E8000/README.md) | `010029B0118E8000` | 1.0.3 | Criterion's engine (Stellar Entertainment port) • **NVN** | **6 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.3** |
+| [NieR:Automata The End of YoRHa Edition](dm/games/010056B015FE8000/README.md) | `010056B015FE8000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.3** |
+| [NieR:Automata The End of YoRHa Edition, Asian release](dm/games/0100B8E016F76000/README.md) | `0100B8E016F76000` | 1.0.3 | PlatinumGames' engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [OCTOPATH TRAVELER](dm/games/010057D006492000/README.md) | `010057D006492000` | 1.0.5 | Unreal Engine 4.18 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Octopath Traveler 0](dm/games/01005270232F2000/README.md) | `01005270232F2000` | 1.0.5 | Unreal Engine 5 • **NVN** | **4 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.5** |
+| [OCTOPATH TRAVELER II](dm/games/0100A3501946E000/README.md) | `0100A3501946E000` | 1.1.1 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.1** |
+| [Paper Mario: The Origami King](dm/games/0100A3900C3E2000/README.md) | `0100A3900C3E2000` | 1.0.1 | Intelligent Systems' engine on NintendoWare • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Paper Mario: The Thousand-Year Door](dm/games/0100ECD018EBE000/README.md) | `0100ECD018EBE000` | 1.0.1 | Intelligent Systems' engine on NintendoWare • **NVN** | **8 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.0.1** |
+| [Patrick's Parabox](dm/games/0100E44016C22000/README.md) | `0100E44016C22000` | 1.0.1 | Unity 2020.3.30f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Persona 4 Golden](dm/games/010062B01525C000/README.md) | `010062B01525C000` | 1.0.2 | Atlus in-house (CRI middleware) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Persona 5 Royal](dm/games/01005CA01580E000/README.md) | `01005CA01580E000` | 1.0.2 | Atlus GFD / Needle (CRI middleware) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Pikmin 4](dm/games/0100B7C00933A000/README.md) | `0100B7C00933A000` | 1.1.1 | Unreal Engine 4.26.2 • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Pokémon Brilliant Diamond](dm/games/0100000011D90000/README.md) | `0100000011D90000` | 1.3.0 | Unity 2019.4.27f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | ⚡ **60 fps with 1.3.0** |
+| [Pokémon Legends: Arceus](dm/games/01001F5010DFA000/README.md) | `01001F5010DFA000` | 1.1.1 | Game Freak's engine (between Sword's and Trinity) • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Pokémon Legends: Z-A](dm/games/0100F43008C44000/README.md) | `0100F43008C44000` | 2.0.2 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Pokémon Pokopia](dm/games/0400A3A01EE4C000/README.md) | `0400A3A01EE4C000` | v655360 (Switch 2) | Koei Tecmo's KTGL • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a dump |
+| [Pokémon Scarlet](dm/games/0100A3D008C5C000/README.md) | `0100A3D008C5C000` | 1.0.0 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Pokémon Shield](dm/games/01008DB008C2C000/README.md) | `01008DB008C2C000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Pokémon Sword](dm/games/0100ABF008968000/README.md) | `0100ABF008968000` | 1.3.2 | Game Freak's engine (before Trinity) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Pokémon Violet](dm/games/01008F6008C5E000/README.md) | `01008F6008C5E000` | 1.0.0 | Game Freak's Trinity engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Portal](dm/games/01007BB017812000/README.md) | `01007BB017812000` | 1.0.3 | Valve's Source engine (28 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Portal 2](dm/games/0100ABD01785C000/README.md) | `0100ABD01785C000` | 1.0.3 | Valve's Source engine (21 NROs) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Princess Peach: Showtime!](dm/games/01007A3009184000/README.md) | `01007A3009184000` | 1.0.0 | Unreal Engine 4.27 (Good-Feel), Wwise • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.0** |
+| [Raging Loop](dm/games/010020400E1C2000/README.md) | `010020400E1C2000` | 1.0.0 (base) | Unity 2018.3.10f1 IL2CPP • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Return of the Obra Dinn](dm/games/010032E00E6E2000/README.md) | `010032E00E6E2000` | 1.0.1 | Unity 2017.4.28f1 IL2CPP • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Rhythm Heaven Groove](dm/games/0100D9F01D474000/README.md) | `0100D9F01D474000` | 1.0.0 (base) | Nintendo's own 2D engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [ROMANCE OF THE THREE KINGDOMS 8 REMAKE](dm/games/0100C2A01A730000/README.md) | `0100C2A01A730000` | 1.1.3 | Koei Tecmo's KTGL • **NVN** | **6 GB** | A17 Pro+ (8GB) | controller only |
+| [Sea of Stars](dm/games/01008C0016544000/README.md) | `01008C0016544000` | 2.0.59001 | Unity 2021.3.25f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [SHIN MEGAMI TENSEI V: Vengeance](dm/games/010069C01AB82000/README.md) | `010069C01AB82000` | 1.0.3 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.0.3** |
+| [Silver Pines](dm/games/0100D5B026844000/README.md) | `0100D5B026844000` | 1.0.0 (base) | Unity 6000.3.15f1 IL2CPP • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [STEINS;GATE RE:BOOT](dm/games/01008BC024FDE000/README.md) | `01008BC024FDE000` | 1.0.3 | M2's ADV engine • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Stardew Valley](dm/games/0100E65002BB8000/README.md) | `0100E65002BB8000` | 1.6.15.13 | MonoGame (C# → C++ by BRUTE) • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [SteamWorld Dig](dm/games/01009320084A4000/README.md) | `01009320084A4000` | 1.12.0 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [SteamWorld Dig 2](dm/games/0100CA9002322000/README.md) | `0100CA9002322000` | 4.1.1 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [SteamWorld Heist II](dm/games/010089C01E9CA000/README.md) | `010089C01E9CA000` | 1.5.1 | Thunderful's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [SteamWorld Heist: Ultimate Edition](dm/games/010016100A186000/README.md) | `010016100A186000` | 2.2.1 | Image & Form's own engine (SteamWorld) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Streets of Rage 4](dm/games/0100EC9010258000/README.md) | `0100EC9010258000` | 1.0.9 | MonoGame (C# → C++ by BRUTE) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Subnautica](dm/games/0100429011144000/README.md) | `0100429011144000` | 1.23.83358 | Unity 2019.4.36f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Subnautica: Below Zero](dm/games/010014C011146000/README.md) | `010014C011146000` | 1.23.55063 | Unity 2019.4.36f1 IL2CPP, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario 3D All-Stars](dm/games/010049900F546000/README.md) | `010049900F546000` | 1.1.4 | a launcher (sead / agl), [Super Mario 64](010049900F546001/README.md) (Nintendo's N64 layer), [Super Mario Sunshine](010049900F546002/README.md) (NERD's Hagi); Galaxy is 32-bit ARM • **NVN, Vulkan** | **6 GB** | A17 Pro+ (8GB) | Super Mario 64 and Sunshine; Galaxy is 32-bit ARM, which Apple silicon cannot run |
+| [Super Mario 3D World + Bowser's Fury](dm/games/010028600EBDA000/README.md) | `010028600EBDA000` | 1.2.2 | Nintendo EPD (sead / agl, NintendoWare) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario Bros. Wonder](dm/games/010015100B514000/README.md) | `010015100B514000` | 1.2.1 (and 1.0.0) | Nintendo EPD (sead / agl) • **NVN** | **8 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario Galaxy](dm/games/010099C022B96000/README.md) | `010099C022B96000` | 1.3.1 | NERD's Hagi Wii layer (recompiled PowerPC) • **Vulkan** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario Galaxy 2](dm/games/0100FD8022DAA000/README.md) | `0100FD8022DAA000` | 1.4.0 | NERD's Hagi Wii layer (recompiled PowerPC) • **Vulkan** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario Odyssey](dm/games/0100000000010000/README.md) | `0100000000010000` | 1.4.1 | Nintendo EPD (sead / agl, NintendoWare) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario Party Jamboree](dm/games/0100965017338000/README.md) | `0100965017338000` | 2.3.0 | NintendoWare Bezel Engine 2.9 • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Mario RPG](dm/games/0100BC0018138000/README.md) | `0100BC0018138000` | 1.0.1 | Unity 2021.3.15f1 IL2CPP, CRIWARE • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Monkey Ball Banana Rumble](dm/games/010031F019294000/README.md) | `010031F019294000` | 2.20 | Unity 2022.3.30f1 IL2CPP, CRIWARE, FMOD • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [SUPER ROBOT WARS Y](dm/games/010063301BD50000/README.md) | `010063301BD50000` | 1.4.1 | Unity 2022.3.44f1 IL2CPP, CRIWARE • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [Super Smash Bros. Ultimate](dm/games/01006A800016E000/README.md) | `01006A800016E000` | 13.0.5 | Bandai Namco / Sora's engine • **NVN** | **8 GB** | A18+ (8GB) | offline |
+| [Taiko Risshiden V DX](dm/games/0100346017304000/README.md) | `0100346017304000` | 1.1.1 | Koei Tecmo's KTGL • **NVN** | **4 GB** | A17 Pro+ (8GB) | 👆 *Japanese · played by touch* |
+| [Team Sonic Racing](dm/games/010092B0091D0000/README.md) | `010092B0091D0000` | 1.0.3 | Sumo Digital's engine, Wwise • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [The Great Ace Attorney Chronicles](dm/games/010036E00FB20000/README.md) | `010036E00FB20000` | 1.0.0 (base) | Capcom's MT Framework • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [The Legend of Zelda: Breath of the Wild](dm/games/01007EF00011E000/README.md) | `01007EF00011E000` | 1.9.0 | Nintendo EPD (sead / agl / gsys / ksys, Havok) • **NVN** | **8 GB** | A18+ (8GB) | ⚡ **60 fps with 1.9.0** |
+| [The Legend of Zelda: Echoes of Wisdom](dm/games/01008CF01BAAC000/README.md) | `01008CF01BAAC000` | 1.1.0 | NintendoWare (G3d / Ui2d / Vfx) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [The Legend of Zelda: Link's Awakening](dm/games/01006BB00C6F0000/README.md) | `01006BB00C6F0000` | 1.1.0 | Grezzo's engine on NintendoWare • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [The Legend of Zelda: Ocarina of Time](dm/games/0400486024DEC000/README.md) | `0400486024DEC000` | v131072 (Switch 2) | Nintendo EPD (sead / agl / gsys, Phive) • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only, from a NUP |
+| [The Legend of Zelda: Skyward Sword HD](dm/games/01002DA013484000/README.md) | `01002DA013484000` | 1.0.1 | Nintendo's Wii-era engine, ported by Tantalus • **NVN** | **4 GB** | A17 Pro+ (8GB) | Playable |
+| [The Legend of Zelda: Tears of the Kingdom](dm/games/0100F2C0115B6000/README.md) | `0100F2C0115B6000` | 1.4.3 | Nintendo EPD (sead / agl / gsys) • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.4.3** |
+| [TRIANGLE STRATEGY](dm/games/0100CC80140F8000/README.md) | `0100CC80140F8000` | 1.1.1 | Unreal Engine 4.27 • **NVN** | **16 GB** | A18 Pro (8GB) | ⚡ **60 fps with 1.1.1** |
+| [Unicorn Overlord](dm/games/010069401ADB8000/README.md) | `010069401ADB8000` | 1.05 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Unicorn Overlord, Asian release](dm/games/010054B01AD92000/README.md) | `010054B01AD92000` | 1.05 | Vanillaware's engine • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Well Dweller](dm/games/0100217023F6C000/README.md) | `0100217023F6C000` | 1.0.0 | GameMaker Studio 2 (its runner) • **OpenGL** | **6 GB** | A17 Pro+ (8GB) | Playable |
+| [Xenoblade Chronicles: Definitive Edition](dm/games/0100FF500E34A000/README.md) | `0100FF500E34A000` | 1.1.2 | Monolith's engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Xenoblade Chronicles 2](dm/games/0100E95004038000/README.md) | `0100E95004038000` | 2.1.0 | Monolith's engine • **NVN** | **8 GB** | A18+ (8GB) | Playable |
+| [Xenoblade Chronicles 3](dm/games/010074F013262000/README.md) | `010074F013262000` | 2.2.1 | Monolith's engine • **NVN** | **16 GB** | A18 Pro (8GB) | Playable |
+| [Yoshi and the Mysterious Book](dm/games/0400245021D2C000/README.md) | `0400245021D2C000` | 1.0.2 (Switch 2) | Unreal Engine 5.4.4 • **NVN2** | **16 GB** | Mac only (Switch 2) | Switch 2, Mac only |
+| [Yoshi's Crafted World](dm/games/01006000040C2000/README.md) | `01006000040C2000` | 1.0.1 | Unreal Engine 4.18 era (Good-Feel) • **NVN** | **6 GB** | A17 Pro+ (8GB) | Playable |
 
 ---
 ## 🚀 Platform Features Timeline (Newest to Oldest)
 
 A complete, deduplicated chronology of every milestone and capability introduced to the NxNative platform:
 
-### 🌟 Current Build (v1.8.3 / Latest) — *October 2026*
+### 🌟 Current Build (v1.9.6 / Latest) — *November 2026*
+> **The Legend of Zelda: Ocarina of Time (Switch 2), Bundled ZBIC NSO Decompression & 144+ Native macOS Games**
+
+- **The Legend of Zelda: Ocarina of Time (`0400486024DEC000` - Switch 2) Support**: Full Switch 2 profile (`v0` & `v131072`), NVN2 task/mesh shader translation to Metal, Ampere `F2IP`/`LDSM` fixes, NDVE compute movie scaling, `pool_skip_retired` scene transition memory optimization, Kokiri Forest GPU heightmap preservation, and SDK 22 Ocarina note-playing service stubs.
+- **Bundled `zbic` Module for SDK 22+ Switch 2 Games**: Pre-bundled `zbic` in the isolated standalone Python runtime and added prerequisite verification so ZBIC-compressed NSOs (`ExeFS/main`) unpack out of the box.
+- **144+ Verified Native macOS & iOS Games**: Expanded catalog covering 10 Nintendo Switch 2 titles (`0400...`) and 134+ Nintendo Switch 1 titles (`0100...`).
+
+### 🌟 v1.8.3 — *October 2026*
 > **macOS Game Mode, Game Launch Fix, Auto-Signing & Mouse Drag & Drop**
 
 - **macOS Game Mode (Modo Jogo)**: Every ported game automatically triggers macOS Game Mode via native fullscreen and game category metadata, maximizing CPU/GPU performance and minimizing Bluetooth latency for controllers and AirPods.
