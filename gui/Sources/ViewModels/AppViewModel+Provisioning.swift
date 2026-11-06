@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 
 extension AppViewModel {
-    static let provisioningVersion = "1.9.6"
+    static let provisioningVersion = "1.9.7"
     private static let provisioningVersionKey = "NXNative_ProvisioningVersion"
 
     /// True when no game launch or port is in progress, so background work may run.
@@ -10,7 +10,7 @@ extension AppViewModel {
         !isBuilding && launchingGameId == nil
     }
 
-    /// Entry point (called once from init): first-run provisioning, v1.9.6 migration and the 60 s auto-update loop.
+    /// Entry point (called once from init): first-run provisioning, v1.9.7 migration and the 60 s auto-update loop.
     public func startAutoProvisioning() {
         let saved = UserDefaults.standard.string(forKey: Self.provisioningVersionKey)
         if saved != Self.provisioningVersion {

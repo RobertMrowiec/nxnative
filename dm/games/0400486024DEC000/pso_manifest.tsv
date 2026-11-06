@@ -1,4 +1,3 @@
-# Prewarm seed list (shipped in the app, next to shader_map.tsv). Rows: S<TAB>shader key<TAB>stage / R<TAB>render pipeline key (pso_skey hex) / C<TAB>compute shader key.
 # NDVE compute pipelines recorded during the title route. The Mac prepares these with progress before drawing the movie.
 C	49dff010b9832251_b
 C	ba079f68ae288dba_b

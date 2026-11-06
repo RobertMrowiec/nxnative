@@ -292,7 +292,7 @@ def generate_markdown(games):
 
     timeline = [
         {
-            "version": "Current Build (v1.9.6 / Latest)",
+            "version": "Current Build (v1.9.7 / Latest)",
             "date": "November 2026",
             "tagline": "The Legend of Zelda: Ocarina of Time (Switch 2), Bundled ZBIC NSO Decompression & 144+ Native macOS Games",
             "features": [

@@ -27,7 +27,7 @@ echo "==> [1/3] Building production Swift GUI..."
 "$SCRIPT_DIR/build_gui.sh"
 
 # Extract Version from Info.plist
-VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "1.9.6")
+VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist" 2>/dev/null || echo "1.9.7")
 TAG_NAME="v$VERSION"
 
 echo "==> Target Version: $TAG_NAME"

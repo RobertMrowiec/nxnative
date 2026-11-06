@@ -22,7 +22,7 @@
   Switch 2 games have started too: <a href="dm/games/0400486024DEC000/README.md"><b>The Legend of Zelda: Ocarina of Time</b></a>, <a href="dm/games/040074A01BF12000/README.md"><b>Donkey Kong Bananza</b></a>, <a href="dm/games/0400380020056000/README.md"><b>Splatoon Raiders</b></a>, <a href="dm/games/04007EF01F8AE000/README.md"><b>Fire Emblem Fortune's Weave</b></a>, <a href="dm/games/0400A3A01EE4C000/README.md"><b>Pokémon Pokopia</b></a>, <a href="dm/games/04003F40232DE000/README.md"><b>Hyrule Warriors: Age of Imprisonment</b></a>, <a href="dm/games/0400C3F00006E000/README.md"><b>Mario Kart World</b></a>, <a href="dm/games/0400D4201C6EA000/README.md"><b>Mario Tennis Fever</b></a>, <a href="dm/games/0400245021D2C000/README.md"><b>Yoshi and the Mysterious Book</b></a> and <a href="dm/games/0400E88025B1A000/README.md"><b>Star Fox</b></a> play natively on the Mac, packed from one <a href="#switch-2-games"><code>.nup</code> file</a> or a dump of the game; iPhone and iPad are untested.
 </p>
 
-[![GitLab Release](https://img.shields.io/badge/Release-v1.9.6-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
+[![GitLab Release](https://img.shields.io/badge/Release-v1.9.7-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
 [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2026.6%2B%20(Tahoe)%20%7C%20iOS%2026%2B%20(Metal%204)-blue.svg)](https://apple.com/macos)
@@ -40,7 +40,7 @@ Switch 2 games are built from one `.nup` file or a folder of their files, not fr
 <p align="center">
   <a href="#-table-of-contents--índice-rápido"><b>🇺🇸 English Documentation</b></a> • 
   <a href="#-guia-rápido-em-português-pt-br"><b>🇧🇷 Guia em Português (PT-BR)</b></a> •
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>💾 Download Latest .DMG (v1.9.6)</b></a> •
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>💾 Download Latest .DMG (v1.9.7)</b></a> •
   <a href="#-supported-games-catalog-144-titles"><b>🎮 Supported Games Gallery (144+ Titles)</b></a>
 </p>
 
@@ -243,7 +243,7 @@ open ../NxNative_Launcher.app
 
 We maintain automated release packaging for GitLab. Every production update generates a compressed `.dmg` and publishes it to the repository's Releases page.
 
-- **Permanent Latest Release Link (v1.9.6)**:
+- **Permanent Latest Release Link (v1.9.7)**:
   Always points to the newest release without needing to guess tag numbers:
   👉 **[https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)**
 - **All Releases Archive**:
@@ -750,7 +750,16 @@ Todos os **144+ jogos** listados na [Galeria Visual de Jogos Suportados](#-suppo
   - **Franquia Mario & Nintendo**: *Super Mario Odyssey*, *Super Mario Bros. Wonder*, *Mario Kart 8 Deluxe*, *Super Mario 3D World + Bowser's Fury*, *Super Mario Galaxy 1 & 2*, *Paper Mario: The Thousand-Year Door* (60 FPS), *Super Mario RPG*, *Mario & Luigi: Brothership* (até 120 FPS), *Princess Peach: Showtime!* (60 FPS), *Luigi's Mansion 2 HD & 3*, *Pikmin 1, 2, 3 Deluxe & 4*, *Animal Crossing: New Horizons*, *Super Smash Bros. Ultimate*, *Metroid Dread*, *Metroid Prime Remastered* & *Metroid Prime 4: Beyond*.
   - **RPGs & Grandes Sucessos**: *Xenoblade Chronicles DE, 2, 3 & X* (60 FPS), *Fire Emblem: Three Houses & Engage* (60 FPS), *Persona 5 Royal*, *Shin Megami Tensei V: Vengeance* (60 FPS), *NieR:Automata*, *Red Dead Redemption* (60 FPS), *DARK SOULS: REMASTERED* (60 FPS), *DRAGON QUEST XI S, III HD-2D, I & II HD-2D, VII Reimagined & Builders 2*, *OCTOPATH TRAVELER 0, I & II*, *Hollow Knight*, *Hollow Knight: Silksong* (até 120 FPS), *Hades I & II*, *Celeste*, *Cuphead*, *Balatro*, *DAVE THE DIVER*, *Portal 2* e dezenas de outros!
 
-### Principais Novidades da Versão v1.9.6
+### Principais Novidades da Versão v1.9.7
+1. **Otimizações de 60 FPS & Correção de Iluminação para *The Legend of Zelda: Ocarina of Time* (Switch 2, `0400486024DEC000`)**:
+   - **Fix de Iluminação Estourada / Alta Exposição**: Implementação completa de `EmitAtomicAddF32` com CAS loop e `FlushDenormal` para instruções `RED.E.ADD.F32.FTZ.RN`. Os compute shaders de exposição e luminância (`sky_analyze`, `probe_analyze`, `cube_map_probe_analyze`) agora geram cálculos precisos, corrigindo cenários externos com iluminação lavada/estourada.
+   - **Gameplay a 60 FPS Estáveis em Ambientes 3D**:
+     - Suporte a mais de 1.284 novos pares de Mesh Shaders e Task Shaders (`point_size`, `topology::point`), eliminando quedas de draw de folhagens, penhascos e masmorras complexas (Dodongo's Cavern).
+     - Cache de chunks de 16 MB em `up_big_src()` (`g_up_big_src`), economizando ~21.5 ms de CPU por frame e eliminando engasgos/stutters.
+     - Proteção de buffers de render target para heightmaps de terreno (`g_in_rt_attach`).
+     - Loop guards e threadgroup fences (`BarrierExits`) para compute shaders Ampere.
+
+### Novidades da Versão v1.9.6
 1. **Suporte Completo a *The Legend of Zelda: Ocarina of Time* (`0400486024DEC000` - Switch 2) e Descompressão ZBIC (`zbic`) Embutida**: Pacotes `.nup` do SDK 22+ com segmentos comprimidos em ZBIC (`zstd`) agora são extraídos e recompilados automaticamente sem erros, incluindo tradução de shaders NVN2 Mesh/Task, instruções Ampere (`F2IP`, `LDSM`), vídeos AV1 paralelos e otimização de memória em transições de cena (`pool_skip_retired`).
 2. **Suporte a Jogos de Nintendo Switch 2 (Ounce)**: Tradução direta de shaders Ampere para Metal sem necessidade de `prod.keys`, com suporte a arquivos `.nup` e pastas de dump completas (`base/`, `updates/`, `dlc/`).
 3. **Suporte a até 8 Jogadores / Controles Simultâneos**: Perfis individuais para controles PlayStation DualSense, Switch Pro Controller e Xbox Wireless Controller.

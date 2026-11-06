@@ -189,7 +189,7 @@ Currently tracking **144 tested game profiles** (138 NVN, 3 OpenGL, 4 Vulkan):
 
 A complete, deduplicated chronology of every milestone and capability introduced to the NxNative platform:
 
-### 🌟 Current Build (v1.9.6 / Latest) — *November 2026*
+### 🌟 Current Build (v1.9.7 / Latest) — *November 2026*
 > **The Legend of Zelda: Ocarina of Time (Switch 2), Bundled ZBIC NSO Decompression & 144+ Native macOS Games**
 
 - **The Legend of Zelda: Ocarina of Time (`0400486024DEC000` - Switch 2) Support**: Full Switch 2 profile (`v0` & `v131072`), NVN2 task/mesh shader translation to Metal, Ampere `F2IP`/`LDSM` fixes, NDVE compute movie scaling, `pool_skip_retired` scene transition memory optimization, Kokiri Forest GPU heightmap preservation, and SDK 22 Ocarina note-playing service stubs.

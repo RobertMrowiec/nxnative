@@ -240,26 +240,32 @@ def ndsr_shaders(d, label):
     return out
 
 def ndve_shaders(d, label):
-    """Nintendo's video enhancement files (Movie/Ndve/*.dat.zs, Ocarina of Time: 'NDVE', a 0x28-byte header, then an NDSR block whose offsets count from its own start): the upscaler's
-    NVN2 programs. The NDSR record table names only some of them (its words are not a regular array: a control offset, control length << 4 | type, code offset triple sits at any word),
-    so every NVN2 control section in the file is a shader: its code area is the one a table triple names for it (NDSR base + code offset), else the one +0x30 of the control section
-    points at, relative to it (the host fills that word in memory, and the key hashes it as zero). A control section that gets neither is left out. The stage comes from the code's SPH"""
+    """The movie library's video engine pack (Movie/Ndve/Ndve-Nvn2-vid_seq5.dat.zs, The Legend of Zelda: Ocarina of Time, SDK 22: 'NDVE'): NVN2 programs laid out raw, each a 0x48-byte
+    control section (version 0x14 at +8; the key takes its first 0x48 bytes) whose code area lies at the section plus +0x30 and is +0x44 bytes long; sections with 0x11 at +8 have no
+    code area of their own (+0x30 0). The section runs up to its code area and has the NVN2 layout: stage byte +0x56 (5: compute), thread group +0x58, shared memory +0x64. All 20 are
+    compute shaders, the decoder's colour conversion among them (the title movie's dispatch found no shader, and the title screen stood on black behind its logo).
+    The sections are found by their magic and checked like any NVN2 section. Two more programs (0x11 at +8, compute, one dispatched at the title) are named only by the 'NDSR' record
+    table in the header (at +0x28): records as in agl's pack (ndsr_shaders: control offset, control length << 4 | type, code offset, code length / 16 << 8 | type; offsets from the 'NDSR'),
+    but among other records of other sizes, so the table is read word by word for records that point at an NVN2 control section and whose code length matches the section's +0x44"""
     if d[:4] != b'NDVE': return []
-    base = d.find(b'NDSR', 0, 0x100)
-    if base < 0: return []
-    words = struct.unpack_from('<%dI' % ((min(len(d), base + 0x100) - base) // 4), d, base)
-    named = {base + words[i]: base + words[i + 2] for i in range(len(words) - 2) if base + words[i] + 0x48 <= len(d) and nvn2_ctl(d[base + words[i]:base + words[i] + 0x48])}
     out = []
-    for m in re.finditer(CTL_MAGIC + b'\xc9\0\0\0', d):
+    t = d.find(b'NDSR', 0, 0x100)
+    for o in range(t + 4 if t >= 0 else len(d), min(len(d) - 16, t + 0x1000) if t >= 0 else 0, 4):
+        c, cl, k, kl = struct.unpack_from('<4I', d, o)
+        if cl & 0xf not in (0, 3, 6) or kl & 0xff != 7 or not 0x48 <= cl >> 4 < 0x10000: continue
+        c, k, n = t + c, t + k, (kl >> 8) * 16
+        if c + (cl >> 4) > len(d) or k + n > len(d) or not nvn2_ctl(d[c:c + NVN2_KEY_CTL]) or struct.unpack_from('<I', d, c + 0x44)[0] != n: continue
+        ctl, code = d[c:c + (cl >> 4)], d[k:k + n]
+        st = nvn2_stage(ctl, code)
+        if st is None or check(label, st, ctl, code): continue
+        out.append((f'{label}#NDVE#NDSR@{c:#x}', st, ctl, code))
+    for m in re.finditer(re.escape(CTL_MAGIC), d):
         c = m.start()
-        if c + 0x48 > len(d) or not nvn2_ctl(d[c:c + 0x48]): continue
-        rel = struct.unpack_from('<I', d, c + 0x30)[0]
-        k = named.get(c, c + rel if rel else None)
-        if k is None: continue
-        ctl = d[c:c + 0xd8]   # an NVN2 control section is 0xd8 bytes (the key hashes its first 0x48; the stage byte is at +0x56)
-        n = struct.unpack_from('<I', ctl, 0x44)[0]
-        code = d[k:k + n]
-        if len(code) != n: continue
+        if c + NVN2_KEY_CTL > len(d) or not nvn2_ctl(d[c:c + NVN2_KEY_CTL]) or struct.unpack_from('<I', d, c + 8)[0] != 0x14: continue
+        rel, n = struct.unpack_from('<Q', d, c + 0x30)[0], struct.unpack_from('<I', d, c + 0x44)[0]
+        if not rel or c + rel + n > len(d) or not n: continue
+        if rel < 0x68: continue   # the section must reach its thread group and shared memory
+        ctl, code = d[c:c + rel], d[c + rel:c + rel + n]
         st = nvn2_stage(ctl, code)
         if st is None or check(label, st, ctl, code): continue
         out.append((f'{label}#NDVE@{c:#x}', st, ctl, code))
@@ -2716,13 +2722,13 @@ def ue_shaders(d, label):
     return out
 
 def var_pairs(found):
-    """(vertex key, pixel key) within the same BNSH variation; (vertex key, pixel key, 'prog') within the same BAHS program variation (bahs_variations).
+    """(vertex or mesh key, pixel key) within the same BNSH variation; (vertex key, pixel key, 'prog') within the same BAHS program variation (bahs_variations).
     The tables stay separate; dmsh_build.py pads against both, as the pipeline prebuild uses both."""
     var = collections.defaultdict(dict)
     for where, st, ctl, code in found:
         g = where if '#var' in where else BAHS_VAR.get(where)
         if g: var[g][st] = skey(ctl, code)
-    return {(v['vs'], v['ps']) + (('prog',) if '#BAHS#prog' in g else ()) for g, v in var.items() if 'vs' in v and 'ps' in v}
+    return {(v[st], v['ps']) + (('prog',) if '#BAHS#prog' in g else ()) for g, v in var.items() for st in ('vs', 'ms') if st in v and 'ps' in v}
 
 def scan_file(args):
     """→ (relative path, {key: …}, pairs, extra); extra = this file's Unity type trees, 'defer' (no type tree, scanned again in the second pass), or ('unreadable', why).
