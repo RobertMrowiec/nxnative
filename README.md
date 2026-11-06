@@ -11,7 +11,7 @@
 <br>
 
 <p align="center">
-  <img src="gui/Icons/NxNative_Launcher-iOS-Default-1024@1x.png" width="140" alt="NxNative Launcher Official Logo">
+  <img src="docs/images/logo.png" width="140" alt="NxNative Launcher Official Logo">
 </p>
 
 # NxNative Launcher
