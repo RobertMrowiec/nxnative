@@ -10,11 +10,17 @@
 
 <br>
 
-Switch 2 games have started too: [The Legend of Zelda: Ocarina of Time](dm/games/0400486024DEC000/README.md), [Donkey Kong Bananza](dm/games/040074A01BF12000/README.md), [Splatoon Raiders](dm/games/0400380020056000/README.md), [Fire Emblem Fortune's Weave](dm/games/04007EF01F8AE000/README.md), [Pokémon Pokopia](dm/games/0400A3A01EE4C000/README.md), [Hyrule Warriors: Age of Imprisonment](dm/games/04003F40232DE000/README.md), [Mario Kart World](dm/games/0400C3F00006E000/README.md), [Mario Tennis Fever](dm/games/0400D4201C6EA000/README.md), [Yoshi and the Mysterious Book](dm/games/0400245021D2C000/README.md) and [Star Fox](dm/games/0400E88025B1A000/README.md) play natively on the Mac, packed from one [`.nup` file](#switch-2-games) or a dump of the game; iPhone and iPad are untested.
+<p align="center">
+  <img src="gui/Icons/NxNative_Launcher-iOS-Default-1024@1x.png" width="140" alt="NxNative Launcher Official Logo">
+</p>
 
 # NxNative Launcher
 
 ### The Definitive Native Game Porting & Playback Suite for Apple Silicon
+
+<p align="center">
+  Switch 2 games have started too: <a href="dm/games/0400486024DEC000/README.md"><b>The Legend of Zelda: Ocarina of Time</b></a>, <a href="dm/games/040074A01BF12000/README.md"><b>Donkey Kong Bananza</b></a>, <a href="dm/games/0400380020056000/README.md"><b>Splatoon Raiders</b></a>, <a href="dm/games/04007EF01F8AE000/README.md"><b>Fire Emblem Fortune's Weave</b></a>, <a href="dm/games/0400A3A01EE4C000/README.md"><b>Pokémon Pokopia</b></a>, <a href="dm/games/04003F40232DE000/README.md"><b>Hyrule Warriors: Age of Imprisonment</b></a>, <a href="dm/games/0400C3F00006E000/README.md"><b>Mario Kart World</b></a>, <a href="dm/games/0400D4201C6EA000/README.md"><b>Mario Tennis Fever</b></a>, <a href="dm/games/0400245021D2C000/README.md"><b>Yoshi and the Mysterious Book</b></a> and <a href="dm/games/0400E88025B1A000/README.md"><b>Star Fox</b></a> play natively on the Mac, packed from one <a href="#switch-2-games"><code>.nup</code> file</a> or a dump of the game; iPhone and iPad are untested.
+</p>
 
 [![GitLab Release](https://img.shields.io/badge/Release-v1.9.6-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
