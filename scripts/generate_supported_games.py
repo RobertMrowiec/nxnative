@@ -249,8 +249,10 @@ def generate_markdown(games):
     md.append("- [🔄 How to Port an Unlisted Game](#how-to-port-an-unlisted-game)\n\n---\n")
 
     # 4. Hardware Tier Guide
-    md.append("## 💻 Hardware & RAM Tier Guide\n\n")
-    md.append("Because NxNative performs **ahead-of-time native recompilation** into ARM64 Mach-O code, games run directly on Apple Silicon memory controllers with Metal 4. Use this guide to assess your device's expected performance:\n\n")
+    md.append("## 💻 Hardware & RAM Tier Guide (Requires macOS 26.6+ Tahoe / iOS 26.0+ & Metal 4)\n\n")
+    md.append("> [!IMPORTANT]\n")
+    md.append("> **OS & Metal 4 Requirement**: Because `nxnative` performs ahead-of-time native recompilation into ARM64 Mach-O code and translates shaders to **Apple Metal 4** (`MTL4CommandQueue`, `MTL4Compiler`, `MTL4MeshRenderPipelineDescriptor`), you **must run macOS 26.6 or later (macOS Tahoe)** with **Xcode 27.2+** on Mac, and **iOS 26.0+ / iPadOS 26.0+** on iPhone/iPad. Earlier OS versions (macOS 13–15, iOS 18) do not include Metal 4.\n\n")
+    md.append("Use this guide to assess your Apple Silicon device's expected performance:\n\n")
     md.append("| Memory Tier | Mac Hardware (Apple Silicon) | iPhone / iPad Hardware | Playable Titles | Target Performance |\n")
     md.append("| :--- | :--- | :--- | :---: | :--- |\n")
     md.append(f"| **4 GB RAM** | M1, M2, M3, M4 (Any Mac) | iPhone 15 Pro, 16 Pro, iPad Pro M1+ | **{count_4gb} games** | Native 60 FPS • Lightweight 2D/3D |\n")
@@ -328,7 +330,7 @@ def generate_markdown(games):
             "tagline": "Official Joy-Con Taskbar Icon, Menu Bar Customization & iOS Sideloading Fixes",
             "features": [
                 "**Joy-Con Status Bar Icon**: Choose between the signature Switch Joy-Con silhouette and the classic launcher icon in the macOS menu bar.",
-                "**iOS Deployment Enhancements**: Streamlined `xcrun devicectl` bundle installations and AirDrop packaging for iOS 18/26.",
+                "**iOS Deployment Enhancements**: Streamlined `xcrun devicectl` bundle installations and AirDrop packaging for iOS 26+.",
                 "**Storage & Cache Diagnostics**: Real-time inspection of shader cache sizes, RomFS asset bundles, and Atmosphere LayeredFS mods."
             ]
         },
@@ -337,7 +339,7 @@ def generate_markdown(games):
             "date": "October 2026",
             "tagline": "Apple Liquid Glass UI Overhaul & 13 Multi-Language Locales",
             "features": [
-                "**Apple Liquid Glass Aesthetic**: Modern translucent glassmorphism design optimized for macOS Sonoma and Sequoia dark mode.",
+                "**Apple Liquid Glass Aesthetic**: Modern translucent glassmorphism design optimized for macOS 26 Tahoe dark mode.",
                 "**Runtime Localization Engine**: Zero-restart dynamic language switching across 13 international locales.",
                 "**Automated Upstream Sync Workflows**: Continuous CI validation verifying compatibility with incoming `seedds/nxnative` upstream updates."
             ]

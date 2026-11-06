@@ -126,7 +126,7 @@ build_app_bundle() {
     <key>CFBundleVersion</key>
     <string>31</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>26.0</string>
     <key>NSHighResolutionCapable</key>
     <true/>
     <key>NSPrincipalClass</key>

@@ -19,8 +19,8 @@ Switch 2 games have started too: [The Legend of Zelda: Ocarina of Time](dm/games
 [![GitLab Release](https://img.shields.io/badge/Release-v1.9.6-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
 [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
-[![Platform](https://img.shields.io/badge/Platform-macOS%2013%2B%20%7C%20iOS%2018%2B-blue.svg)](https://apple.com/macos)
-[![Architecture](https://img.shields.io/badge/Arch-Apple%20Silicon%20(M1--M4%20%26%20A17%2B)-orange.svg)](https://apple.com)
+[![Platform](https://img.shields.io/badge/Platform-macOS%2026.6%2B%20(Tahoe)%20%7C%20iOS%2026%2B%20(Metal%204)-blue.svg)](https://apple.com/macos)
+[![Architecture](https://img.shields.io/badge/Arch-Apple%20Silicon%20(M1--M4%2B%20%26%20A17%20Pro%2B)-orange.svg)](https://apple.com)
 [![Verified Games](https://img.shields.io/badge/Verified%20Games-144%2B%20Titles%20(Switch%201%20%26%202)-success.svg)](#supported-games-catalog-144-titles)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Clean-Room Compliance](https://img.shields.io/badge/Legal-Clean--Room%20DMCA%201201(f)-informational.svg)](#-clean-room--legal-policy)
@@ -252,9 +252,12 @@ To package and deploy a new release from the command line:
 
 ## 🛠️ Environment & Prerequisites
 
-### System Requirements
-* **Operating System**: macOS 13.0 (Ventura), macOS 14.0 (Sonoma), or macOS 15.0+ (Sequoia).
-* **Architecture**: Apple Silicon Mac (M1, M2, M3, M4 or higher) or iOS 18+ (A17 Pro, A18, A18 Pro, M-series iPad).
+### System Requirements (Metal 4 Required)
+* **Operating System**:
+  - **macOS 26.6 or later (macOS Tahoe)** — **Strictly Required**. `nxnative`'s graphics host and shader pipeline rely directly on **Apple Metal 4** (`MTL4CommandQueue`, `MTL4Compiler`, `MTL4RenderCommandEncoder`, `MTL4MeshRenderPipelineDescriptor`). Older macOS versions (macOS 13 Ventura, 14 Sonoma, 15 Sequoia) do **not** include Metal 4 and cannot compile or run games.
+  - **iOS 26.0+ / iPadOS 26.0+** — Required for sideloaded `.ipa` builds on iPhone and iPad (Metal 4 runtime).
+* **Xcode & Metal Toolchain**: **Xcode 27.2** (or newer with `MetalToolchain` installed via `xcodebuild -downloadComponent MetalToolchain`).
+* **Architecture**: Apple Silicon Mac (`M1`, `M2`, `M3`, `M4` or higher) or iOS/iPadOS 26+ device (`A17 Pro`, `A18`, `A18 Pro`, `A19` or M-series iPad).
 * **Storage**: 15–20 GB of free space recommended for compilation toolchains, caches, and RomFS assets.
 
 ### Manual Dependency Installation (Optional)
@@ -716,7 +719,7 @@ O **NxNative Launcher** é uma iniciativa técnica de código aberto dedicada à
 > - O usuário é integralmente responsável por extrair seus próprios dumps de jogos e chaves de seu próprio hardware adquirido legalmente.
 
 ### O que é o NxNative Launcher?
-O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift para Apple Silicon (Mac M1/M2/M3/M4 e iPhone 15/16 Pro). **Ele não é um emulador tradicional**: o código ARM64 do jogo roda diretamente no processador da Apple sem tradução dinâmica (JIT), e os gráficos são reconstruídos diretamente em **Apple Metal 4**. Atualmente, **mais de 144 jogos verificados** funcionam em port nativo para macOS, incluindo **10 jogos do Nintendo Switch 2** e **134+ jogos do Nintendo Switch 1**.
+O **NxNative Launcher** é uma aplicação desktop nativa desenvolvida em Swift para Apple Silicon (Mac M1/M2/M3/M4 com **macOS 26.6+ Tahoe** e iPhone 15 Pro / 16 Pro / 17 Pro com **iOS 26.0+**). **Ele não é um emulador tradicional**: o código ARM64 do jogo roda diretamente no processador da Apple sem tradução dinâmica (JIT), e os gráficos são reconstruídos diretamente em **Apple Metal 4** (exigindo obrigatoriamente **macOS 26.6+**, **Xcode 27.2+** e **Metal 4** — versões antigas como macOS 13, 14 ou 15 não possuem suporte ao Metal 4). Atualmente, **mais de 144 jogos verificados** funcionam em port nativo para macOS, incluindo **10 jogos do Nintendo Switch 2** e **134+ jogos do Nintendo Switch 1**.
 
 <p align="center">
   <img src="docs/images/gifs/demo_screens_nav.gif" width="95%" alt="NxNative Launcher - Navegação Fluida entre Telas">
@@ -765,8 +768,8 @@ Todos os **144+ jogos** listados na [Galeria Visual de Jogos Suportados](#-suppo
 - More switch 2 games
 - Better Mouse Orbit support
 
-### Como Começar em 3 Passos
-1. **Baixar o Instalador**: Baixe o `NxNative_Launcher.dmg` na página de [Latest Release](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases) e arraste para sua pasta `Aplicativos`.
+### Como Começar em 3 Passos (Requisito: macOS 26.6+ Tahoe & Xcode 27.2 com Metal 4)
+1. **Baixar o Instalador**: Em um Mac Apple Silicon com **macOS 26.6+ (Tahoe)** e **Xcode 27.2+**, baixe o `NxNative_Launcher.dmg` na página de [Latest Release](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases) e arraste para sua pasta `Aplicativos`.
 2. **Configuração Automática**: Abra o launcher. Na aba **Settings**, caso falte alguma ferramenta, clique em **"Instalar Dependências Faltantes"** (o app instala Homebrew, Python e bibliotecas automaticamente).
 3. **Portar e Jogar**: Vá para a aba **Port**, arraste seu arquivo `.nup`, `.nsp`, `.xci` ou pasta com seus dumps do jogo, confira a estimativa de tempo e clique em **"Iniciar Portabilidade"**!
 
