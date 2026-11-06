@@ -7148,12 +7148,20 @@ static ArchEpoch *ep_enter(void) {   // the current period, joined: a flush hand
     return ep;
 }
 static void ep_leave(ArchEpoch *ep) { atomic_fetch_sub(&ep->active, 1); dispatch_group_leave(ep->busy); }
+// Thread-safe wrapper for Metal 4 compiler pipeline builds to prevent concurrent AGXMetal driver lock corruption (os_unfair_lock corrupt in createVertexProgramVariant)
+static pthread_mutex_t g_mtl4_comp_mu = PTHREAD_MUTEX_INITIALIZER;
+static inline id<MTLRenderPipelineState> mtl4_comp_build(id<MTL4Compiler> comp, MTL4RenderPipelineDescriptor *d, NSError **e) {
+    pthread_mutex_lock(&g_mtl4_comp_mu);
+    id<MTLRenderPipelineState> ps = [comp newRenderPipelineStateWithDescriptor:d compilerTaskOptions:nil error:e];
+    pthread_mutex_unlock(&g_mtl4_comp_mu);
+    return ps;
+}
 // A compile the archive captures, in the current flush period, counted there when it built (vd: the base has a vertex layout). No task options: a captured base never imports
 // archive entries (see the compaction crash below)
 static id<MTLRenderPipelineState> arch_capture(MTL4RenderPipelineDescriptor *d, NSError **e, int vd) {
-    if (!g_arch_cap) return [g_comp4 newRenderPipelineStateWithDescriptor:d compilerTaskOptions:nil error:e];
+    if (!g_arch_cap) return mtl4_comp_build(g_comp4, d, e);
     ArchEpoch *ep = ep_enter();
-    id<MTLRenderPipelineState> ps = [ep->comp newRenderPipelineStateWithDescriptor:d compilerTaskOptions:nil error:e];
+    id<MTLRenderPipelineState> ps = mtl4_comp_build(ep->comp, d, e);
     if (ps) { atomic_fetch_add(&ep->n, 1); atomic_fetch_add(&g_arch_new, 1); if (vd) { atomic_fetch_add(&ep->vd, 1); atomic_fetch_add(&g_arch_new_vd, 1); } }
     ep_leave(ep);
     return ps;
@@ -7353,7 +7361,7 @@ static id<MTLRenderPipelineState> pso_build_ex(MTLRenderPipelineDescriptor *d, N
     // ambient occlusion draws 4 triangles and writes the array layer of each one's primitive ID: every one wrote layer 0, so 3 pixels in 4 had no sun light. A platform limit: the ID has no other source
     if (rast && g_comp4 && [d.label isEqualToString:PSO_WHOLE]) {
         MTL4RenderPipelineDescriptor *whole = pso_desc4(d, 0);
-        if (whole) { if (!compile) return nil; return [g_comp4 newRenderPipelineStateWithDescriptor:whole compilerTaskOptions:nil error:e]; }
+        if (whole) { if (!compile) return nil; return mtl4_comp_build(g_comp4, whole, e); }
     }
     MTL4RenderPipelineDescriptor *b = g_comp4 ? pso_desc4(d, rast) : nil;   // with rasterization off there is no colour state to leave open: the base is the pipeline
     if (!b) { if (!compile) return nil; g_pb_legacy++; return pso_build_dev(d, e); }
