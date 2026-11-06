@@ -35,13 +35,19 @@ def rows():
     return out
 
 
+LOCAL_ONLY_IMAGES = {'zelda-ocarina-of-time.png'}
+CDN_BASE = 'https://raw.githubusercontent.com/seedds/nxnative/main/docs/images'
+
+
 def cell(image, name, note, tid):
     # Attributes use double quotes; apostrophes in existing captions need no escaping.
+    raw_image = image
     image, name, note = (html.escape(s, quote=False).replace('"', '&quot;') for s in (image, name, note))
     caption = f'<a href="dm/games/{tid}/README.md">{name}</a>'
     detail = f'<br>{note}' if note else ''   # a game with no remark has only its caption
+    img_src = f'docs/images/{image}' if raw_image in LOCAL_ONLY_IMAGES else f'{CDN_BASE}/{image}'
     # <small> is one step below the body text; <sub> would be smaller still and lower the baseline.
-    return f'<td align="center" valign="top" width="33%"><img src="docs/images/{image}" width="256" alt="{name}"><br><small><b>{caption}</b>{detail}</small></td>'
+    return f'<td align="center" valign="top" width="33%"><img src="{img_src}" width="256" loading="lazy" alt="{name}"><br><small><b>{caption}</b>{detail}</small></td>'
 
 
 def gallery():
