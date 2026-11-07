@@ -465,6 +465,7 @@ extension Translations {
         "build.files_count": "(%d files)",
         "system.tag_system": "System",
         "settings.cat_general": "General & Folders",
+        "settings.cat_updates": "Updates",
         "settings.cat_keys": "Keys & Decryption",
         "settings.cat_toolchain": "Tools & Compilers",
         "settings.cat_developer": "Developer Engine",

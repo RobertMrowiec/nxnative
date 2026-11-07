@@ -50,9 +50,7 @@ echo "==> [3/3] Preparing GitLab Release for $TAG_NAME..."
 TOKEN="${GITLAB_TOKEN:-${GL_TOKEN:-}}"
 if [ -z "$TOKEN" ]; then
     REMOTE_URL=$(git -C "$REPO_ROOT" remote get-url gitlab 2>/dev/null || true)
-    if [[ "$REMOTE_URL" =~ (glpat-[a-zA-Z0-9_.-]+) ]]; then
-        TOKEN="${BASH_REMATCH[1]}"
-    fi
+    TOKEN=$(echo "$REMOTE_URL" | sed -nE 's/.*(glpat-[^@]+)@.*/\1/p')
 fi
 
 if [ -n "$TOKEN" ]; then
@@ -114,7 +112,7 @@ except Exception:
   "name": "NxNative Launcher $TAG_NAME",
   "tag_name": "$TAG_NAME",
   "ref": "main",
-  "description": "### 🚀 NxNative Launcher $TAG_NAME - Official Release\n\nOfficial native Apple Silicon build for **macOS 26.6+ (macOS Tahoe)** with **Apple Metal 4** & **Xcode 27.2+** (and **iOS 26.0+ / iPadOS 26.0+** for iPhone/iPad builds).\n\n- **Package**: \`$DMG_NAME\` ($DMG_SIZE)\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\n- **System Requirements**: Apple Silicon Mac (\`M1\`–\`M4+\`) running **macOS 26.6+ (Tahoe)** and **Xcode 27.2+** with **Metal 4** (\`MetalToolchain\`).\n\n---\n\n### 🌟 Key Highlights & Bug Fixes in $TAG_NAME\n\n- **🛠️ Game Porting & Host Compilation Fixes (\`mac_host_build.log\`)**:\n  - Resolved C and Objective-C redefinitions and conflicting declarations across core host services: \`hle_misc.c\` (\`CheckAgcPermissionUnderMinimumAge\`), \`hle_net.c\` (\`SK_EBADF\`, \`SK_EAGAIN\` collision), \`hle_offline.c\` (\`nnsocketGetAddrInfoWithOptions\`), and \`hle_sdk16.c\` (\`RequestLoadNxFont\`).\n  - Fixed Metal graphics backend build failures in \`nvn_mtl.m\` by cleaning up undeclared functions (\`tex_rgba_atomic_alias\`), eliminating local scope conflicts on \`rangeKey\` in \`up_big_src\`, correcting call signatures, and removing undefined \`ghost_finish_submission\` linker failure.\n  - Restored clean geometry builder \`mtk_build\` in \`nvn_geometry.inc\`, removing truncated and duplicate shader pipeline definitions.\n  - Verified 100% clean compilation (\`dmhost\`) for titles including *Donkey Kong Bananza* (\`040074A01BF12000\`) and *Luigi'\''s Mansion 3* (\`0100DCA0064A6000\`).\n- **🐍 Python Environment & \`zbic\` Auto-Detection (pyenv & Virtualenv Support)**:\n  - Added live module validation in \`SystemDetector.swift\` testing for \`lz4.block\`, \`capstone\`, \`fontTools\`, and \`zbic\`.\n  - Added native discovery and prioritization for user \`pyenv\` environments (\`~/.pyenv/shims/python3\` and \`~/.pyenv/versions/*/bin/python3\`), fixing missing module errors when porting *The Legend of Zelda: Tears of the Kingdom* and Switch 2 games.\n  - Updated bundled standalone Python runtime inside \`NxNative_Launcher.app\` with \`zbic 1.0.1.post1\`.\n- **🔐 Clarified Administrator Privilege Prompt**:\n  - Updated the macOS \`osascript\` elevation dialog in \`InstallerService.swift\` with clear, unambiguous instructions explaining that the user'\''s macOS account password is required for toolchain dependency installation.\n- **🛡️ Mandatory Anti-Regression Smoke Testing**:\n  - Implemented automatic dual-game \`dmhost\` compilation tests (*Donkey Kong Bananza* + *Luigi'\''s Mansion 3*) in \`sync_upstream.sh\`. Any future upstream updates from \`seedds/nxnative\` that break host compilation will be automatically blocked and rolled back before reaching production.\n- **⚡ Zero-Hang Invariant & Apple Silicon Performance**:\n  - Guaranteed 6-second watchdog protection, bounded 2.0s subprocess timeouts, and unblocked main thread execution across macOS Tahoe (26.6+) with Metal 4.\n\n---\n\n### ⚖️ Game Preservation Notice (\\\"for those who come after\\\")\n\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No copyrighted game copies, ROMs, keys, or proprietary firmwares are distributed.",
+  "description": "### 🚀 NxNative Launcher $TAG_NAME - Official Release\\n\\nOfficial native Apple Silicon build for **macOS 26.6+ (macOS Tahoe)** with **Apple Metal 4** & **Xcode 27.2+** (and **iOS 26.0+ / iPadOS 26.0+** for iPhone/iPad builds).\\n\\n- **Package**: \`$DMG_NAME\` ($DMG_SIZE)\\n- **Direct Download**: [$DMG_NAME]($DIRECT_DOWNLOAD_URL)\\n- **System Requirements**: Apple Silicon Mac (\`M1\`–\`M4+\`) running **macOS 26.6+ (Tahoe)** and **Xcode 27.2+** with **Metal 4** (\`MetalToolchain\`).\\n\\n---\\n\\n### 🌟 Destaques & Otimizações em $TAG_NAME\\n\\n- **🗡️ The Legend of Zelda: Ocarina of Time (Switch 2 · \`0400486024DEC000\`)**:\\n  - **Vídeos e Cutscenes a 60 FPS**: Bypass automático da rede neural NDVE (\`0x3b5f524\`) em favor do reprodutor nativo 1080p, eliminando a queda pesada de 47.5ms/frame (20 fps) nas introduções e história.\\n  - **Pacing de 60 FPS no Motor**: Integração de patch \`frame_step\` (\`0x3b4f074\`) no controlador interno de vsync, garantindo 60 FPS fluidos em velocidade normal 1.0x (sem aceleração 2x).\\n  - **MetalFX Spatial Nativo**: Substituição do upscaler de compute pesado pelo MetalFX nativo do macOS Tahoe (Metal 4), economizando banda e GPU.\\n  - **Gerenciamento de Memória para Macs 16 GB**: Ativação de compressão lossy em render targets de cor (\`rt_lossy\`), descarte imediato de páginas de memória guest de texturas após upload (\`DM_TEX_RELEASE=2\`) e supressão de texturas retiradas (\`pool_skip_retired\`).\\n  - **Overlays de Resolução Automáticos**: Geração automática de presets de resolução dinâmica (\`romfs_overlay\` para docked, handheld e potato) embutidos no pacote \`.app\` sem comandos manuais.\\n  - **Isolamento Estrito**: Todas as otimizações específicas são aplicadas exclusivamente ao Title ID \`0400486024DEC000\`, preservando 100% de estabilidade para todos os demais jogos.\\n\\n- **🚀 NxNative Launcher GUI & Sistema**:\\n  - **Nova Aba de Atualizações em Configurações**: Acompanhamento de versões, changelog detalhado e atualização em 1 clique direto pela interface.\\n  - **Injeção Inteligente de Ambiente**: Preserva chaves de configuração personalizadas no \`env.txt\` sem sobrescrever parâmetros do motor.\\n  - **Watchdog Zero-Hang Mandatório**: Proteção ativa contra travamentos na inicialização de jogos com timeouts rígidos em subprocessos.\\n\\n---\\n\\n### 📖 Instruções para Usuários\\n\\n#### 🆕 Para quem vai portar pela primeira vez (Novo Port):\\n1. Abra o **NxNative Launcher** e vá na aba **Portar Jogo**.\\n2. Selecione a pasta com os NSPs de *The Legend of Zelda: Ocarina of Time*.\\n3. Inicie a conversão. O launcher aplicará automaticamente todos os patches de 60 FPS, compilará o motor gráfico \`dmhost\` e gerará o \`romfs_overlay\` sem necessidade de comandos no terminal.\\n\\n#### 🔄 Para quem já portou o jogo anteriormente (.app existente):\\n1. Como os pacotes \`.app\` no macOS são autossuficientes e guardam sua própria cópia do motor \`dmhost\` e binários compilados, para receber as cutscenes em 60 FPS e o novo motor gráfico basta clicar em **Portar novamente** na pasta do jogo.\\n2. Caso tenha mantido a pasta \`0400486024DEC000_build\`, o launcher reaproveita todo o cache de shaders e a re-geração do \`.app\` leva apenas **1 a 2 minutos**!\\n\\n---\\n\\n### ⚖️ Game Preservation Notice (\\\"for those who come after\\\")\\n\\nThis project is strictly for software preservation, interoperability (DMCA 1201(f)), and educational research. No copyrighted game copies, ROMs, keys, or proprietary firmwares are distributed.",
   "assets": {
     "links": [
       {
@@ -136,13 +134,30 @@ EOF
             "$RELEASE_API")
         POST_CODE=$(echo "$POST_RESP" | tail -n1)
         if [ "$POST_CODE" = "409" ]; then
-            echo "==> Release $TAG_NAME already exists, updating via PUT..."
+            echo "==> Release $TAG_NAME already exists, updating description via PUT..."
             curl -s -X PUT \
                 --header "PRIVATE-TOKEN: $TOKEN" \
                 --header "Content-Type: application/json" \
                 --data "$RELEASE_PAYLOAD" \
                 "$RELEASE_API/$TAG_NAME" > /dev/null || true
         fi
+
+        # Ensure asset link is registered in release
+        echo "==> Registering DMG link in Release assets..."
+        LINK_PAYLOAD=$(cat <<EOF
+{
+  "name": "$DMG_NAME ($DMG_SIZE)",
+  "url": "$DIRECT_DOWNLOAD_URL",
+  "filepath": "/binaries/$DMG_NAME",
+  "link_type": "package"
+}
+EOF
+)
+        curl -s -X POST \
+            --header "PRIVATE-TOKEN: $TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$LINK_PAYLOAD" \
+            "$RELEASE_API/$TAG_NAME/assets/links" > /dev/null || true
 
         echo "✅ Release $TAG_NAME published/updated on GitLab!"
     else

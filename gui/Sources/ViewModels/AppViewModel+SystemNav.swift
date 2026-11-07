@@ -5,13 +5,15 @@ import AppKit
 extension AppViewModel {
     
     public var availableSettingsCategories: [SettingsCategory] {
-        isDeveloperMode ? SettingsCategory.allCases : [.general, .toolchain]
+        isDeveloperMode ? SettingsCategory.allCases : [.general, .updates, .toolchain]
     }
     
     private func maxFocusIndex(for category: SettingsCategory) -> Int {
         switch category {
         case .general:
             return 1
+        case .updates:
+            return 2
         case .toolchain:
             return 2
         case .developer:
@@ -93,6 +95,13 @@ extension AppViewModel {
         switch activeSettingsCategory {
         case .general:
             selectGameFolder()
+            
+        case .updates:
+            if settingsItemFocusIndex == 0 {
+                checkForUpdates()
+            } else {
+                applyUpdate(autoRelaunch: true)
+            }
             
         case .toolchain:
             if settingsItemFocusIndex == 0 {

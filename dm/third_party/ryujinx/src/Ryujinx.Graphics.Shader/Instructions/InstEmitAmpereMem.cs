@@ -369,19 +369,6 @@ namespace Ryujinx.Graphics.Shader.Instructions
         }
 
         // ATOMG Rd, [Ra + UR + offset], Rb: operation 87..91; the uniform form keeps Ra's pair bit at 70
-        // ATOMG.CAS returns the old value: compare Rb and replace it with Rc at the global address.
-        public static void AAtomgCas(EmitterContext context)
-        {
-            AmpereOp x = new(context.CurrOp);
-            if (x.Bits(73, 76) > 1 || x.Bit(91))
-            {
-                throw AFail(context, $"ATOMG.CAS type {x.Bits(73, 76)} or uniform address");
-            }
-            (Operand lo, Operand hi) = AGlobalAddress(context, x, 72, 64, 0);
-            Operand result = context.AtomicCompareAndSwap(StorageKind.GlobalMemory, lo, hi, AGpr(x.Rb), AGpr(x.Rc));
-            ASet(context, x, result);
-        }
-
         public static void AAtomg(EmitterContext context)
         {
             AmpereOp x = new(context.CurrOp);

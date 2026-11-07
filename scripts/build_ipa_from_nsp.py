@@ -2631,15 +2631,34 @@ def env_file_pairs(path):   # an environment file's switches (one KEY=VALUE per 
     return out
 
 
-def build_env_file(work, env_file, motion):
+def build_env_file(work, env_file, motion, g=None):
     """The environment file the build bakes in (the iOS app's bundled dm/env.txt, the Mac app's, the Mac run command's switches): the --env-file / DM_ENV_FILE one as it is, or, for a build
-    without motion (MOTION / --no-motion), its switches plus DM_MOTION=0 in <id>_build/build_env.txt"""
-    if motion: return env_file
+    without motion (MOTION / --no-motion) or a game with recommended defaults, its switches in <id>_build/build_env.txt"""
+    oot = g is not None and g.id == '0400486024DEC000'
+    if motion and not oot: return env_file
     pairs = env_file_pairs(env_file) if env_file else {}
-    pairs['DM_MOTION'] = '0'
+    if not motion: pairs['DM_MOTION'] = '0'
+    if oot:
+        pairs.setdefault('DM_UPSCALER', 'metalfx')
+        pairs.setdefault('DM_FPS_HOLD', 'off')
+        pairs.setdefault('DM_THERMAL_CAP', '0')
     f = work / 'build_env.txt'
     f.write_text(''.join(f'{k}={v}\n' for k, v in pairs.items()))
     return str(f)
+
+
+def ensure_romfs_overlay(py, repo, game, g, logs, env):
+    """For Ocarina of Time (0400486024DEC000), automatically generate the dynamic-resolution overlay packs (handheld, docked, potato-handheld, potato-docked) beside RomFS.img if not already present."""
+    if not g or g.id != '0400486024DEC000': return
+    romfs_img = game / 'RomFS.img'
+    script = repo / 'scripts/oot_res_overlay.py'
+    if not romfs_img.is_file() or not script.is_file(): return
+    ov = game / 'romfs_overlay'
+    presets = (('handheld', '0.666667'), ('docked', '0.9375'), ('potato-handheld', '0.5'), ('potato-docked', '0.666667'))
+    if all((ov / mode / 'Pack/Bootup.Nin_Ounce_NVN2.pack.zs').is_file() for mode, _ in presets): return
+    say('generating Ocarina of Time resolution overlays (handheld, docked, potato-handheld, potato-docked)')
+    for mode, scale in presets:
+        run([py, script, romfs_img, ov / mode, scale, '-', 'flat'], logs / f'oot_res_overlay_{mode}.log', env=env, fatal=False)
 
 
 def mac_host(py, repo, work, env, logs, g):
@@ -2793,6 +2812,9 @@ def mac_app(py, repo, out, app, work, game, patched, host, font, msl, aoc, gfx, 
         if v: cmd += [opt, v]
     for n, r in (programs or {}).items(): cmd += ['--program', f'{n}\t{r["patched"]}\t{r["romfs"]}\t{r["msl"]}\t{r["tables"]}\t{r["html"]}']
     if (game / 'html').is_dir(): cmd += ['--html', game / 'html']
+    # game file replacements beside the RomFS: romfs_overlay_mac when the Mac app's differ from the IPA's, else romfs_overlay
+    overlay = next((d for d in (game / 'romfs_overlay_mac', game / 'romfs_overlay') if d.is_dir()), None)
+    if overlay: cmd += ['--romfs-overlay', overlay]; say(f'game file replacements: {overlay}')
     unchanged = False
     def line(ln):
         nonlocal unchanged
@@ -3189,7 +3211,8 @@ def main(args=None):
     motion = MOTION if args.motion is None else args.motion
     jit = uses_jit(game / 'ExeFS')
     if jit and not mac and not mac_pack: capture_jit(py, repo, game, patched, work, env, logs, g)   # the iPhone runs no code made at run time: it serves the plugin's output from an image
-    env_file = build_env_file(work, args.env_file or DM_ENV_FILE, motion)
+    ensure_romfs_overlay(py, repo, game, g, logs, env)
+    env_file = build_env_file(work, args.env_file or DM_ENV_FILE, motion, g)
     if not motion: say('motion (gyro): off, DM_MOTION=0 is built in (on the iPhone, DM_MOTION=1 in the app\'s Documents/env.txt turns it back on)')
     if mac_pack:   # a Mac app: the Mac host, then the app packed from it and the build's files
         if getattr(args, 'in_programs', None) is not None:   # a program of the game: the app its first program's build packs takes these

@@ -446,7 +446,7 @@ static int fn_shortcut(NSEvent *e) {
 }
 static ctrl_prompt g_cp; static int g_cp_confirm, g_cp_cancel;   // the controller applet's prompt (front_ctrl_support) and a key pressed in it since its last step
 static int cp_poll(void);
-static void on_key(NSEvent *e, int down) {
+static void on_mouse_button(int buttonCode, int down) {
     if (!g_input_on) return;
     load_custom_input_mapping();
     int b = key_bit((unsigned short)buttonCode);

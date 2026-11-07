@@ -184,6 +184,12 @@ public struct SystemView: View {
                     RoundedRectangle(cornerRadius: 16)
                         .stroke(viewModel.settingsItemFocusIndex == 0 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
                 )
+        case .updates:
+            SystemUpdatesCard(viewModel: viewModel)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(viewModel.settingsItemFocusIndex == 0 ? NXTheme.secondary : Color.clear, lineWidth: 1.5)
+                )
         case .toolchain:
             VStack(spacing: 14) {
                 SystemKeysCard(viewModel: viewModel)
