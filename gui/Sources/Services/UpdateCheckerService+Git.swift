@@ -102,6 +102,18 @@ extension UpdateCheckerService {
         process.standardOutput = pipe
         process.standardError = pipe
         
+        let outputLock = NSLock()
+        var outputData = Data()
+        let handle = pipe.fileHandleForReading
+        handle.readabilityHandler = { fh in
+            let chunk = fh.availableData
+            if !chunk.isEmpty {
+                outputLock.lock()
+                outputData.append(chunk)
+                outputLock.unlock()
+            }
+        }
+        
         do {
             try process.run()
             
@@ -118,12 +130,20 @@ extension UpdateCheckerService {
                 if process.isRunning {
                     process.terminate()
                 }
+                handle.readabilityHandler = nil
                 return (-1, "Git operation timed out after \(timeout)s: git \(args.joined(separator: " "))")
             }
             
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return (process.terminationStatus, String(data: data, encoding: .utf8) ?? "")
+            handle.readabilityHandler = nil
+            let remaining = handle.readDataToEndOfFile()
+            outputLock.lock()
+            outputData.append(remaining)
+            let outStr = String(data: outputData, encoding: .utf8) ?? ""
+            outputLock.unlock()
+            
+            return (process.terminationStatus, outStr)
         } catch {
+            handle.readabilityHandler = nil
             return (-1, error.localizedDescription)
         }
     }
