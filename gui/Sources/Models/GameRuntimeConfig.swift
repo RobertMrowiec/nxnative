@@ -109,6 +109,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
         
         // 1. Write to ~/Library/Application Support/nxnative/<titleId>/env.txt (both cases to avoid mismatch)
         let resolvedTitleId = (game.titleId?.isEmpty == false) ? game.titleId : CompatibilityService.shared.findTitleId(forGameTitle: game.name)
+        let isOot = resolvedTitleId?.uppercased() == "0400486024DEC000" || game.name.localizedCaseInsensitiveContains("Ocarina of Time")
         if let titleId = resolvedTitleId, !titleId.isEmpty {
             let ids = Set([titleId, titleId.uppercased(), titleId.lowercased()])
             for tid in ids {
@@ -118,7 +119,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
                 try? fm.createDirectory(at: appSupDir, withIntermediateDirectories: true)
                 let envFile = appSupDir.appendingPathComponent("env.txt")
                 let existing = try? String(contentsOf: envFile, encoding: .utf8)
-                let content = mergedEnvContent(existing: existing)
+                let content = mergedEnvContent(existing: existing, isOot: isOot)
                 try? content.write(to: envFile, atomically: true, encoding: .utf8)
             }
         }
@@ -128,7 +129,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
         if fm.fileExists(atPath: dmDir.path) {
             let bundleEnv = dmDir.appendingPathComponent("env.txt")
             let existing = try? String(contentsOf: bundleEnv, encoding: .utf8)
-            let content = mergedEnvContent(existing: existing)
+            let content = mergedEnvContent(existing: existing, isOot: isOot)
             try? content.write(to: bundleEnv, atomically: true, encoding: .utf8)
         }
         
@@ -136,7 +137,7 @@ public struct GameRuntimeConfig: Codable, Equatable {
         InputProfileManager.shared.exportMapping(for: game, config: self)
     }
 
-    private func mergedEnvContent(existing: String?) -> String {
+    private func mergedEnvContent(existing: String?, isOot: Bool = false) -> String {
         let managedKeys = ["DM_FPS_TARGET", "DM_METAL_HUD", "DM_OPMODE", "DM_RENDER_SCALE", "DM_PRESENT_UPSCALE", "DM_FULLSCREEN", "DM_LAUNCHER", "DM_CONTROLLER_PROFILE_ID"]
         var preservedLines: [String] = []
         if let existing = existing {
@@ -150,6 +151,18 @@ public struct GameRuntimeConfig: Codable, Equatable {
                 }
                 if !isManaged {
                     preservedLines.append(trimmed)
+                }
+            }
+        }
+        if isOot {
+            let ootDefaults = [
+                ("DM_UPSCALER", "metalfx"),
+                ("DM_FPS_HOLD", "off"),
+                ("DM_THERMAL_CAP", "0")
+            ]
+            for (k, v) in ootDefaults {
+                if !preservedLines.contains(where: { $0.hasPrefix("\(k)=") }) {
+                    preservedLines.append("\(k)=\(v)")
                 }
             }
         }
