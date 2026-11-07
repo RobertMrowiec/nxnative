@@ -889,15 +889,11 @@ namespace Ryujinx.Graphics.Shader.Translation.Optimizations
             context.BranchIfTrue(lblFound, hintFits);
 
             // The last entry whose start is at or below the address (entry 0 starts at 0, so there always is one)
-            Operand index = Local();
-            Operand step = Local();
-            context.Copy(index, Const(0));
-            context.Copy(step, context.ShiftRightU32(MapWord(Const(0), GmemMapCountWord), Const(1)));
-            Operand lblSearch = Label();
-            context.MarkLabel(lblSearch);
+            Operand index = Const(0);
 
+            for (int step = 1 << (GmemMapLog2 - 1); step != 0; step >>= 1)
             {
-                Operand candidate = context.IAdd(index, step);
+                Operand candidate = context.IAdd(index, Const(step));
                 Operand entry = context.IMultiply(candidate, Const(GmemMapEntryWords));
                 index = context.ConditionalSelect(AtOrBelow(MapWord(entry, 1), MapWord(entry, 0)), candidate, index);
             }

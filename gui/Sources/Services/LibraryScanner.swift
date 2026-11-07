@@ -442,8 +442,12 @@ public final class LibraryScanner {
                 }
             }
 
-            // Quick ad-hoc sign bundle wrapper WITHOUT --deep (validates plist/bundle wrapper in 0.05s)
-            self.runProcessWithTimeout(executable: "/usr/bin/codesign", arguments: ["--force", "--sign", "-", url.path], timeoutSeconds: 2.0)
+            // Remove any stale/partial bundle-level _CodeSignature left by interrupted bundle signing
+            // (signing the top-level .app hashes all of Contents/Resources/ which can be 40+ GB; Mach-O binaries in Contents/MacOS carry their own embedded LC_CODE_SIGNATURE)
+            let codeSigDir = url.appendingPathComponent("Contents/_CodeSignature")
+            if fm.fileExists(atPath: codeSigDir.path) {
+                try? fm.removeItem(at: codeSigDir)
+            }
 
             DispatchQueue.main.async {
                 let config = NSWorkspace.OpenConfiguration()
