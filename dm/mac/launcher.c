@@ -222,6 +222,7 @@ int main(int argc, char **argv) {
     snprintf(p, sizeof p, "%s/shader_map.tsv", dm); if (!stat(p, &st)) setenv("DM_NVN_SHMAP", p, 0);
     snprintf(p, sizeof p, "%s/aoc", res); if (!stat(p, &st)) setenv("DM_AOC_DIR", p, 0);
     snprintf(p, sizeof p, "%s/pso", res); if (!stat(p, &st)) setenv("DM_PSO_BUNDLE", p, 0);   // the bases of every shader pair: the first start builds none
+    snprintf(p, sizeof p, "%s/romfs_overlay", res); if (!stat(p, &st) && S_ISDIR(st.st_mode)) setenv("DM_ROMFS_OVERLAY", p, 0);   // game file replacements served over the RomFS (pack_app.py --romfs-overlay; hle_fs.c)
     if (*lang) setenv("DM_LANG", lang, 0);
     setenv("DM_WINDOW", "1", 0); setenv("DM_AUDIO", "1", 0);
     programs_table(contents, res, sup);
