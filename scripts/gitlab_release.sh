@@ -50,9 +50,7 @@ echo "==> [3/3] Preparing GitLab Release for $TAG_NAME..."
 TOKEN="${GITLAB_TOKEN:-${GL_TOKEN:-}}"
 if [ -z "$TOKEN" ]; then
     REMOTE_URL=$(git -C "$REPO_ROOT" remote get-url gitlab 2>/dev/null || true)
-    if [[ "$REMOTE_URL" =~ (glpat-[a-zA-Z0-9_.-]+) ]]; then
-        TOKEN="${BASH_REMATCH[1]}"
-    fi
+    TOKEN=$(echo "$REMOTE_URL" | sed -nE 's/.*(glpat-[^@]+)@.*/\1/p')
 fi
 
 if [ -n "$TOKEN" ]; then
@@ -136,13 +134,30 @@ EOF
             "$RELEASE_API")
         POST_CODE=$(echo "$POST_RESP" | tail -n1)
         if [ "$POST_CODE" = "409" ]; then
-            echo "==> Release $TAG_NAME already exists, updating via PUT..."
+            echo "==> Release $TAG_NAME already exists, updating description via PUT..."
             curl -s -X PUT \
                 --header "PRIVATE-TOKEN: $TOKEN" \
                 --header "Content-Type: application/json" \
                 --data "$RELEASE_PAYLOAD" \
                 "$RELEASE_API/$TAG_NAME" > /dev/null || true
         fi
+
+        # Ensure asset link is registered in release
+        echo "==> Registering DMG link in Release assets..."
+        LINK_PAYLOAD=$(cat <<EOF
+{
+  "name": "$DMG_NAME ($DMG_SIZE)",
+  "url": "$DIRECT_DOWNLOAD_URL",
+  "filepath": "/binaries/$DMG_NAME",
+  "link_type": "package"
+}
+EOF
+)
+        curl -s -X POST \
+            --header "PRIVATE-TOKEN: $TOKEN" \
+            --header "Content-Type: application/json" \
+            --data "$LINK_PAYLOAD" \
+            "$RELEASE_API/$TAG_NAME/assets/links" > /dev/null || true
 
         echo "✅ Release $TAG_NAME published/updated on GitLab!"
     else
