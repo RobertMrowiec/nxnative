@@ -381,6 +381,7 @@ extension Translations {
         "build.files_count": "(%d fichiers)",
         "system.tag_system": "Système",
         "settings.cat_general": "Général et Dossiers",
+        "settings.cat_updates": "Mises à jour",
         "settings.cat_keys": "Clés et Déchiffrement",
         "settings.cat_toolchain": "Outils et Compilateurs",
         "settings.cat_developer": "Développeur et Moteur",

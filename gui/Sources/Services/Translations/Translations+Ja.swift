@@ -381,6 +381,7 @@ extension Translations {
         "build.files_count": "(%d ファイル)",
         "system.tag_system": "システム",
         "settings.cat_general": "一般 & フォルダ",
+        "settings.cat_updates": "アップデート",
         "settings.cat_keys": "キー & 復号",
         "settings.cat_toolchain": "ツール & コンパイラ",
         "settings.cat_developer": "開発者 & エンジン",

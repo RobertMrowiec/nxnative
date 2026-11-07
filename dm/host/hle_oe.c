@@ -290,8 +290,11 @@ HLE_FORCE("_ZN2nn2oe22SetCpuOverclockEnabledEb", "CPU overclock switch (through 
 // oe::GetGraphicsScalingParameters). The SDK maps the parameter's first word 10 / 20 / 30 to scale 0 / 1 / 2. Donkey Kong Bananza keeps it as a quality tier: a byte of its graphics
 // settings (+0x1c7, main+0x549348, next to the handheld flag it takes from the operation mode at +0x1c4), and an index into {3, 12, 16} (main+0x1d1a604) whose value less 3 (0, 9, 13)
 // goes to a renderer parameter (main+0x549614). Which tier the console reports in which mode is not measured: the host answers 0 handheld and 1 console, following the operation mode
-static int gfx_scale(void) { const char *e = getenv("DM_GFX_SCALE"), *p = getenv("DM_RES_PRESET"); int v = e ? atoi(e) : p && (atoi(p) == 1 || !strcmp(p, "potato")) ? 2 : 0; return v >= 0 && v <= 2 ? v : 0; }
-HLE_FORCE("_ZN2nn2oe23GetCurrentGraphicsScaleEv", "graphics scale (Switch 2, through am): 0, the whole GPU (DM_GFX_SCALE sets 1 or 2)", int, h_oe_GfxScale, void) { return gfx_scale(); }
+#ifndef DM_GAME_RES_PRESETS
+#define DM_GAME_RES_PRESETS 0
+#endif
+static int gfx_scale(void) { const char *e = getenv("DM_GFX_SCALE"), *p = getenv("DM_RES_PRESET"); if (!e && !p && !DM_GAME_RES_PRESETS) return opmode() == 1; int v = e ? atoi(e) : p && (atoi(p) == 1 || !strcmp(p, "potato")) ? 2 : 0; return v >= 0 && v <= 2 ? v : 0; }
+HLE_FORCE("_ZN2nn2oe23GetCurrentGraphicsScaleEv", "graphics scale (Switch 2, through am): 0 handheld, 1 console (or 0..2 with res_presets / DM_GFX_SCALE)", int, h_oe_GfxScale, void) { return gfx_scale(); }
 HLE_FORCE("_ZN2nn2oe42SetGraphicsScaleChangedNotificationEnabledEb", "graphics scale change notification (Switch 2, through am); the host's scale never changes",
           void, h_oe_GfxScaleNotify, unsigned on) { (void)on; }
 // The frame length the game aims at (Switch 2 SDKs): oe::SetGraphicsTargetFrameRate maps up to 59 fps to mode 1, up to 119 to mode 2 and above to mode 3, SetGraphicsTargetFrameRateAuto

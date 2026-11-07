@@ -913,7 +913,7 @@ static int64_t img_serve(mount_t *m, int64_t k, const char *path) {
     if (!ent->type || ent->nlen <= 3 || memcmp(nm + ent->nlen - 3, ".zs", 3)) return k;   // other files keep their flags as they are
     uint8_t f = __atomic_load_n(&ent->flags, __ATOMIC_ACQUIRE);
     if (f & IMG_ENT_ZCHECKED) return f & IMG_ENT_BADZSTD ? img_subst(m, path, NULL, NULL) : k;
-    static int on = -1; if (on < 0) { const char *e = getenv("DM_ROMFS_ZSTD_CHECK"); on = !(e && *e == '0'); }
+    static int on = -1; if (on < 0) { const char *e = getenv("DM_ROMFS_ZSTD_CHECK"); on = e ? *e != '0' : (sizeof DM_GAME_ROMFS_SUBST > 1); }
     int bad = 0; int64_t r = k;
     if (on && ent->b >= 4) {
         uint8_t h[4];

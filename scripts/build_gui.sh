@@ -122,9 +122,9 @@ build_app_bundle() {
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.9.8</string>
+    <string>1.9.9</string>
     <key>CFBundleVersion</key>
-    <string>33</string>
+    <string>34</string>
     <key>LSMinimumSystemVersion</key>
     <string>26.0</string>
     <key>NSHighResolutionCapable</key>
