@@ -62,13 +62,13 @@ public struct SystemUpdatesCard: View {
                         
                         // Status Badge
                         if viewModel.isCheckingUpdate {
-                            StatusBadge(isPositive: true, text: "Verificando...")
+                            StatusBadge(isPositive: true, text: viewModel.tr("updates.status_checking"))
                         } else if viewModel.isApplyingUpdate || viewModel.isSyncingUpstream {
-                            StatusBadge(isPositive: true, text: "Atualizando...")
+                            StatusBadge(isPositive: true, text: viewModel.tr("updates.status_updating"))
                         } else if let info = viewModel.updateInfo, info.hasUpdate {
-                            StatusBadge(isPositive: true, text: "Nova Versão Disponível")
+                            StatusBadge(isPositive: true, text: viewModel.tr("updates.status_available"))
                         } else {
-                            StatusBadge(isPositive: true, text: "Versão Atualizada")
+                            StatusBadge(isPositive: true, text: viewModel.tr("updates.status_latest"))
                         }
                     }
                     
@@ -78,7 +78,7 @@ public struct SystemUpdatesCard: View {
                     if viewModel.isCheckingUpdate {
                         HStack(spacing: 12) {
                             ProgressView().controlSize(.small)
-                            Text("Consultando repositório remoto no GitLab para novos commits e releases...")
+                            Text(viewModel.tr("updates.checking_desc"))
                                 .font(.system(size: 12))
                                 .foregroundColor(NXTheme.textSecondary)
                             Spacer()
@@ -90,15 +90,15 @@ public struct SystemUpdatesCard: View {
                                 .font(.system(size: 24))
                                 .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Atualização Concluída com Sucesso!")
+                                Text(viewModel.tr("updates.completed_title"))
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                Text(viewModel.updateSuccessBanner ?? "O aplicativo foi recompilado e está pronto para reiniciar.")
+                                Text(viewModel.updateSuccessBanner ?? viewModel.tr("updates.completed_desc"))
                                     .font(.system(size: 11))
                                     .foregroundColor(NXTheme.textSecondary)
                             }
                             Spacer()
-                            Button("Reiniciar Agora") {
+                            Button(viewModel.tr("updates.relaunch_now")) {
                                 SoundEffectService.shared.play(.click)
                                 viewModel.relaunchUpdatedLauncher()
                             }
@@ -112,7 +112,7 @@ public struct SystemUpdatesCard: View {
                                 .font(.system(size: 22))
                                 .foregroundColor(.orange)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Aviso de Atualização")
+                                Text(viewModel.tr("updates.warning_title"))
                                     .font(.system(size: 13, weight: .bold))
                                     .foregroundColor(.white)
                                 Text(err)
@@ -120,7 +120,7 @@ public struct SystemUpdatesCard: View {
                                     .foregroundColor(NXTheme.textSecondary)
                             }
                             Spacer()
-                            Button("Tentar Novamente") {
+                            Button(viewModel.tr("updates.try_again")) {
                                 SoundEffectService.shared.play(.click)
                                 viewModel.checkForUpdates()
                             }
@@ -134,15 +134,15 @@ public struct SystemUpdatesCard: View {
                                 .font(.system(size: 22))
                                 .foregroundColor(NXTheme.secondary)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("Nova Atualização Encontrada!")
+                                Text(viewModel.tr("updates.found_title"))
                                     .font(.system(size: 13, weight: .bold, design: .rounded))
                                     .foregroundColor(.white)
-                                Text("[\(info.localCommit)] → [\(info.remoteCommit)] · \(info.commitMessages.count) novos commits disponíveis")
+                                Text(viewModel.tr("updates.found_desc", info.localCommit, info.remoteCommit, info.commitMessages.count))
                                     .font(.system(size: 11, design: .monospaced))
                                     .foregroundColor(NXTheme.textSecondary)
                             }
                             Spacer()
-                            Button("Atualizar para Nova Versão") {
+                            Button(viewModel.tr("updates.update_to_new_version")) {
                                 SoundEffectService.shared.play(.click)
                                 viewModel.applyUpdate(autoRelaunch: true)
                             }
@@ -155,7 +155,7 @@ public struct SystemUpdatesCard: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .font(.system(size: 20))
                                 .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                            Text("Você está utilizando a versão mais recente com todas as otimizações do motor.")
+                            Text(viewModel.tr("updates.already_latest_desc"))
                                 .font(.system(size: 12))
                                 .foregroundColor(NXTheme.textSecondary)
                             Spacer()
@@ -170,7 +170,7 @@ public struct SystemUpdatesCard: View {
                         }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "arrow.clockwise")
-                                Text("Verificar Atualizações")
+                                Text(viewModel.tr("updates.check_updates"))
                             }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
@@ -183,7 +183,7 @@ public struct SystemUpdatesCard: View {
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "arrow.down.circle.fill")
-                                    Text("Atualizar Agora")
+                                    Text(viewModel.tr("updates.update_now"))
                                 }
                             }
                             .buttonStyle(NXPrimaryButtonStyle())
@@ -197,12 +197,12 @@ public struct SystemUpdatesCard: View {
                             }) {
                                 HStack(spacing: 6) {
                                     Image(systemName: "arrow.triangle.merge")
-                                    Text("Sincronizar Upstream")
+                                    Text(viewModel.tr("updates.sync_upstream"))
                                 }
                             }
                             .buttonStyle(NXSecondaryButtonStyle())
                             .disabled(viewModel.isSyncingUpstream || viewModel.isApplyingUpdate)
-                            .help("Sincroniza commits do repositório upstream seedds/nxnative")
+                            .help(viewModel.tr("updates.sync_upstream_help"))
                         }
                         
                         Button(action: {
@@ -217,7 +217,7 @@ public struct SystemUpdatesCard: View {
                             }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
-                        .help("Reportar bugs, incompatibilidades ou sugerir melhorias no GitLab")
+                        .help(viewModel.tr("updates.issues_help"))
 
                         Button(action: {
                             if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests") {
@@ -231,7 +231,7 @@ public struct SystemUpdatesCard: View {
                             }
                         }
                         .buttonStyle(NXSecondaryButtonStyle())
-                        .help("Enviar Pull Requests / Merge Requests no GitLab")
+                        .help(viewModel.tr("updates.prs_help"))
                         
                         Spacer()
                     }
@@ -240,7 +240,7 @@ public struct SystemUpdatesCard: View {
                     if viewModel.isApplyingUpdate || viewModel.isSyncingUpstream || !viewModel.updateInstallLogs.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
-                                Text("Log de Atualização e Compilação")
+                                Text(viewModel.tr("updates.log_title"))
                                     .font(.system(size: 11, weight: .semibold))
                                     .foregroundColor(NXTheme.textSecondary)
                                 Spacer()
@@ -271,7 +271,7 @@ public struct SystemUpdatesCard: View {
             GlassCard {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        Label("O que há de novo & Correções nesta Versão", systemImage: "sparkles.rectangle.stack.fill")
+                        Label(viewModel.tr("updates.changelog_title"), systemImage: "sparkles.rectangle.stack.fill")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
                             .foregroundColor(NXTheme.textPrimary)
                         Spacer()
@@ -288,11 +288,11 @@ public struct SystemUpdatesCard: View {
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                changeItem("Vídeos e Cutscenes a 60 FPS: Desativa a rede neural NDVE (14 dispatches/frame que causavam queda para 20 fps) e aciona o reprodutor nativo 1080p sem perda de qualidade visual.")
-                                changeItem("Pacing de Tempo a 60 FPS: Patch de frame_step no controlador interno de taxa de quadros, mantendo o jogo rodando a 1.0x da velocidade normal sem aceleração.")
-                                changeItem("Upscaler MetalFX Spatial: Substitui o upscaler de 6 passes de compute do jogo pelo MetalFX nativo do macOS Tahoe (Metal 4), reduzindo o uso de GPU e mantendo taxa acima de 60 fps.")
-                                changeItem("Gerenciamento de Memória para Macs 16 GB: Render targets com compressão Metal lossy (rt_lossy), descarte imediato de páginas de texturas enviadas (DM_TEX_RELEASE=2) e supressão de texturas retiradas (pool_skip_retired).")
-                                changeItem("Overlays de Resolução Automáticos: Empacota automaticamente presets de resolução (docked, handheld e modo leve potato) em Contents/Resources/romfs_overlay.")
+                                changeItem(viewModel.tr("updates.changelog_oot_video"))
+                                changeItem(viewModel.tr("updates.changelog_oot_pacing"))
+                                changeItem(viewModel.tr("updates.changelog_oot_metalfx"))
+                                changeItem(viewModel.tr("updates.changelog_oot_memory"))
+                                changeItem(viewModel.tr("updates.changelog_oot_overlay"))
                             }
                             .padding(.leading, 8)
                         }
@@ -303,15 +303,15 @@ public struct SystemUpdatesCard: View {
                         VStack(alignment: .leading, spacing: 6) {
                             HStack(spacing: 6) {
                                 Text("🚀")
-                                Text("NxNative Launcher & Sistema")
+                                Text(viewModel.tr("updates.changelog_system_title"))
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                changeItem("Aba de Atualizações Integrada: Visualização direta de novos commits, novidades e instalação automatizada com reinicialização em 1 clique.")
-                                changeItem("Injeção Inteligente de Ambiente: Configurações de MetalFX e render scale salvas sem sobrescrever parâmetros específicos de títulos complexos.")
-                                changeItem("Isolamento Estrito por Jogo: Otimizações específicas de Ocarina of Time são ativadas exclusivamente pelo Title ID (0400486024DEC000), garantindo 100% de compatibilidade para todos os demais jogos da biblioteca.")
+                                changeItem(viewModel.tr("updates.changelog_system_updates"))
+                                changeItem(viewModel.tr("updates.changelog_system_env"))
+                                changeItem(viewModel.tr("updates.changelog_system_isolation"))
                             }
                             .padding(.leading, 8)
                         }
@@ -321,7 +321,7 @@ public struct SystemUpdatesCard: View {
                         // Commits list from git if available
                         if let info = viewModel.updateInfo, !info.commitMessages.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("Commits no Repositório Remoto:")
+                                Text(viewModel.tr("updates.remote_commits_title"))
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(NXTheme.textSecondary)
                                 ForEach(info.commitMessages.prefix(10), id: \.self) { msg in
@@ -341,7 +341,7 @@ public struct SystemUpdatesCard: View {
             // MARK: - Game Porting Instructions
             GlassCard {
                 VStack(alignment: .leading, spacing: 10) {
-                    Label("Como aplicar as melhorias nos seus jogos", systemImage: "info.circle.fill")
+                    Label(viewModel.tr("updates.instructions_title"), systemImage: "info.circle.fill")
                         .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(NXTheme.textPrimary)
                     
@@ -351,11 +351,11 @@ public struct SystemUpdatesCard: View {
                             HStack(spacing: 5) {
                                 Image(systemName: "plus.circle.fill")
                                     .foregroundColor(Color(red: 0.13, green: 0.77, blue: 0.37))
-                                Text("Para quem vai portar pela primeira vez:")
+                                Text(viewModel.tr("updates.instructions_new_title"))
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
-                            Text("100% automático. Basta ir na aba Portar Jogo, selecionar o NSP/NUP do Zelda Ocarina of Time e iniciar. O Launcher aplica todos os patches, compila o motor dmhost com MetalFX e gera o romfs_overlay sem nenhuma ação manual necessária.")
+                            Text(viewModel.tr("updates.instructions_new_desc"))
                                 .font(.system(size: 11))
                                 .foregroundColor(NXTheme.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -369,11 +369,11 @@ public struct SystemUpdatesCard: View {
                             HStack(spacing: 5) {
                                 Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                                     .foregroundColor(NXTheme.secondary)
-                                Text("Para quem já portou o jogo anteriormente:")
+                                Text(viewModel.tr("updates.instructions_existing_title"))
                                     .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
-                            Text("Como o bundle (.app) é independente, para receber o novo executável dmhost, os vídeos a 60 FPS e o overlay de resolução, clique em 'Portar novamente' na pasta do jogo. Como o cache de extração e shaders é preservado, o re-build dura cerca de 1 a 2 minutos.")
+                            Text(viewModel.tr("updates.instructions_existing_desc"))
                                 .font(.system(size: 11))
                                 .foregroundColor(NXTheme.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
