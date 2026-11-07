@@ -45,23 +45,41 @@ Thank you for your interest in contributing to **NxNative Launcher** and the **n
 
 ---
 
-## 🐞 Reporting Problems
+## 🐞 Reporting Problems & Community Issues
 
-When reporting an issue on [GitLab Issues](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues), please provide:
+We maintain dedicated GitLab issue templates to ensure issues are diagnosed and resolved quickly:
+
+- 🐛 **[Report a Bug or Crash](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues/new?issuable_template=Bug_Report)**: Use this for unexpected crashes, launch hangs, visual glitches, or launcher exceptions.
+- 🎮 **[Submit a Game Compatibility Report](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues/new?issuable_template=Game_Compatibility_Report)**: Report whether a specific Switch or Switch 2 game is playable, in-game, or needs patches on Apple Silicon.
+- 💡 **[Propose a Feature Request](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues/new?issuable_template=Feature_Request)**: Suggest new tools, UI improvements (Apple Liquid Glass), or controller features.
+- 📋 **[Browse All Active Issues](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues)**: See ongoing discussions, known workarounds, and open tickets.
+
+### When submitting an issue:
 1. **Device & OS**: Chip model (e.g., M1, M2 Pro, M3 Max, M4, iPhone 15 Pro) and macOS/iOS version.
-2. **Game Information**: Title ID and Game Build Version.
-3. **Logs**: Attach sanitized logs located at `~/Library/Logs/nxnative/<TitleID>.log`.
-   - You can also run `python3 scripts/bug_report.py <TitleID>` to produce a sanitized diagnostic report zip.
-4. **Description**: Clear description of the unexpected behavior (crash, visual glitch, frame pacing).
+2. **Game Information**: Title ID (16 hex digits) and Game Build Version.
+3. **Sanitized Logs**: Attach output from `~/Library/Logs/nxnative/<TitleID>.log` or generate a diagnostic zip with:
+   ```bash
+   python3 scripts/bug_report.py <TitleID>
+   ```
+4. **Description**: Clear description of the unexpected behavior and reproduction steps.
 
 ---
 
-## 🔀 Submitting a Merge Request (MR)
+## 🔀 Submitting Pull Requests & Merge Requests (MRs)
 
-1. **One change per MR** off `main`.
-2. **Keep commits descriptive**: Explain the symptom, root cause, and how you verified the fix.
-3. **Tests & Verification Checklist**:
-   - For GUI changes: verify clean build with `./scripts/build_gui.sh`.
+Community contributions are warmly welcomed! We accept Merge Requests (the GitLab counterpart to GitHub Pull Requests) directly on our repository.
+
+- 🔀 **[Open a New Merge Request](https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests/new)**
+- 📋 **[Browse Active Merge Requests](https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests)**
+
+### Merge Request Guidelines:
+1. **Fork or Branch**: Create your feature branch off `main` (e.g., `git checkout -b fix/m4-vsync-pacing`).
+2. **One Change per MR**: Keep changes focused and atomic.
+3. **Commit Messages in English**: Follow standard conventional format (`feat:`, `fix:`, `perf:`, `docs:`) with descriptive English explanations.
+4. **Zero-Hang Invariant**: Any change touching game launch or subprocess execution MUST follow the zero-hang watchdog rules (bounded timeouts, non-blocking UI, preserved environment).
+5. **English-Only Standard for Releases**: Per `GEMINI.md` and `04-release-standards.md`, all public release notes and MR descriptions must be in English.
+6. **Tests & Verification Checklist**:
+   - For GUI changes: verify clean build with `cd gui && swift build -c release` and `./scripts/build_gui.sh`.
    - For supported games list: run `python3 scripts/generate_supported_games.py`.
    - For engine modifications: ensure host regression checks pass.
    - For release packages: run `./scripts/gitlab_release.sh`.

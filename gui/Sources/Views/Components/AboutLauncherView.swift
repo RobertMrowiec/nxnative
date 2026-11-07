@@ -103,21 +103,55 @@ public struct AboutLauncherView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher") {
-                        NSWorkspace.shared.open(url)
+                HStack(spacing: 6) {
+                    Button(action: {
+                        if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "ladybug.fill")
+                                .font(.system(size: 9.5, weight: .bold))
+                            Text("Issues")
+                                .font(.system(size: 10.5, weight: .semibold))
+                        }
                     }
-                }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.up.right")
-                            .font(.system(size: 10, weight: .bold))
-                        Text("GitLab")
-                            .font(.system(size: 11, weight: .bold))
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.small)
+                    .help("Report bugs, compatibility status or feature requests")
+                    
+                    Button(action: {
+                        if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.triangle.merge")
+                                .font(.system(size: 9.5, weight: .bold))
+                            Text("PRs")
+                                .font(.system(size: 10.5, weight: .semibold))
+                        }
                     }
-                    .foregroundColor(.white)
+                    .buttonStyle(NXSecondaryButtonStyle())
+                    .controlSize(.small)
+                    .help("Submit Pull Requests and community contributions")
+                    
+                    Button(action: {
+                        if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher") {
+                            NSWorkspace.shared.open(url)
+                        }
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 9.5, weight: .bold))
+                            Text("GitLab")
+                                .font(.system(size: 10.5, weight: .bold))
+                        }
+                        .foregroundColor(.white)
+                    }
+                    .buttonStyle(NXPrimaryButtonStyle())
+                    .controlSize(.small)
                 }
-                .buttonStyle(NXPrimaryButtonStyle())
-                .controlSize(.small)
             }
             .padding(12)
             .nxGlassCard(cornerRadius: 12, tint: NXTheme.primary.opacity(0.28))

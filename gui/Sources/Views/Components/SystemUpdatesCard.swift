@@ -205,6 +205,34 @@ public struct SystemUpdatesCard: View {
                             .help("Sincroniza commits do repositório upstream seedds/nxnative")
                         }
                         
+                        Button(action: {
+                            if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "ladybug.fill")
+                                    .foregroundColor(Color.orange)
+                                Text("Issues")
+                            }
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        .help("Reportar bugs, incompatibilidades ou sugerir melhorias no GitLab")
+
+                        Button(action: {
+                            if let url = URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }) {
+                            HStack(spacing: 5) {
+                                Image(systemName: "arrow.triangle.merge")
+                                    .foregroundColor(Color.cyan)
+                                Text("Pull Requests")
+                            }
+                        }
+                        .buttonStyle(NXSecondaryButtonStyle())
+                        .help("Enviar Pull Requests / Merge Requests no GitLab")
+                        
                         Spacer()
                     }
                     
