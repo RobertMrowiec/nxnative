@@ -158,10 +158,15 @@ public struct GameRuntimeConfig: Codable, Equatable {
             let ootDefaults = [
                 ("DM_UPSCALER", "metalfx"),
                 ("DM_FPS_HOLD", "off"),
-                ("DM_THERMAL_CAP", "0")
+                ("DM_THERMAL_CAP", "0"),
+                ("DM_TEX_RELEASE", "1")
             ]
             for (k, v) in ootDefaults {
-                if !preservedLines.contains(where: { $0.hasPrefix("\(k)=") }) {
+                if let idx = preservedLines.firstIndex(where: { $0.hasPrefix("\(k)=") }) {
+                    if k == "DM_TEX_RELEASE" && preservedLines[idx] == "DM_TEX_RELEASE=2" {
+                        preservedLines[idx] = "DM_TEX_RELEASE=1"
+                    }
+                } else {
                     preservedLines.append("\(k)=\(v)")
                 }
             }

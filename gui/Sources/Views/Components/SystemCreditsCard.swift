@@ -14,10 +14,28 @@ public struct SystemCreditsCard: View {
                     
                     Spacer()
                     
-                    HStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Link(destination: URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues")!) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "ladybug.fill")
+                                Text("Issues")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.orange)
+                        }
+                        
+                        Link(destination: URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests")!) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.triangle.merge")
+                                Text("Pull Requests")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color.cyan)
+                        }
+
                         Link(destination: URL(string: "https://gitlab.com/rennan-group2/nxnative_Launcher")!) {
                             HStack(spacing: 4) {
-                                Text("rennan-group2/nxnative_Launcher")
+                                Text("GitLab")
                                 Image(systemName: "arrow.up.right")
                             }
                             .font(.system(size: 10, weight: .semibold))

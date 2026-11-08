@@ -5,7 +5,9 @@
   <a href="README.md"><b>📖 Overview & Guide</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games & Timeline</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
   <a href="CONTRIBUTING.md"><b>🤝 Contributing</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>📦 Releases & Downloads (.dmg)</b></a>
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues"><b>🐞 Issues</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests"><b>🔀 Merge Requests</b></a> &nbsp;&nbsp;|&nbsp;&nbsp;
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest"><b>📦 Latest Release (.dmg)</b></a>
 </div>
 
 <br>
@@ -22,7 +24,9 @@
   Switch 2 games have started too: <a href="dm/games/0400486024DEC000/README.md"><b>The Legend of Zelda: Ocarina of Time</b></a>, <a href="dm/games/040074A01BF12000/README.md"><b>Donkey Kong Bananza</b></a>, <a href="dm/games/0400380020056000/README.md"><b>Splatoon Raiders</b></a>, <a href="dm/games/04007EF01F8AE000/README.md"><b>Fire Emblem Fortune's Weave</b></a>, <a href="dm/games/0400A3A01EE4C000/README.md"><b>Pokémon Pokopia</b></a>, <a href="dm/games/04003F40232DE000/README.md"><b>Hyrule Warriors: Age of Imprisonment</b></a>, <a href="dm/games/0400C3F00006E000/README.md"><b>Mario Kart World</b></a>, <a href="dm/games/0400D4201C6EA000/README.md"><b>Mario Tennis Fever</b></a>, <a href="dm/games/0400245021D2C000/README.md"><b>Yoshi and the Mysterious Book</b></a> and <a href="dm/games/0400E88025B1A000/README.md"><b>Star Fox</b></a> play natively on the Mac, packed from one <a href="#switch-2-games"><code>.nup</code> file</a> or a dump of the game; iPhone and iPad are untested.
 </p>
 
-[![GitLab Release](https://img.shields.io/badge/Release-v1.9.7-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases)
+[![GitLab Release](https://img.shields.io/badge/Release-v1.9.9-purple.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest)
+[![GitLab Issues](https://img.shields.io/badge/GitLab-Issues%20%26%20Bugs-blue.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues)
+[![GitLab Merge Requests](https://img.shields.io/badge/GitLab-Pull%20%2F%20Merge%20Requests-green.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests)
 [![GitLab Repository](https://img.shields.io/badge/GitLab-rennan--group2%2Fnxnative__Launcher-orange.svg?logo=gitlab)](https://gitlab.com/rennan-group2/nxnative_Launcher)
 [![Core Engine](https://img.shields.io/badge/Core%20Engine-seedds%2Fnxnative-white.svg)](https://github.com/seedds/nxnative)
 [![Platform](https://img.shields.io/badge/Platform-macOS%2026.6%2B%20(Tahoe)%20%7C%20iOS%2026%2B%20(Metal%204)-blue.svg)](https://apple.com/macos)
@@ -812,6 +816,7 @@ Este projeto foi construído sobre o esforço e dedicação de projetos e desenv
   <p><b>NxNative Launcher is an independent open-source project and is not affiliated with, endorsed by, or connected to Nintendo Co., Ltd.</b></p>
   <a href="SUPPORTED_GAMES.md"><b>🎮 Supported Games (144+ Titles)</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
   <a href="CONTRIBUTING.md"><b>🤝 Contributing</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues"><b>🐞 Report Bug on GitLab</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
-  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases"><b>📦 Latest Release (.dmg)</b></a>
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/issues"><b>🐞 Issues & Bug Reports</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/merge_requests"><b>🔀 Pull / Merge Requests</b></a> &nbsp;&nbsp;•&nbsp;&nbsp;
+  <a href="https://gitlab.com/rennan-group2/nxnative_Launcher/-/releases/permalink/latest"><b>📦 Latest Release (.dmg)</b></a>
 </div>

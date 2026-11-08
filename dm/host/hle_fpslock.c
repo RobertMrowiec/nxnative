@@ -226,7 +226,7 @@ static void unity_vsync_tick(int target, const char *src) {
     if (nlog < 8) { nlog++; LOG("main: Unity QualitySettings.vSyncCount (level %d) %u → %u vsyncs (%d fps; %s)", lvl, cur, want, target, src); }
 }
 // The running main's engine limiters, found once: by the first present (dm_fps_lock_tick) or by the graphics layer's present cap, which may ask first (dm_fps_lock_engine, from the acquire)
-static lock_t ue[4], target_lock, unity_tfr; static const lock_t *rows[NLOCKS + 6]; static int nrow, nier, ue_missing; static uint8_t *base; static uint32_t display;
+static lock_t ue[4], target_lock; static const lock_t *rows[NLOCKS + 5]; static int nrow, nier, trinity, ue_missing; static uint8_t *base; static uint32_t display;
 static pthread_once_t g_found = PTHREAD_ONCE_INIT;
 static void lock_find(void) {
     for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) {
