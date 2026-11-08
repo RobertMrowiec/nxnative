@@ -46,6 +46,11 @@ sys_resource	0x3000000
 shader_groups	/Shader/=shader /Lib/=lib /Effect/=effect /Layout2Shader/=layout /Movie/=movie
 shader_note	0400486024DEC000 shaders
 
+# ---- Frame rate ----
+# The game steps its time by a frame ratio, its base rate / its frame rate, whatever the frame took: frames longer than a vsync played in slow motion. The ratio takes the host's
+# frame step instead (MATCH_FRAME_STEP in patches.py, found by its function on any build that keeps it): 1 vsync at 60 fps, 2 when 60 does not hold, so game time = real time
+fps_target	60
+
 # ---- Graphics ----
 # agl wraps its depth clears in render conditions, as on Donkey Kong Bananza and Splatoon Raiders: in Kokiri Forest the main opaque pass tests EQUAL against a copy of the prepass depth
 # that a conditional clear (skipped on the console) wiped first, so no lit geometry landed and the full-screen sky showed through everywhere (a white scene)
