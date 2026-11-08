@@ -383,8 +383,22 @@ public final class UpdateCheckerService {
         }
         
         let pid = ProcessInfo.processInfo.processIdentifier
-        let script = "while kill -0 \(pid) 2>/dev/null; do sleep 0.2; done; sleep 0.3; open \"\(targetBundle)\""
-        
+        // Wait for this process to exit, give LaunchServices time to tear the old instance down
+        // (open right after exit can land on the dying instance and launch nothing), then retry
+        // a few times; -n forces a new instance even if LaunchServices still sees the old one.
+        // Everything is logged so a failed relaunch leaves evidence.
+        let script = """
+        exec >> "$HOME/Library/Logs/nxnative/launcher_relaunch.log" 2>&1
+        echo "== $(date) waiting for pid \(pid) =="
+        while kill -0 \(pid) 2>/dev/null; do sleep 0.2; done
+        sleep 1.5
+        for i in 1 2 3 4 5; do
+            if /usr/bin/open -n "\(targetBundle)"; then echo "relaunched on try $i"; exit 0; fi
+            echo "open failed (try $i)"; sleep 2
+        done
+        echo "giving up"
+        """
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/sh")
         process.arguments = ["-c", script]

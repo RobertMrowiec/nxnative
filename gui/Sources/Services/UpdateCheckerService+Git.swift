@@ -45,11 +45,24 @@ extension UpdateCheckerService {
             let sourceApp = fm.fileExists(atPath: workspaceApp.path) ? workspaceApp : repoApp
             guard fm.fileExists(atPath: sourceApp.path) else { return }
             reportProgress("==> Updating running bundle at \(currentBundleURL.path)...")
+            // Replace Contents wholesale, then re-sign: a merge copy leaves the old build's files
+            // beside the new ones, which breaks the bundle's resource seal ("a sealed resource is
+            // missing or invalid") and can keep the relaunched app from opening.
+            let script = """
+            set -e
+            rm -rf "\(currentBundleURL.path)/Contents"
+            cp -R "\(sourceApp.path)/Contents" "\(currentBundleURL.path)/Contents"
+            codesign --force --deep --sign - "\(currentBundleURL.path)"
+            /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f "\(currentBundleURL.path)" || true
+            """
             let cpProc = Process()
-            cpProc.executableURL = URL(fileURLWithPath: "/bin/cp")
-            cpProc.arguments = ["-Rf", "\(sourceApp.path)/Contents", "\(currentBundleURL.path)/"]
+            cpProc.executableURL = URL(fileURLWithPath: "/bin/sh")
+            cpProc.arguments = ["-c", script]
             try? cpProc.run()
             cpProc.waitUntilExit()
+            if cpProc.terminationStatus != 0 {
+                reportProgress("⚠️ Updating the running bundle failed (code \(cpProc.terminationStatus)); the workspace copy at \(sourceApp.path) is good.")
+            }
         }
     }
     

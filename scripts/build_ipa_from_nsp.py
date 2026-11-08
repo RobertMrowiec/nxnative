@@ -69,6 +69,7 @@ LANGUAGE = ''                           # game language, a code or a name: 'ja',
 KEEP_EXTRACTED = True                   # keep the extracted game files after the IPA is built (saves extraction next time; as big as the game files); False deletes them
 DM_ENV_FILE = ''                        # optional: environment switches for a diagnostic build (one KEY=VALUE per line)
 SEEN_SHADERS = False                    # PLATFORM 'mac' / 'mac-app': build only the shaders the profile's playtests used (shader_seen.tsv) and those the last runs' logs reported missing, not the whole map; areas the list does not cover draw without the rest until this runs again
+SEEN_SHADERS_GAMES = {'0400A3A01EE4C000'}   # title IDs built as if SEEN_SHADERS were on, when SEEN_SHADERS is off and no --seen-shaders / --no-seen-shaders is given (Pokémon Pokopia: 131k shaders, a full map is a 131 GB cache)
 PSO_GPUS = ''                           # NVN games: GPU architectures the app gets the shader pairs' pipeline bases for, made on this Mac (metal-tt, comma-separated: 'g18p' = A19 / A19 Pro of the iPhone 17 family;
                                         #   another device's name is in its log when the app has none for it), so the device does not build them on its first start; each adds about 650 MB to the app (Breath of the Wild) and minutes to a first build; 'none' = no archive;
                                         #   empty = by the game's profile: its pso_gpu key (whitespace-separated architectures, joined with commas) when it sets pso_mtl4 on (the Metal 4 path, the only one that reads the archive on iOS, is on for it),
@@ -3061,6 +3062,8 @@ def main(args=None):
         g, provisional = gamemod.load(f'{app:016X}'), True
         say('[RED] provisional game profile: values guessed from the survey, the game may not boot; bring it up per docs/agents after packing')
     say(f'game profile: {g.id}{" (provisional: " + str(g.dir) + ")" if provisional else ""}')
+    if args.seen_shaders is None and not seen_shaders and mac and g.id in SEEN_SHADERS_GAMES:
+        seen_shaders = True; say(f'SEEN_SHADERS_GAMES lists {g.id}: building only the shaders its playtests used, as with --seen-shaders')
     if seen_shaders and not g.table('shader_seen.tsv').is_file(): raise BuildError(f'--seen-shaders: game profile {g.id} has no list of the shaders its playtests used ({g.table("shader_seen.tsv")}): build the whole map, without this option')
     builds, need = g.builds(), g.words('shader_versions')
     have, derived = nsp_versions(fam), False
