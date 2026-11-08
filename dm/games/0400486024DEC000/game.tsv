@@ -57,8 +57,11 @@ gmem_skip	on
 # Pool tables give a finalized texture ID with no view the dummy instead of making its texture again: about 2.5 GB at the house-to-forest change (upstream #1393, nvn_mtl.m pool_skip_retired)
 pool_skip_retired	on
 # Guest copies of textures in CPU_NO_ACCESS pools (render and depth targets the game cannot read) given back once their GPU copy exists (upstream #1447, nvn_mtl.m rel_*): about 550 MB outdoors.
-# 2: also CPU-visible copies, pages unwritten since their upload (1.85 GB more in Kokiri Forest: peak 7.0 → 5.2 GB with the iPhone's guest files); no texture lost and no problem seen in a 4-minute play test
-tex_release	2
+# Level 1 preserves CPU-visible texture pages, curing the magenta/pink and black surfaces on area transitions.
+tex_release	1
+# As Tears of the Kingdom: the CPU writes terrain tiles' height, blend and hole maps without NVN flush.
+tex_flush_upload	on
+tex_dirty_upload	on
 # Large block-compressed textures from the game files kept without their finest level on the GPU (tex_soft, ported from the plumber-racer-2 fork)
 tex_soft	on
 # rt_drop (render targets taken over by a later-drawn one become 1x1 stand-ins, nvn_mtl.m rtd_sweep) is off: footprint 8.9 → 7.1 GB at the Kokiri Forest doorway, but the game still

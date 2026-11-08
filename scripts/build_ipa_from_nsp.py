@@ -2642,6 +2642,8 @@ def build_env_file(work, env_file, motion, g=None):
         pairs.setdefault('DM_UPSCALER', 'metalfx')
         pairs.setdefault('DM_FPS_HOLD', 'off')
         pairs.setdefault('DM_THERMAL_CAP', '0')
+        if pairs.get('DM_TEX_RELEASE') == '2': pairs['DM_TEX_RELEASE'] = '1'
+        else: pairs.setdefault('DM_TEX_RELEASE', '1')
     f = work / 'build_env.txt'
     f.write_text(''.join(f'{k}={v}\n' for k, v in pairs.items()))
     return str(f)
