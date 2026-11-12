@@ -238,6 +238,10 @@ static void *ctl_main(void *arg) {
                 if (!strcmp(line, "dump")) { crash_dump_now("DM_CTL dump"); continue; }
                 if (!strncmp(line, "program ", 8)) { void dm_oe_execute(int index, const void *param, size_t n); LOG("DM_CTL: oe::ExecuteProgram(%d)", atoi(line + 8)); dm_oe_execute(atoi(line + 8), NULL, 0); continue; }
                 if (!strncmp(line, "webshot ", 8)) { void front_web_shot(const char *path); front_web_shot(line + 8); continue; }
+                if (!strncmp(line, "burst ", 6)) {   // "burst <n> <path with %d>": the next n presented frames, consecutive (frame-generation tests)
+                    int bn = atoi(line + 6); const char *bp = strchr(line + 6, ' ');
+                    for (int k = 1; bp && k <= bn && k <= 8; k++) { char p[1024]; snprintf(p, sizeof p, bp + 1, k); dm_gfx_shot_at(k, p); }
+                    LOG("DM_CTL: burst of %d frames", bn); continue; }
                 if (!strncmp(line, "shot ", 5)) { dm_gfx_shot_at(1, line + 5); LOG("DM_CTL: screenshot of the next frame → %s", line + 5); continue; }
                 if (!strncmp(line, "texlist ", 8)) { void dm_gfx_texlist(int target); dm_gfx_texlist(atoi(line + 8)); continue; }
                 if (!strcmp(line, "restop")) { void dm_gfx_restop(void); dm_gfx_restop(); continue; }   // what the residency set holds (nvn_mtl.m res_top)

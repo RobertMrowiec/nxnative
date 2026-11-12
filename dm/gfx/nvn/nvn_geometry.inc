@@ -603,6 +603,10 @@ static void mesh_tasks_draw(const p_draw *dw) {
     { static int skip = -1; if (skip < 0) { const char *e = getenv("DM_NVN_SKIP_MESH"); skip = e && atoi(e); if (skip) MLOG("DM_NVN_SKIP_MESH: task / mesh draws dropped (diagnostic; the picture is wrong)"); } if (skip) return; }
     __unsafe_unretained NvProg *pr = prog_get(S.prog);
     if (skip_fs_draw(pr)) return;   // DM_NVN_SKIP_FS by the fragment shader, as for other draws
+    // DM_NVN_FOLIAGE_SHADOWS=0 (a quality option): task / mesh draws with no pixel shader are dropped. In Ocarina of Time those are the foliage's depth-only draws into its
+    // shadow maps: the grass, bushes and canopy stop casting shadows, everything else is drawn as before
+    { static int fsh = -1; if (fsh < 0) { const char *e = getenv("DM_NVN_FOLIAGE_SHADOWS"); fsh = !(e && !strcmp(e, "0")); if (!fsh) MLOG("DM_NVN_FOLIAGE_SHADOWS=0: depth-only task / mesh draws (foliage shadows) are not drawn"); }
+      if (!fsh && pr && !pr->sh[1]) { static uint64_t n; if (!n++) MLOG("foliage shadows: first depth-only task / mesh draw dropped"); return; } }
     NvShader *ts = pr ? pr->sh[3] : nil, *ms = pr ? pr->sh[4] : nil;
     if (ts && ts->mesh_kind != 1) ts = nil;
     if (!ms || ms->mesh_kind != 2 || !ms->fn || (ts ? !ts->fn : !ms->mesh_notask)) {
@@ -613,7 +617,7 @@ static void mesh_tasks_draw(const p_draw *dw) {
     if (!raster || raster->sh[1] != pr->sh[1] || raster->sh[0]) { raster = [NvProg new]; raster->sh[1] = pr->sh[1]; pr->geo_lean_raster = raster; }
     uint64_t ind = 0, ind_first = 0;
     if (dw->ind) { void *mb; uint64_t mo;
-        if (!mdx_find(dw->ind, dw->ind, &ind)) { mdx_run(dw, NULL); if (!mdx_find(dw->ind, dw->ind, &ind)) ind = 0; }
+        if (!mdx_find(dw->ind, dw->ind, &ind)) { mdx_run(dw, NULL, 0); if (!mdx_find(dw->ind, dw->ind, &ind)) ind = 0; }
         if (!ind || !mtl_gpu_addr(dw->ind, 8, &mb, &mo, &ind_first)) { RED_ONCE(154, "DrawMeshTasksIndirect record at %#llx is in no memory pool: draw skipped", (unsigned long long)dw->ind); return; }
         ind_first += 4; }
     g_mtk.on = 1; g_mtk.miss = 0; g_mtk.ts = ts; g_mtk.ms = ms; g_mtk.first = (uint32_t)dw->first; g_mtk.count = (uint32_t)dw->count;
@@ -623,7 +627,7 @@ static void mesh_tasks_draw(const p_draw *dw) {
     draw_(&triangle, NULL);
     g_geo_program = nil; g_mtk.on = 0; args_dirty_all();
     if (g_mtk.miss) { g_mtk_wait++; return; }
-    swrite_note(pr); g_wr_epoch++;
+    swrite_note(pr); g_wr_epoch++; g_sub_mesh = 1;
     if (!g_mtk_n++) MLOG("task / mesh: first draw, task %s mesh %s fragment %s, %u workgroups from %u%s", ts ? ts->key : "-", ms->key, pr->sh[1] ? pr->sh[1]->key : "-", g_mtk.count, g_mtk.first, ind ? " (indirect)" : "");
 }
 static uint64_t g_geo_mesh_n, g_geo_mesh_wait;   // mesh draws; draws the compute path drew while their mesh pipeline was built

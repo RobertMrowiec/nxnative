@@ -837,13 +837,115 @@ NVN(nvnCommandBufferSaveZCullData, void, NVNcommandBuffer *c, NVNbufferAddress a
 // depth-stencil state still does. The host does no ZCull, so there is nothing to set (Donkey Kong Bananza: EQUAL, 0xff)
 NVN_NOPROTO(nvnCommandBufferSetStencilCullCriteria, void, NVNcommandBuffer *c, int func, int ref) { (void)c; (void)func; (void)ref; }
 static _Atomic uint64_t g_sync_ns;
+// Blocked SyncWait ages: how far behind the newest physical fence the waited fence is when a wait
+// blocks, and how long it blocks. Age 0 = the game waits the fence of the newest submission (no
+// CPU/GPU overlap possible); a healthy pipeline waits fences 2+ submissions old, which are done.
+static _Atomic uint64_t g_syncage_ns[4], g_syncage_n[4];   // buckets by fence age in submissions: 0, 1, 2-4, 5+
+static void sync_age_rec3(const sync_t *o, uint64_t dt);   // receipt-backed syncs: defined after nvn_queue.inc, which holds the receipt type
+static void sync_age_rec(uint64_t fence, uint64_t dt) {
+    uint64_t newest = mtl_last_fence(); uint64_t age = newest > fence ? newest - fence : 0;
+    int b = age == 0 ? 0 : age == 1 ? 1 : age <= 4 ? 2 : 3;
+    atomic_fetch_add(&g_syncage_ns[b], dt); atomic_fetch_add(&g_syncage_n[b], 1);
+}
+// The guest callsites of same-frame blocked SyncWaits (age <= 1, blocked >= 0.5 ms): a small table,
+// summed and logged with the frame probes so the serializing caller can be named.
+typedef struct { uint64_t lr, ns, n; char thread[32]; } syncwho_t;
+static syncwho_t g_syncwho[24]; static pthread_mutex_t g_syncwho_mu = PTHREAD_MUTEX_INITIALIZER;
+static void sync_who_rec(const void *ra, uint64_t dt) {
+    uint64_t lr = (uint64_t)(uintptr_t)ra;
+    pthread_mutex_lock(&g_syncwho_mu);
+    for (int i = 0; i < 24; i++) {
+        if (g_syncwho[i].lr == lr || !g_syncwho[i].lr) {
+            if (!g_syncwho[i].lr) pthread_getname_np(pthread_self(), g_syncwho[i].thread, sizeof g_syncwho[i].thread);
+            g_syncwho[i].lr = lr; g_syncwho[i].ns += dt; g_syncwho[i].n++; break;
+        }
+    }
+    pthread_mutex_unlock(&g_syncwho_mu);
+}
+void sync_who_report(void) {
+    pthread_mutex_lock(&g_syncwho_mu);
+    for (int i = 0; i < 24; i++) if (g_syncwho[i].lr) {
+        module_t *m = module_of((void *)(uintptr_t)g_syncwho[i].lr);
+        if (m) LOG("[nvn] [syncwho] %s+%#llx on '%s': %llu blocked same-frame waits, %.1f ms total", m->name,
+            (unsigned long long)(g_syncwho[i].lr - (uint64_t)(uintptr_t)m->base), g_syncwho[i].thread, (unsigned long long)g_syncwho[i].n, g_syncwho[i].ns / 1e6);
+        else LOG("[nvn] [syncwho] %#llx: %llu waits, %.1f ms", (unsigned long long)g_syncwho[i].lr, (unsigned long long)g_syncwho[i].n, g_syncwho[i].ns / 1e6);
+        g_syncwho[i].lr = 0; g_syncwho[i].ns = g_syncwho[i].n = 0;
+    }
+    pthread_mutex_unlock(&g_syncwho_mu);
+}
+// DM_NVN_METERFAKE=<module offset, hex>: the blocked SyncWait at that one guest callsite (the
+// frame loop's GPU meter in Ocarina of Time, main+0x40cde0) returns once its fence is encoded
+// instead of GPU-complete, giving the game its console CPU/GPU overlap back. The game's buffer
+// rings are built for one frame of overlap; what this skews is its GPU-time measurement, whose
+// consumers (frame step, dynamic resolution) this host already stubs. Experimental.
+#define METERFAKE_SITES 4
+static const void *g_mf_ra[METERFAKE_SITES]; static uint64_t g_mf_prev[METERFAKE_SITES][4]; static int g_mf_n = -1;
+// DM_NVN_METERFAKE_DEPTH: how many frames in flight the faked wait allows (default 1, console-like). At 2 the wait passes once the submission TWO boundaries back has completed:
+// the frame period stops being encode + GPU tail and becomes max(build, encode, GPU busy). The encoded wait below still runs at every boundary, so DM_NVN_SHADOWCOPY snapshots
+// stay race-free at any depth; only bindings left live (shadow holes) see the same per-frame rewrite hazard they already had at depth 1.
+static int meterfake_depth(void) { static int v = -1; if (v < 0) { const char *e = getenv("DM_NVN_METERFAKE_DEPTH"); v = e ? atoi(e) : 1; if (v < 1) v = 1; if (v > 3) v = 3; if (v > 1) LOG("[nvn] meter fake: %d frames in flight (DM_NVN_METERFAKE_DEPTH)", v); } return v; }
+// Overlap throttle: frames that bind many ranges LIVE (ubp_get refused them: GPU-written or unreadable) are the ones that hang under run-ahead — the soak's hang zones ran
+// 2,000-3,000 live bindings a frame against ~400 elsewhere. Past the threshold the next boundaries wait honestly (console-serial), and the overlap resumes once the zone passes.
+static _Atomic uint64_t g_mf_hold_until; static _Atomic uint64_t g_mf_holds;
+static int mf_live_max(void) { static int v = -1; if (v < 0) { const char *e = getenv("DM_NVN_MF_LIVE_MAX"); v = e ? atoi(e) : 1200; } return v; }
+static int meterfake_site(const void *ra) {
+    if (g_mf_n < 0) {
+        g_mf_n = 0; const char *e = getenv("DM_NVN_METERFAKE");
+        if (!e) e = "40cde0,40ce34";   // both frame-loop sites. Their overlap alone tore the foliage parameter blocks the game rewrites right after 40cde0 (white grass, ~80/1000 presents
+                                       // docked); DM_NVN_MF_MESHWAIT (on by default under the overlap) makes 40cde0 also wait for the latest task / mesh segment: 0 flashes, docked walk
+                                       // 32-39 -> 35-40 fps, Kokiri spawn 33.6 -> 35.8 fps on an M1 Max (2026-11-10). "40ce34" alone gained nothing docked; DM_NVN_METERFAKE=0 turns it off
+        if (!strcmp(e, "0") || !strcmp(e, "off")) e = NULL;
+        if (e) { uint64_t base = 0;
+            for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) { base = (uint64_t)(uintptr_t)g_mod[i].base; break; }
+            char buf[256]; strncpy(buf, e, sizeof buf - 1); buf[sizeof buf - 1] = 0;
+            for (char *t = strtok(buf, ","); t && g_mf_n < METERFAKE_SITES; t = strtok(NULL, ",")) {
+                uint64_t off = strtoull(t, NULL, 16);
+                if (base && off) { g_mf_ra[g_mf_n++] = (const void *)(uintptr_t)(base + off);
+                    LOG("[nvn] meter fake: the SyncWait returning to main+%#llx waits the previous frame's fence, not its own (DM_NVN_METERFAKE)", (unsigned long long)off); }
+            } }
+    }
+    for (int i = 0; i < g_mf_n; i++) if (g_mf_ra[i] == ra) return i;
+    return -1;
+}
+int nvn_meterfake_active(void) { meterfake_site(NULL); return g_mf_n > 0; }   // nvn_mtl.m shadow_on: overlap on → shadow copies default on
+static int nvn_sync_encoded_wait(const sync_t *s, uint64_t timeout);   // wait only for the receipt's publication (encode order)
+static uint64_t sync_receipt_fence(const sync_t *s);                   // the published receipt's physical fence (0 while unpublished)
+static int evsig_log_on(void);   // DM_NVN_EVSIG_LOG (below)
 NVN(nvnSyncWait, NVNsyncWaitResult, const NVNsync *s, uint64_t timeout) {
     const sync_t *o = (const sync_t *)s;
     if (!o->fenced) return NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED;
-    if(o->fenced==3) { if(nvn_sync_wait(o,0)) return NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED; uint64_t t0=now_ns(); int ok=nvn_sync_wait(o,timeout); atomic_fetch_add(&g_sync_ns,now_ns()-t0); return ok?NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED:NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED; }
+    uint64_t dm_nvn_frame_count(void);
+    int mf = o->fenced == 3 && atomic_load_explicit(&g_mf_hold_until, memory_order_relaxed) <= dm_nvn_frame_count() ? meterfake_site(__builtin_return_address(0)) : -1;
+    if (mf >= 0) {
+        // One frame in flight, as the console runs: this wait passes once its own submission is
+        // encoded and the PREVIOUS submission waited here has completed on the GPU.
+        uint64_t t0 = now_ns(); int ok = nvn_sync_encoded_wait(o, timeout);
+        uint64_t fence = sync_receipt_fence(o);
+        int d = meterfake_depth();
+        if (ok && g_mf_prev[mf][d - 1]) ok = mtl_wait(g_mf_prev[mf][d - 1], timeout);
+        // DM_NVN_MF_MESHWAIT=1: at this site the wait also covers the latest submission with task / mesh draws. Ocarina of Time rewrites its foliage parameter blocks right after
+        // main+0x40cde0, and its foliage mesh shaders read them through raw bindless loads no snapshot reaches (one-frame white grass). Waiting for the foliage's submission keeps
+        // the overlap with the GPU work after it (lighting, post-processing, UI) without letting the rewrite meet a foliage draw still in flight
+        { static int mw = -1; if (mw < 0) { int mtl_meshwait_on(void); mw = mtl_meshwait_on(); if (mw) LOG("[nvn] meter fake: the first site also waits for the latest task / mesh submission (DM_NVN_MF_MESHWAIT)"); }
+          if (mw && ok && mf == 0) { int mtl_mesh_wait(uint64_t); ok = mtl_mesh_wait(timeout); } }
+        if (fence) { for (int k = 3; k > 0; k--) g_mf_prev[mf][k] = g_mf_prev[mf][k - 1]; g_mf_prev[mf][0] = fence; }
+        uint64_t dt = now_ns() - t0; atomic_fetch_add(&g_sync_ns, dt);
+        if (dt > 500000) sync_who_rec(__builtin_return_address(0), dt);
+        { void mtl_live_guard_arm(void); mtl_live_guard_arm(); }   // DM_NVN_LIVE_GUARD: from here the game rewrites its per-frame blocks while the GPU still reads them raw; protect, and stall only an actual conflicting write
+        return ok ? NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED : NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED;
+    }
+    if(o->fenced==3) { if(nvn_sync_wait(o,0)) return NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED; uint64_t t0=now_ns(); int ok=nvn_sync_wait(o,timeout); uint64_t dt=now_ns()-t0;
+        if (evsig_log_on()) { uint64_t base = 0; for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) { base = (uint64_t)(uintptr_t)g_mod[i].base; break; }
+            char tn[64] = {0}; pthread_getname_np(pthread_self(), tn, sizeof tn);
+            LOG("[evsig] t=%.3f frame %llu syncwait(receipt) %.2f ms thread '%s' ra main+%#llx", t0 / 1e6, (unsigned long long)dm_nvn_frame_count(), dt / 1e6, tn, (unsigned long long)((uint64_t)(uintptr_t)__builtin_return_address(0) - base)); } atomic_fetch_add(&g_sync_ns,dt); sync_age_rec3(o,dt); if(dt>500000) sync_who_rec(__builtin_return_address(0),dt); return ok?NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED:NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED; }
     int (*w)(uint64_t, uint64_t) = o->fenced == 2 ? mtl_wait_acq : mtl_wait;
     if (w(o->fence, 0)) return NVN_SYNC_WAIT_RESULT_ALREADY_SIGNALED;
-    uint64_t t0 = now_ns(); int ok = w(o->fence, timeout); atomic_fetch_add(&g_sync_ns, now_ns() - t0);   // the frame's blocked SyncWait time (@sync_ms)
+    uint64_t t0 = now_ns(); int ok = w(o->fence, timeout); uint64_t dt = now_ns() - t0; atomic_fetch_add(&g_sync_ns, dt);   // the frame's blocked SyncWait time (@sync_ms)
+    if (evsig_log_on()) { uint64_t base = 0; for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) { base = (uint64_t)(uintptr_t)g_mod[i].base; break; }
+        char tn[64] = {0}; pthread_getname_np(pthread_self(), tn, sizeof tn);
+        LOG("[evsig] t=%.3f frame %llu syncwait %.2f ms fence %llu thread '%s' ra main+%#llx", t0 / 1e6, (unsigned long long)dm_nvn_frame_count(), dt / 1e6, (unsigned long long)o->fence, tn, (unsigned long long)((uint64_t)(uintptr_t)__builtin_return_address(0) - base)); }
+    sync_age_rec(o->fence, dt);
+    if (dt > 500000) sync_who_rec(__builtin_return_address(0), dt);
     return ok ? NVN_SYNC_WAIT_RESULT_CONDITION_SATISFIED : NVN_SYNC_WAIT_RESULT_TIMEOUT_EXPIRED;
 }
 NVN(nvnEventBuilderSetDefaults, void, NVNeventBuilder *b) { memset(b, 0, sizeof(ev_builder_t)); }
@@ -859,7 +961,18 @@ NVN_NOPROTO(nvnEventGetMemoryOffset, int64_t, const NVNevent *e) { return ((cons
 NVN(nvnEventFinalize, void, NVNevent *e) { ((ev_t *)e)->magic = 0; }
 NVN(nvnEventGetValue, uint32_t, const NVNevent *e) { return atomic_load_explicit((_Atomic uint32_t *)((const ev_t *)e)->val,memory_order_acquire); }
 static void ev_signal(const ev_t *e, int mode, uint32_t v) { nvn_event_publish(e->val,mode,v); }
-NVN(nvnEventSignal, void, NVNevent *e, NVNeventSignalMode m, uint32_t v) { ev_signal((const ev_t *)e, m, v); }
+// DM_NVN_EVSIG_LOG=<first frame>-<last frame> (diagnostic): CPU event signals and blocked SyncWaits with time, thread and guest return address, for those frames
+static int evsig_log_on(void) {
+    static long a = -2, b; if (a == -2) { const char *e = getenv("DM_NVN_EVSIG_LOG"); a = -1; if (e && sscanf(e, "%ld-%ld", &a, &b) != 2) a = -1; }
+    if (a < 0) return 0; uint64_t f = dm_nvn_frame_count(); return (long)f >= a && (long)f <= b;
+}
+NVN(nvnEventSignal, void, NVNevent *e, NVNeventSignalMode m, uint32_t v) {
+    if (evsig_log_on()) {   {   // DM_NVN_EVSIG_LOG (diagnostic): who signals NVN events from the CPU, and when
+        uint64_t base = 0; for (int i = 0; i < g_nmod; i++) if (!strcmp(g_mod[i].name, "main")) { base = (uint64_t)(uintptr_t)g_mod[i].base; break; }
+        char tn[64] = {0}; pthread_getname_np(pthread_self(), tn, sizeof tn);
+        LOG("[evsig] t=%.3f frame %llu word %p mode %d value %u thread '%s' ra main+%#llx", now_ns() / 1e6, (unsigned long long)dm_nvn_frame_count(), (void *)((const ev_t *)e)->val, (int)m, v, tn,
+            (unsigned long long)((uint64_t)(uintptr_t)__builtin_return_address(0) - base)); } }
+    ev_signal((const ev_t *)e, m, v); }
 
 // ---------- Queue ----------
 #define QB(b) ((queue_builder_t *)(b))
@@ -1420,6 +1533,22 @@ void dm_gfx_suspend(int on) {
 // graphics gate: inside it, going to the background meanwhile (dm_gfx_suspend, on the main thread) waited for it, minutes on a first start. It stays host work for the guest scheduler. The lock
 // comes before the gate: a second submission waiting for it must not count as in flight, or the suspend waits for it while the first waits to enter the closed gate holding the lock
 #include "nvn_queue.inc"
+static void sync_age_rec3(const sync_t *o, uint64_t dt) { if (o->fenced == 3) sync_age_rec(((const nq_receipt *)(uintptr_t)o->fence)->fence, dt); }
+static uint64_t sync_receipt_fence(const sync_t *s) { const nq_receipt *r = (const nq_receipt *)(uintptr_t)s->fence; return s->fenced == 3 && r->published ? r->fence : 0; }
+// Meter-fake wait: block until the sync's receipt is published (its submission encoded on the one
+// ordered Metal queue), not until the GPU completed it.
+static int nvn_sync_encoded_wait(const sync_t *s, uint64_t timeout) {
+    uint64_t start = now_ns(), fence = 0;
+    pthread_mutex_lock(&nq_mu);
+    while (!nq_sync_encoded(s, &fence)) {
+        uint64_t elapsed = now_ns() - start;
+        if (timeout != UINT64_MAX && elapsed >= timeout) { pthread_mutex_unlock(&nq_mu); return 0; }
+        if (timeout == UINT64_MAX) pthread_cond_wait(&nq_cv, &nq_mu);
+        else { uint64_t left = timeout - elapsed; struct timespec ts = { (time_t)(left / 1000000000ull), (long)(left % 1000000000ull) }; pthread_cond_timedwait_relative_np(&nq_cv, &nq_mu, &ts); }
+    }
+    pthread_mutex_unlock(&nq_mu);
+    return 1;
+}
 NVN(nvnQueueSubmitCommands, void, NVNqueue *q, int n, const NVNcommandHandle *h) {
     ((queue_t *)q)->submits++;
     nvn_queue_submit((queue_t *)q,n,(const uint64_t *)h);
@@ -2180,6 +2309,48 @@ NVN(nvnQueuePresentTexture, void, NVNqueue *q, NVNwindow *w, int idx) {
         trow(f, "@t_s", (now_ns() - g_t0_ns) / 1e9);
         trow(f, "@drawable_ms", mtl_drawable_ns_take() / 1e6);
         trow(f, "@sub_wall_ms", atomic_exchange(&g_sub_wall_ns, 0) / 1e6); trow(f, "@sub_cpu_ms", atomic_exchange(&g_sub_cpu_ns, 0) / 1e6); trow(f, "@sub_instr", (double)atomic_exchange(&g_sub_instr, 0));
+        {   // queue scheduler: physical commits, replay-thread stalls on parked work (dependency waits) and idle with nothing queued (nvn_queue.inc)
+            static uint64_t pqc, pqs, pqn, pqi; uint64_t qc, qs, qn, qi; nvn_queue_stats(&qc, &qs, &qn, &qi);
+            trow(f, "@q_commits", (double)(qc - pqc)); trow(f, "@q_stall_ms", (qs - pqs) / 1e6); trow(f, "@q_stalls", (double)(qn - pqn)); trow(f, "@q_idle_ms", (qi - pqi) / 1e6);
+            pqc = qc; pqs = qs; pqn = qn; pqi = qi;
+            // Parked-head time by what released it: CPU event publish / GPU-fenced publish / completed predecessor or poll / published sync
+            static uint64_t pns[4], pn[4]; uint64_t ns[4], n[4]; nvn_queue_park_stats(ns, n);
+            static const char *pk[4] = { "@park_ev_cpu_ms", "@park_ev_gpu_ms", "@park_ev_pred_ms", "@park_sync_ms" };
+            for (int i = 0; i < 4; i++) { trow(f, pk[i], (ns[i] - pns[i]) / 1e6); pns[i] = ns[i]; pn[i] = n[i]; }
+            { static uint64_t pmu, pmn; uint64_t mu, mn; nvn_queue_submu_stats(&mu, &mn);
+              trow(f, "@q_submu_ms", (mu - pmu) / 1e6); trow(f, "@q_submu_n", (double)(mn - pmn)); pmu = mu; pmn = mn; }
+            { static uint64_t pfl; uint64_t fl = nvn_queue_flat_ns(); trow(f, "@q_flat_ms", (fl - pfl) / 1e6); pfl = fl; }
+            // Blocked guest SyncWaits by the waited fence's age in submissions (0 = the newest: no CPU/GPU overlap)
+            static uint64_t psa[4]; static const char *sk[4] = { "@syncage0_ms", "@syncage1_ms", "@syncage2_4_ms", "@syncage5_ms" };
+            for (int i = 0; i < 4; i++) { uint64_t v = atomic_load(&g_syncage_ns[i]); trow(f, sk[i], (v - psa[i]) / 1e6); psa[i] = v; }
+            if (f && f % 1800 == 0) { nvn_queue_park_report(); sync_who_report(); }
+            {   // DM_NVN_SHADOWCOPY: bindings snapshotted / left live (ubp_get refused) / skipped (size 0 or too big), and snapshot bytes (nvn_mtl.m shadow_bind; classes cbuf/sbuf/vbuf/ibuf)
+                void mtl_shadow_stats(uint64_t n[4], uint64_t live[4], uint64_t skip[4], uint64_t *bytes);
+                static uint64_t pn2[4], pl2[4], ps2[4], pb2; uint64_t n2[4], l2[4], s2[4], b2; mtl_shadow_stats(n2, l2, s2, &b2);
+                uint64_t dn = 0, dl = 0, ds = 0; for (int i = 0; i < 4; i++) { dn += n2[i] - pn2[i]; dl += l2[i] - pl2[i]; ds += s2[i] - ps2[i]; }
+                trow(f, "@shc_ok", (double)dn); trow(f, "@shc_live", (double)dl); trow(f, "@shc_skip", (double)ds); trow(f, "@shc_mb", (b2 - pb2) / 1048576.0);
+                if (dl > (uint64_t)mf_live_max()) { uint64_t dm_nvn_frame_count(void); atomic_store(&g_mf_hold_until, dm_nvn_frame_count() + 3); atomic_fetch_add(&g_mf_holds, 1); }   // overlap throttle (see mf_live_max)
+                trow(f, "@mf_holds", (double)atomic_load(&g_mf_holds));
+                { void mtl_ubp_stats(uint64_t *, uint64_t *, uint64_t *); static uint64_t pm3, pr3; uint64_t m3, r3, x3; mtl_ubp_stats(&m3, &r3, &x3);
+                  trow(f, "@ubp_made", (double)(m3 - pm3)); trow(f, "@ubp_reused", (double)(r3 - pr3)); pm3 = m3; pr3 = r3; }
+                { void mtl_pin_stats(uint64_t *, uint64_t *, uint64_t *, uint64_t *); static uint64_t ph4, pm4, pd4; uint64_t h4, m4, b4, d4; mtl_pin_stats(&h4, &m4, &b4, &d4);
+                  trow(f, "@pin_hits", (double)(h4 - ph4)); trow(f, "@pin_made", (double)(m4 - pm4)); trow(f, "@pin_mb", b4 / 1048576.0); trow(f, "@pin_drop", (double)(d4 - pd4)); ph4 = h4; pm4 = m4; pd4 = d4; }
+                { void mtl_ubp_why(uint64_t w[5]); static uint64_t pw5[5]; uint64_t w5[5]; mtl_ubp_why(w5);
+                  static const char *wn[5] = { "@ubpwhy_size", "@ubpwhy_sbw", "@ubpwhy_gw", "@ubpwhy_pend", "@ubpwhy_unread" };
+                  for (int i = 0; i < 5; i++) { trow(f, wn[i], (double)(w5[i] - pw5[i])); pw5[i] = w5[i]; } }
+                { void mtl_gmr_smear(uint64_t w[2]); static uint64_t pg2[2]; uint64_t g2[2]; mtl_gmr_smear(g2);   // refusals the raw-store prediction's smear caused alone (gmem-redirect candidates)
+                  trow(f, "@gmr_sbwsmear", (double)(g2[0] - pg2[0])); trow(f, "@gmr_gwsmear", (double)(g2[1] - pg2[1])); pg2[0] = g2[0]; pg2[1] = g2[1]; }
+                { void mtl_gmr_stats(uint64_t *, uint64_t *, uint64_t *); static uint64_t pa6, pb6, pc6; uint64_t a6, b6, c6; mtl_gmr_stats(&a6, &b6, &c6);
+                  trow(f, "@gmr_ranges", (double)(a6 - pa6)); trow(f, "@gmr_tables", (double)(b6 - pb6)); trow(f, "@gmr_storehits", (double)(c6 - pc6)); pa6 = a6; pb6 = b6; pc6 = c6; }
+                if (f && f % 1800 == 0 && (dn | dl | ds)) LOG("[shc] frame %llu: ok %llu live %llu skip %llu (cbuf %llu/%llu/%llu sbuf %llu/%llu/%llu vbuf %llu/%llu/%llu ibuf %llu/%llu/%llu)",
+                    (unsigned long long)f, (unsigned long long)dn, (unsigned long long)dl, (unsigned long long)ds,
+                    (unsigned long long)(n2[0]-pn2[0]), (unsigned long long)(l2[0]-pl2[0]), (unsigned long long)(s2[0]-ps2[0]),
+                    (unsigned long long)(n2[1]-pn2[1]), (unsigned long long)(l2[1]-pl2[1]), (unsigned long long)(s2[1]-ps2[1]),
+                    (unsigned long long)(n2[2]-pn2[2]), (unsigned long long)(l2[2]-pl2[2]), (unsigned long long)(s2[2]-ps2[2]),
+                    (unsigned long long)(n2[3]-pn2[3]), (unsigned long long)(l2[3]-pl2[3]), (unsigned long long)(s2[3]-ps2[3]));
+                memcpy(pn2, n2, sizeof n2); memcpy(pl2, l2, sizeof l2); memcpy(ps2, s2, sizeof s2); pb2 = b2;
+            }
+        }
     } else atomic_store(&g_nvn_ns, 0);
     g_acq_wait_ns = g_pq_wait_ns = 0;
     if (f >= 8) { double g = mtl_gpu_ms(f - 8); if (g >= 0) { tpush(3, g); trow(f - 8, "@gpu_ms", g); g_hr[g_hn++ % HRN] = g; }   // GPU time is taken 8 frames late (already completed)
