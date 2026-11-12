@@ -92,9 +92,11 @@ static int release_page(range_t *r, uintptr_t p, _Atomic uint64_t *count) {
         if (!busy_wait(r, p)) return 0;
     }
 }
+int mtl_live_guard_wait(const void *addr);   // nvn_mtl.m DM_NVN_LIVE_GUARD: a write into a guarded raw-accessed pool waits here for the GPU work still reading it (atomics and nanosleep only)
 static int on_fault(void *addr, int is_write, void *uc) {
     (void)uc;
     if (!is_write) return 0;
+    mtl_live_guard_wait(addr);   // before any page is released: the guard's stall must come first or the write proceeds into memory the GPU still reads
     uintptr_t a = (uintptr_t)addr; int ours = 0, n = atomic_load(&g_nr);
     for (int i = 0; i < n; i++)   // Every range sharing the page must be released: releasing only one leaves the other range's state at "protected", and later writes no longer fault and are missed
         { range_t *r = rg(i); if (live_at(i) && a >= r->base && a < r->end) ours |= release_page(r, (a - r->base) >> g_shift, &g_faults); }
@@ -119,6 +121,9 @@ static void release_pages(range_t *r, uintptr_t p, uintptr_t q, _Atomic uint64_t
 static void prep_write(void *addr, size_t len) {
     uintptr_t a = (uintptr_t)addr, e = a + len; int n = atomic_load(&g_nr);
     if (!len) return;
+    mtl_live_guard_wait(addr); if (len > 1) mtl_live_guard_wait((const char *)addr + len - 1);   // a host write into a guarded pool waits like a game write would
+    void mtl_live_guard_open(const void *, size_t); mtl_live_guard_open(addr, len);   // then opens it: a host system call cannot fault through a read-only page (EFAULT, see above)
+
     for (int i = 0; i < n; i++) {
         range_t *r = rg(i);
         if (!live_at(i) || e <= r->base || a >= r->end) continue;

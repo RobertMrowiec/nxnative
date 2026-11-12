@@ -50,6 +50,28 @@ Measured on an M6 Mac with 16 GB, headless, on one walk with camera turns (`walk
 - With a window, the first start on a new chain runs the pipeline prebuild first: 33,190 shader pairs, 691 s on this Mac. A run with no window skips it.
 - The opening movie runs at the movie's own 24 fps pace during the story section and cannot be skipped: about 8 minutes on a new file.
 
+## Frame generation (60 fps on slower Macs)
+
+Docked, an M1 Max (32-core GPU) needs about 25-28 ms of GPU work per frame, at any render size (the mesh passes, compute post-processing and the upscaler do not scale with the resolution). The game cannot render 60 there, so `DM_FRAMEGEN=1` makes it render 30 and shows 60:
+
+- The game runs its 30 fps step (`main.c` forces `DM_FPS_TARGET=30`), the display link stays at 60 Hz. On the tick a new frame arrives a picture between it and the previous one is shown, on the next tick the frame itself (one tick of added latency). [`nvn_fg.inc`](../../gfx/nvn/nvn_fg.inc), [`fg_core.h`](../../gfx/nvn/fg_core.h).
+- The picture is made by MetalFX's frame interpolator (`MTL4FXFrameInterpolator`). The game gives no motion vectors, so the host computes them by block matching on a quarter-resolution luma pyramid (5 levels). A guard pass puts the real frame's pixels back where the motion does not fit (Link running against a still background, contrast-relative thresholds `DM_FG_GT0` 0.6 / `DM_FG_GT1` 1.2), and a detail pass carries the real frame's high frequencies into the generated picture when it is made at half scale. `DM_FG_SCALE` (0.5 recommended, 2.3 ms of GPU), `DM_FG_GUARD`, `DM_FG_DETAIL`.
+- A display-link tick with no new frame queued still shows the held real frame (`DM_FG_EMPTYHOLD`, on). Before, a game that queued its frame just in time lost every held tick and showed only generated pictures, 30 a second: random drops to 9-17 real frames a second.
+- `DM_UP_SHARPEN` (0..1, default 0.5): FSR1's RCAS after MetalFX's spatial scaler, in place of the copy to the drawable, so free. 1.0 makes the grass crunchy.
+- Resolution: the game's dynamic resolution steers by a load measured against a 60 fps budget, so at 30 it sits at its floor. Use one fixed size: `scripts/oot_res_overlay.py <RomFS.img> <app>/Contents/Resources/romfs_overlay/docked 0.8 - flat` (2048x1152), or `DM_ROMFS_OVERLAY=<folder holding docked/>` in env.txt.
+
+Measured on an M1 Max MacBook Pro (64 GB, AC, macOS 27.2), docked (`DM_OPMODE=1`), Kokiri Forest, the installed app with a warm pipeline cache, `DM_FRAMEGEN=1 DM_FG_SCALE=0.5 DM_DYNAMIC_RESOLUTION=1 DM_UPSCALER=metalfx`, shown pictures a second per 20 s segment (2026-11-11):
+
+| Render size | Walk: mean / worst segment | Camera spin |
+|---|---|---|
+| 1707x960 (0.66 flat) | 59.9-60.0 / 59.5 (3 runs) | |
+| 1906x1072 (0.73 flat) | 59.9 / 58.8 | |
+| 2048x1152 (0.80 flat) | 59.9 / 59.0 (25 segments) | 60.0 / 59.8 |
+| 2276x1280 (0.88 flat) | 59.1 / 56.6 | |
+| 2439x1372 (0.9375 flat) | 58.1 / 52.9 | |
+
+Without frame generation the same Mac ran 25-36 fps docked. Not measured: Hyrule Field and other heavy areas, other Macs. Open: small dark dots over the grass in the game's own frames (probably its particles).
+
 ## Dynamic resolution
 
 - The controller (v131072; found by fingerprint, so the addresses are only for reading): the parameters are `game__gfx__DynamicResolutionParam` (`LoadThreshold`, `ReduceCounterMax`, `IncreaseCounterMax`, and a list of levels, each a `ResolutionReduceScale` and a `Priority`). Once a frame the update (`main+0x805aa0`) reads the frame's GPU time, subtracts what its cost model predicts at the current size and keeps the trend of that residual. The level function (`main+0x8065e0`) adds the residual to the model's cost at each level and returns the best level under the threshold: 0, the full 1536x864, when the current size fits. The update moves down after `ReduceCounterMax` frames that ask for it and back up after `IncreaseCounterMax`. Scripted `GPULoad` hints from event data (`main+0x31c3de0`) and `OneshotSetDynamicResolutionLoadThreshold` adjust it in cutscenes.
